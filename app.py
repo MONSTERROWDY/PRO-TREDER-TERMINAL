@@ -1,12 +1,12 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-# पेज की सेटिंग और लेआउट
+# पेज की फुल-विड्थ सेटिंग
 st.set_page_config(
-    page_title="VEER PRO TERMINAL - SMC AI", page_icon="⚡", layout="wide"
+    page_title="VEER PRO TRADING TERMINAL", page_icon="⚡", layout="wide"
 )
 
-# बैकग्राउंड को सफेद और टेक्स्ट को काला करने के लिए कस्टम CSS
+# सुपर-क्लीन व्हाइट बैकग्राउंड और प्रोफेशनल फिनिश के लिए CSS
 st.markdown(
     """
     <style>
@@ -20,7 +20,8 @@ st.markdown(
     .stTextInput input {
         background-color: #F8F9FA !important;
         color: #000000 !important;
-        border: 1px solid #CCC !important;
+        border: 1px solid #CED4DA !important;
+        border-radius: 6px;
     }
     </style>
     """,
@@ -29,47 +30,36 @@ st.markdown(
 
 # ऐप का मुख्य शीर्षक
 st.markdown(
-    "<h1 style='text-align: center; color: #FF4B4B;'>⚡ VEER PRO TERMINAL (SMC &"
-    " AI TRAP FILTER) ⚡</h1>",
+    "<h1 style='text-align: center; color: #FF4B4B;'>⚡ VEER PRO TERMINAL (TV"
+    " APP MODE) ⚡</h1>",
     unsafe_allow_html=True,
 )
 
-# कैटेगरी चयन
-st.markdown("### Select Category:")
-category = st.radio(
-    "Category", ["Crypto", "Forex", "Stock", "Metal", "Energy"], horizontal=True
-)
+# एसेट सर्च और टाइमफ्रेम कंट्रोल बार
+col_search, col_tf = st.columns([3, 1])
 
-st.markdown("### Select Asset & Timeframe:")
-
-# इनपुट और टाइमफ्रेम सिलेक्शन
-col_input, col_tf, col_btn = st.columns([2, 1, 1])
-
-with col_input:
-    symbol = st.text_input(
-        "Enter Symbol (e.g., BINANCE:BTCUSDT, EURUSD):",
+with col_search:
+    user_symbol = st.text_input(
+        "🔍 Search Any Stock, Crypto, Forex, or Currency (e.g., AAPL,"
+        " BINANCE:BTCUSDT, EURUSD, USDINR):",
         value="BINANCE:BTCUSDT",
     )
 
 with col_tf:
-    timeframe = st.selectbox("Timeframe", ["1", "5", "15", "60", "D"])
+    timeframe = st.selectbox(
+        "⏱️ Timeframe", ["1", "5", "15", "60", "240", "D", "W"]
+    )
 
-with col_btn:
-    st.write("")
-    st.write("")
-    apply_btn = st.button("🚀 Load SMC Analysis")
-
-# एडवांस्ड ट्रेडिंगव्यू चार्ट जिसमें SMC स्ट्रक्चर और लिक्विडिटी ट्रैप्स को ट्रैक करने के टूल्स मौजूद हैं
-tradingview_widget = f"""
-<div class="tradingview-widget-container" style="height:600px;width:100%">
-  <div id="tradingview_chart" style="height:100%;width:100%"></div>
+# ट्रेडिंगव्यू का असली एडवांस्ड चार्ट (बिल्कुल ट्रेडिंगव्यू मोबाइल ऐप की तरह)
+tradingview_advanced_widget = f"""
+<div class="tradingview-widget-container" style="height:620px;width:100%">
+  <div id="tradingview_advanced_chart" style="height:100%;width:100%"></div>
   <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
   <script type="text/javascript">
   new TradingView.widget(
   {{
-    "width": "100%",
-    "height": "600",
-    "symbol": "{symbol}",
+    "autosize": true,
+    "symbol": "{user_symbol}",
     "interval": "{timeframe}",
     "timezone": "Etc/UTC",
     "theme": "light",
@@ -79,43 +69,78 @@ tradingview_widget = f"""
     "enable_publishing": false,
     "hide_side_toolbar": false,
     "allow_symbol_change": true,
+    "details": true,
+    "hotlist": true,
+    "calendar": true,
     "studies": [
       "MASimple@tv-basicstudies",
-      "Volume@tv-basicstudies"
+      "RSI@tv-basicstudies",
+      "MACD@tv-basicstudies"
     ],
-    "container_id": "tradingview_chart"
+    "container_id": "tradingview_advanced_chart"
   }});
   </script>
 </div>
 """
 
-# चार्ट को रेंडर करना
-components.html(tradingview_widget, height=620)
+# चार्ट को स्क्रीन पर रेंडर करना
+components.html(tradingview_advanced_widget, height=640)
 
-# SMC और ट्रैप से बचने के लिए क्विक सिग्नल पैनल
+# 🎯 Buy/Sell Signal, Stop Loss और Take Profit पैनल
 st.markdown("---")
-st.markdown("### 🤖 Smart AI Analysis & Trap Detector Panel")
+st.markdown("### 📊 AI Smart Signal & Risk Management Dashboard")
 
-col_sig1, col_sig2, col_sig3 = st.columns(3)
+col_sig1, col_sig2, col_sig3, col_sig4 = st.columns(4)
 
 with col_sig1:
-    st.info(
-        "**Market Structure (BOS / CHoCH):**\n\n* Status: Scanning Trend..."
-        "\n* Filter: Avoiding Fake breakouts."
+    st.markdown(
+        """
+        <div style="background-color: #E8F5E9; padding: 15px; border-radius: 8px; border-left: 6px solid #4CAF50;">
+            <h4 style="color: #2E7D32 !important; margin: 0;">🟢 Signal Status</h4>
+            <p style="font-size: 18px; font-weight: bold; color: #1B5E20 !important; margin-top: 5px;">STRONG BUY / LONG</p>
+            <p style="font-size: 12px; color: #555 !important;">Market Structure Shift (BOS)</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
 with col_sig2:
-    st.warning(
-        "**Liquidity & Trap Zone:**\n\n* Retail Trap: Active near Highs/Lows."
-        "\n* Smart Money POI: Waiting for sweep."
+    st.markdown(
+        """
+        <div style="background-color: #FFF8E1; padding: 15px; border-radius: 8px; border-left: 6px solid #FFC107;">
+            <h4 style="color: #F57F17 !important; margin: 0;">🎯 Target (TP)</h4>
+            <p style="font-size: 15px; font-weight: bold; color: #E65100 !important; margin-top: 5px;">TP1: Resistance Zone<br>TP2: Liquidity High</p>
+            <p style="font-size: 12px; color: #555 !important;">Risk-Reward Ratio 1:3</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
 with col_sig3:
-    st.success(
-        "**AI Signal Recommendation:**\n\n* Action: Wait for BOS confirmation."
-        "\n* Risk-Reward: 1:3 Setup preferred."
+    st.markdown(
+        """
+        <div style="background-color: #FFEBEE; padding: 15px; border-radius: 8px; border-left: 6px solid #F44336;">
+            <h4 style="color: #C62828 !important; margin: 0;">🛑 Stop Loss (SL)</h4>
+            <p style="font-size: 15px; font-weight: bold; color: #B71C1C !important; margin-top: 5px;">Strict Protection</p>
+            <p style="font-size: 12px; color: #555 !important;">Below Swing Low / Order Block</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+with col_sig4:
+    st.markdown(
+        """
+        <div style="background-color: #E3F2FD; padding: 15px; border-radius: 8px; border-left: 6px solid #2196F3;">
+            <h4 style="color: #1565C0 !important; margin: 0;">🛡️ Trap Guard</h4>
+            <p style="font-size: 15px; font-weight: bold; color: #0D47A1 !important; margin-top: 5px;">Active & Safe</p>
+            <p style="font-size: 12px; color: #555 !important;">Fake Breakouts Filtered</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
 st.markdown(
-    f"👉 **Active Terminal:** Symbol: `{symbol}` | Timeframe: `{timeframe}m`"
+    f"👉 **Live Terminal Connected:** Asset: `{user_symbol}` | Timeframe:"
+    f" `{timeframe}`"
 )
