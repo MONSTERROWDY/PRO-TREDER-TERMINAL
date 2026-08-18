@@ -3,12 +3,12 @@ import streamlit.components.v1 as components
 
 # पेज की फुल-विड्थ लेआउट सेटिंग
 st.set_page_config(
-    page_title="VEER PRO TRADING TERMINAL - FULL TV CLONE",
+    page_title="VEER PRO TRADING TERMINAL - ULTIMATE CLONE",
     page_icon="⚡",
     layout="wide",
 )
 
-# प्रोफेशनल ट्रेडिंगव्यू डार्क/लाइट थीम और क्लीन UI के लिए CSS
+# प्रोफेशनल डार्क थीम और यूज़र इंटरफेस के लिए CSS
 st.markdown(
     """
     <style>
@@ -45,7 +45,7 @@ st.markdown(
 # ऐप का मुख्य शीर्षक
 st.markdown(
     "<h1 style='text-align: center; color: #38BDF8;'>⚡ VEER PRO TERMINAL —"
-    " COMPLETE TRADINGVIEW CLONE ⚡</h1>",
+    " UNLIMITED TRADING ENGINE ⚡</h1>",
     unsafe_allow_html=True,
 )
 
@@ -53,10 +53,9 @@ st.markdown(
 col_search, col_tf, col_btn = st.columns([2, 1, 1])
 
 with col_search:
-    user_symbol = st.text_input(
-        "🔍 Search Asset (e.g., NASDAQ:AAPL, BINANCE:BTCUSDT, OANDA:XAUUSD,"
-        " NSE:RELIANCE):",
-        value="BINANCE:BTCUSDT",
+    raw_symbol = st.text_input(
+        "🔍 Search Asset (e.g., Nifty 50, Banknifty, Reliance, Gold, BTCUSDT):",
+        value="Nifty 50",
     )
 
 with col_tf:
@@ -78,7 +77,28 @@ with col_btn:
     st.write("")
     analyze_btn = st.button("🚀 RUN AI SIGNAL")
 
-# ट्रेडिंगव्यू का ओरिजिनल एडवांस्ड रियल-टाइम चार्ट विजेट (फुल ट्रेडिंगव्यू ऐप जैसा)
+# 🛠️ स्मार्ट ऑटो-करेक्शन इंजन (ताकि कोई भी स्टॉक या क्रिप्टो कभी फेल न हो)
+clean_sym = raw_symbol.strip()
+
+if ":" in clean_sym:
+    user_symbol = clean_sym.upper()
+else:
+    s_upper = clean_sym.upper()
+    if "NIFTY" in s_upper or "BANKNIFTY" in s_upper or "FINNIFTY" in s_upper:
+        user_symbol = f"NSE:{s_upper.replace(' ', '')}"
+    elif "BTC" in s_upper or "ETH" in s_upper or "SOL" in s_upper or "USDT" in s_upper:
+        if "USDT" not in s_upper and "USD" not in s_upper:
+            s_upper += "USDT"
+        user_symbol = f"BINANCE:{s_upper}"
+    elif "GOLD" in s_upper or "XAU" in s_upper:
+        user_symbol = "OANDA:XAUUSD"
+    elif "EUR" in s_upper or "USD" in s_upper or "GBP" in s_upper or "JPY" in s_upper:
+        user_symbol = f"FX:{s_upper}"
+    else:
+        # इंडियन स्टॉक के लिए डिफ़ॉल्ट NSE
+        user_symbol = f"NSE:{s_upper.replace(' ', '')}"
+
+# ट्रेडिंगव्यू का एडवांस्ड रियल-टाइम चार्ट विजेट
 tradingview_code = f"""
 <div class="tradingview-widget-container" style="height:620px;width:100%">
   <div id="tradingview_clone_chart" style="height:100%;width:100%"></div>
@@ -115,7 +135,7 @@ tradingview_code = f"""
 </div>
 """
 
-# चार्ट रेंडर करना
+# चार्ट को रेंडर करना
 components.html(tradingview_code, height=640)
 
 # 📊 AI सिग्नल, मार्केट स्ट्रक्चर, स्टॉप लॉस और टेक प्रॉफिट डैशबोर्ड
@@ -124,11 +144,9 @@ st.markdown(
     "### 🤖 Live AI Smart Signal & Risk Management Dashboard (SMC Engine)"
 )
 
-# अगर यूज़र ने बटन दबाया है तो स्टेट को एक्टिव करें
 if analyze_btn:
     st.session_state["analyzed"] = True
 
-# सिग्नल कार्ड्स लेआउट
 col_s1, col_s2, col_s3, col_s4 = st.columns(4)
 
 with col_s1:
@@ -182,7 +200,7 @@ with col_s4:
 if st.session_state.get("analyzed", False):
     st.success(
         f"✅ AI Signal successfully generated for `{user_symbol}` on timeframe"
-        f" `{tf_option}`. Market structure is verified!"
+        f" `{tf_option}`. Market structure verified!"
     )
 
 st.markdown(
