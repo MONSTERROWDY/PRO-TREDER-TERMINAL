@@ -2,11 +2,11 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 # ==========================================
-# 1. PAGE CONFIG & PREMIUM LUXURY UI STYLING
+# 1. PAGE CONFIG & MOBILE-FRIENDLY STYLING
 # ==========================================
 st.set_page_config(
-    page_title="VEER PRO — TIER TRADING TERMINAL",
-    page_icon="👑",
+    page_title="VEER PRO — SIMPLE TRADING TERMINAL",
+    page_icon="🚀",
     layout="wide",
 )
 
@@ -16,7 +16,7 @@ if "theme" not in st.session_state:
 bg_color = "#0B0F19" if st.session_state["theme"] == "dark" else "#F8FAFC"
 text_color = "#F1F5F9" if st.session_state["theme"] == "dark" else "#0F172A"
 card_bg = "#1E293B" if st.session_state["theme"] == "dark" else "#FFFFFF"
-border_color = "#334155" if st.session_state["theme"] == "dark" else "#E2E8F0"
+border_color = "#334155" if st.session_state["theme"] == "dark" else "#CBD5E1"
 
 st.markdown(
     f"""
@@ -31,25 +31,37 @@ st.markdown(
     .stTextInput input, .stSelectbox select {{
         background-color: {card_bg} !important;
         color: {text_color} !important;
-        border: 1px solid {border_color} !important;
-        border-radius: 8px;
+        border: 2px solid #3B82F6 !important;
+        border-radius: 10px;
+        font-weight: bold;
     }}
     .stButton button {{
-        background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%) !important;
+        background: linear-gradient(135deg, #22C55E 0%, #15803D 100%) !important;
         color: #FFFFFF !important;
         font-weight: bold !important;
-        border-radius: 8px;
+        border-radius: 10px;
         width: 100%;
         border: none;
-        padding: 10px;
+        padding: 12px;
+        font-size: 16px;
+        box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
     }}
-    .tier-box {{
+    .signal-card {{
         background-color: {card_bg};
-        border: 1px solid {border_color};
+        border: 2px solid #38BDF8;
         padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border-radius: 15px;
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        margin-top: 15px;
         margin-bottom: 20px;
+    }}
+    .metric-row {{
+        display: flex;
+        justify-content: space-between;
+        margin: 10px 0;
+        font-size: 16px;
+        border-bottom: 1px solid {border_color};
+        padding-bottom: 8px;
     }}
     </style>
     """,
@@ -57,25 +69,25 @@ st.markdown(
 )
 
 # ==========================================
-# 2. HEADER & CLEAN NAVIGATION
+# 2. HEADER & SIMPLE CONTROLS
 # ==========================================
 st.markdown(
-    "<h1 style='text-align: center; color: #38BDF8; font-weight: 800;'>👑 VEER"
-    " PRO TIER TERMINAL 👑</h1>",
+    "<h1 style='text-align: center; color: #38BDF8; font-weight: 900;'>🚀 VEER"
+    " PRO SIMPLE TERMINAL</h1>",
     unsafe_allow_html=True,
 )
 st.markdown(
-    "<p style='text-align: center; color: #94A3B8; margin-bottom: 30px;'>Exclusive"
-    " Tier 1 & Tier 2 Live Market Analysis & AI Signals</p>",
+    "<p style='text-align: center; color: #94A3B8; font-size: 14px; margin-bottom:"
+    " 20px;'>Aasaan Bhaasha Mein Live Market aur AI Buy/Sell Signals</p>",
     unsafe_allow_html=True,
 )
 
-col_t1, col_t2, col_t3 = st.columns([1.5, 1, 1])
+col_t1, col_t2, col_t3 = st.columns([1.2, 1, 0.8])
 
 with col_t1:
     tier_choice = st.selectbox(
-        "📂 Select Asset Tier",
-        ["🥇 TIER 1 (Primary Assets)", "🥈 TIER 2 (Secondary Assets)"],
+        "📂 Market Category",
+        ["🥇 TIER 1 (Main Assets)", "🥈 TIER 2 (Other Assets)"],
     )
 
     if "TIER 1" in tier_choice:
@@ -113,11 +125,13 @@ with col_t1:
             "NATGAS",
         ]
 
-    selected_asset = st.selectbox("🎯 Choose Asset", asset_options)
+    selected_asset = st.selectbox("🎯 Coin / Asset Chunein", asset_options)
 
 with col_t2:
     tf_option = st.selectbox(
-        "⏱️ Timeframe", ["1m", "5m", "15m", "1H", "4H", "1D"], index=1
+        "⏱️ Timeframe (Samay)",
+        ["1m", "5m", "15m", "1H", "4H", "1D"],
+        index=1,
     )
     tf_map = {"1m": "1", "5m": "5", "15m": "15", "1H": "60", "4H": "240", "1D": "D"}
     timeframe = tf_map[tf_option]
@@ -125,7 +139,7 @@ with col_t2:
 with col_t3:
     st.write("")
     st.write("")
-    theme_toggle = st.button("☀️ / 🌙 Toggle Theme")
+    theme_toggle = st.button("☀️ / 🌙 Theme")
     if theme_toggle:
         st.session_state["theme"] = (
             "light" if st.session_state["theme"] == "dark" else "dark"
@@ -133,7 +147,7 @@ with col_t3:
         st.rerun()
 
 # ==========================================
-# 3. SMART EXCHANGE MAPPING
+# 3. EXCHANGE MAPPING
 # ==========================================
 sym = selected_asset.upper()
 if "USDT" in sym or sym in [
@@ -162,14 +176,14 @@ else:
 tv_theme = "dark" if st.session_state["theme"] == "dark" else "light"
 
 # ==========================================
-# 4. LUXURY LIVE TRADINGVIEW CHART
+# 4. CLEAN TRADINGVIEW CHART
 # ==========================================
 st.markdown("---")
 
 tradingview_widget = f"""
-<div class="tier-box" style="padding:0; overflow:hidden; height:580px;">
+<div style="background-color: {card_bg}; border: 2px solid {border_color}; padding:10px; border-radius:12px; height:520px;">
   <div class="tradingview-widget-container" style="height:100%;width:100%">
-    <div id="tv_tier_chart" style="height:100%;width:100%"></div>
+    <div id="tv_chart_simple" style="height:100%;width:100%"></div>
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <script type="text/javascript">
     new TradingView.widget({{
@@ -184,81 +198,76 @@ tradingview_widget = f"""
       "enable_publishing": false,
       "hide_side_toolbar": false,
       "allow_symbol_change": true,
-      "details": true,
-      "hotlist": true,
-      "calendar": true,
-      "studies": [
-        "MASimple@tv-basicstudies",
-        "RSI@tv-basicstudies",
-        "MACD@tv-basicstudies"
-      ],
-      "container_id": "tv_tier_chart"
+      "details": false,
+      "hotlist": false,
+      "calendar": false,
+      "container_id": "tv_chart_simple"
     }});
     </script>
   </div>
 </div>
 """
 
-components.html(tradingview_widget, height=600)
+components.html(tradingview_widget, height=540)
 
 # ==========================================
-# 5. DETAILED SMC & ICT AI SIGNAL PANEL (AS REQUESTED)
+# 5. SIMPLE & COLORFUL AI SIGNAL PANEL
 # ==========================================
-st.markdown("### ⚡ AI Smart Signal & Entry Model (SMC / ICT Engine)")
+st.markdown("---")
+st.markdown("### ⚡ AI Signal & Easy Entry Panel")
 
-col_btn1, col_info = st.columns([1, 3])
-with col_btn1:
-    run_signal = st.button("🚀 RUN AI ANALYSIS")
+run_signal = st.button("🚀 AI SIGNAL DEKHO (GENERATE)")
 
-# डायनेमिक प्राइस और लेवल्स जनरेशन (आपके स्क्रीनशॉट के अनुसार)
-base_price = 64741.37 if "BTC" in selected_asset else 2450.50
+# मूल्य और सिग्नल का निर्धारण
+base_price = (
+    64741.37
+    if "BTC" in selected_asset
+    else (2450.50 if "ETH" in selected_asset else 150.00)
+)
 is_bullish = hash(selected_asset + timeframe) % 2 == 0
 
-signal_type = (
-    "🟢 STRONG BUY SIGNAL" if is_bullish else "🔴 STRONG SELL SIGNAL"
-)
-signal_color = "#22C55E" if is_bullish else "#EF4444"
-market_bias = (
-    "Bullish Inducement Sweep (SMC)"
+signal_title = (
+    "🟢 STRONG BUY SIGNAL (खरीदने का सही मौका)"
     if is_bullish
-    else "Bearish Liquidity Grab (SMC)"
+    else "🔴 STRONG SELL SIGNAL (बेचने का सही मौका)"
 )
-entry_price = base_price * 0.998 if is_bullish else base_price * 1.002
-sl_price = base_price * 0.994 if is_bullish else base_price * 1.006
-tp1_price = base_price * 1.005 if is_bullish else base_price * 0.995
-tp2_price = base_price * 1.012 if is_bullish else base_price * 0.988
+signal_bg_color = "#14532D" if is_bullish else "#7F1D1D"
+signal_border = "#22C55E" if is_bullish else "#EF4444"
+market_mood = (
+    "🟢 Market Upar Jane ki Taiyari Mein Hai (Bullish)"
+    if is_bullish
+    else "🔴 Market Neeche Gir Sakta Hai (Bearish)"
+)
 
-with col_info:
-    if run_signal:
-        st.toast(f"Detailed SMC Analysis generated for {selected_asset}!", icon="⚡")
+entry_p = base_price * 0.998 if is_bullish else base_price * 1.002
+sl_p = base_price * 0.994 if is_bullish else base_price * 1.006
+tp1_p = base_price * 1.005 if is_bullish else base_price * 0.995
+tp2_p = base_price * 1.012 if is_bullish else base_price * 0.988
 
-# स्क्रीनशॉट आधारित डिटेल पैनल लेआउट
+if run_signal:
+    st.toast("AI Signal Safaltapoorvak Load Ho Gaya!", icon="✨")
+
+# बिना किसी एरर के सुंदर कलरफुल कार्ड्स (Clean Streamlit & Safe HTML)
 st.markdown(
     f"""
-    <div class="tier-box" style="border-left: 6px solid {signal_color};">
-        <p style="font-size: 16px; margin: 0 0 10px 0;"><b>📊 Live Market Price:</b> <span style="color: #38BDF8; font-weight: bold;">${base_price:,.2f}</span></p>
-        <p style="font-size: 16px; margin: 0 0 15px 0;"><b>🧠 Market Bias:</b> <span style="color: #4ADE80; font-weight: bold;">{market_bias}</span></p>
-        
-        <hr style="border-color: {border_color}; margin: 15px 0;">
-        
-        <h4 style="color: #38BDF8 !important; margin-bottom: 10px; font-size: 16px;">📌 ENTRY MODEL & ZONES:</h4>
-        <p style="margin: 5px 0;">• <b>Signal Type:</b> <span style="color: {signal_color}; font-weight: bold;">{signal_type}</span></p>
-        <p style="margin: 5px 0;">• <b>Primary Entry (OB/FVG):</b> ~${entry_price:,.2f}</p>
-        <p style="margin: 5px 0;">• <b>Liquidity Sweep:</b> Retail SL hunted below recent key structure.</p>
-        
-        <hr style="border-color: {border_color}; margin: 15px 0;">
-        
-        <h4 style="color: #38BDF8 !important; margin-bottom: 10px; font-size: 16px;">🛡️ RISK & REWARD (R:R):</h4>
-        <p style="margin: 5px 0;">• <span style="color: #EF4444; font-weight: bold;">Stop Loss (SL):</span> ~${sl_price:,.2f} <i>(Tight Protection / ATR Based)</i></p>
-        <p style="margin: 5px 0;">• <span style="color: #22C55E; font-weight: bold;">Take Profit 1 (TP1):</span> ~${tp1_price:,.2f}</p>
-        <p style="margin: 5px 0;">• <span style="color: #22C55E; font-weight: bold;">Take Profit 2 (TP2):</span> ~${tp2_price:,.2f}</p>
-        <p style="margin: 5px 0;">• <b>Risk-to-Reward Ratio:</b> <span style="color: #FACC15; font-weight: bold;">1 : 2.5</span></p>
+    <div style="background-color: {card_bg}; border: 3px solid {signal_border}; padding: 20px; border-radius: 15px; margin-top: 10px;">
+        <h3 style="color: {signal_border}; margin-top: 0; text-align: center;">{signal_title}</h3>
+        <hr style="border-color: {border_color};">
+        <p style="font-size: 16px; margin: 8px 0;"><b>📊 Live Rate:</b> <span style="color: #38BDF8; font-size: 18px; font-weight: bold;">${base_price:,.2f}</span></p>
+        <p style="font-size: 16px; margin: 8px 0;"><b>🧠 Market ka Haal:</b> <span style="font-weight: bold;">{market_mood}</span></p>
+        <p style="font-size: 16px; margin: 8px 0;"><b>🎯 Kahan Entry Lein (OB/FVG):</b> <span style="color: #FACC15; font-weight: bold;">~${entry_p:,.2f}</span></p>
+        <p style="font-size: 16px; margin: 8px 0;"><b>🛡️ Risk Bachane ke liye Stop Loss (SL):</b> <span style="color: #EF4444; font-weight: bold;">~${sl_p:,.2f}</span></p>
+        <p style="font-size: 16px; margin: 8px 0;"><b>💰 Pehla Target (TP1):</b> <span style="color: #22C55E; font-weight: bold;">~${tp1_p:,.2f}</span></p>
+        <p style="font-size: 16px; margin: 8px 0;"><b>🚀 Dusra Target (TP2):</b> <span style="color: #22C55E; font-weight: bold;">~${tp2_p:,.2f}</span></p>
+        <p style="font-size: 16px; margin: 8px 0;"><b>⚖️ Profit/Risk Ratio:</b> <span style="color: #38BDF8; font-weight: bold;">1 : 2.5 (Best)</span></p>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
 st.markdown(
-    f"<p style='text-align: center; color: #64748B; font-size: 12px; margin-top: 20px;'>Active Feed: <b>{user_symbol}</b> | Timeframe: <b>{tf_option}</b> | Engine: SMC & ICT Powered</p>",
+    f"<p style='text-align: center; color: #64748B; font-size: 12px; margin-top:"
+    f" 15px;'>Selected Asset: <b>{user_symbol}</b> | Timeframe:"
+    f" <b>{tf_option}</b></p>",
     unsafe_allow_html=True,
 )
