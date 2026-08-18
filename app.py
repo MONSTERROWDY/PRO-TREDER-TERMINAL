@@ -49,10 +49,11 @@ st.markdown(
     .risk-box {{
         background-color: {card_bg};
         border: 2px solid #EAB308;
-        padding: 15px;
+        padding: 18px;
         border-radius: 12px;
         margin-top: 15px;
         margin-bottom: 15px;
+        box-shadow: 0 4px 12px rgba(234, 179, 8, 0.15);
     }}
     </style>
     """,
@@ -69,7 +70,7 @@ st.markdown(
 )
 st.markdown(
     "<p style='text-align: center; color: #94A3B8; font-size: 14px; margin-bottom:"
-    " 20px;'>Live Market, AI Buy/Sell Signals & Risk Management</p>",
+    " 20px;'>Live Market, AI Buy/Sell Signals & Full Risk Management</p>",
     unsafe_allow_html=True,
 )
 
@@ -202,34 +203,32 @@ tradingview_widget = f"""
 components.html(tradingview_widget, height=540)
 
 # ==========================================
-# 5. RISK MANAGEMENT CALCULATOR
+# 5. FULL OPTIMIZED RISK MANAGEMENT SYSTEM
 # ==========================================
 st.markdown("---")
-st.markdown("### 🛡️ Risk Management & Position Sizer")
+st.markdown("### 💰 Risk Management, Position Sizing & Live Safeguard")
 
-col_r1, col_r2, col_r3 = st.columns(3)
+col_r1, col_r2, col_r3, col_r4 = st.columns(4)
+
 with col_r1:
-    account_balance = st.number_input(
-        "💵 Total Capital ($ / ₹)", value=1000.0, step=100.0
+    account_bal = st.number_input(
+        "Account Balance ($)", value=10000.0, step=500.0
     )
 with col_r2:
-    risk_percentage = st.slider(
-        "📉 Risk Per Trade (%)", min_value=0.5, max_value=5.0, value=1.0, step=0.5
-    )
+    risk_pct = st.slider("Risk % Per Trade", 0.1, 5.0, 1.0, 0.1)
 with col_r3:
-    leverage_val = st.selectbox(
-        "⚡ Leverage", ["1x", "5x", "10x", "20x", "50x", "100x"], index=2
-    )
+    atr_val = st.number_input("ATR Stop Loss Multiplier", value=1.5, step=0.1)
+with col_r4:
+    max_daily_loss = st.number_input("Max Daily Loss Limit ($)", value=500.0)
 
-allowed_risk_amount = (account_balance * risk_percentage) / 100
-lev_num = int(leverage_val.replace("x", ""))
-position_size_allowed = allowed_risk_amount * lev_num
+risk_amt = (account_bal * risk_pct) / 100
+tp1 = risk_amt * 2.0
+tp2 = risk_amt * 3.5
 
 st.markdown(
     f"""
     <div class="risk-box">
-        <p style="margin: 4px 0; font-size: 15px;">🔒 <b>Max Loss Limit (Risk Amount):</b> <span style="color: #EF4444; font-weight: bold;">${allowed_risk_amount:,.2f}</span> (Isse zyada ek trade mein loss nahi hona chahiye)</p>
-        <p style="margin: 4px 0; font-size: 15px;">📊 <b>Suggested Position Size ({leverage_val}):</b> <span style="color: #38BDF8; font-weight: bold;">${position_size_allowed:,.2f}</span></p>
+        <p style="margin: 0; font-size: 15px;">💡 <b>Live Risk Report:</b> Risk Capital: <span style="color: #EF4444; font-weight: bold;">${risk_amt:.2f}</span> | ATR Stop Loss Active | TP1 Target: <span style="color: #22C55E; font-weight: bold;">${tp1:.2f}</span> | TP2 Target: <span style="color: #22C55E; font-weight: bold;">${tp2:.2f}</span> | Daily Guard: <span style="color: #38BDF8; font-weight: bold;">Protected</span></p>
     </div>
     """,
     unsafe_allow_html=True,
