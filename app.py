@@ -5,7 +5,7 @@ import streamlit.components.v1 as components
 # 1. PAGE CONFIG & MOBILE-FRIENDLY STYLING
 # ==========================================
 st.set_page_config(
-    page_title="VEER PRO — SIMPLE TRADING TERMINAL",
+    page_title="VEER PRO TRADING TERMINAL",
     page_icon="🚀",
     layout="wide",
 )
@@ -28,7 +28,7 @@ st.markdown(
     h1, h2, h3, h4, h5, h6, p, label, span {{
         color: {text_color} !important;
     }}
-    .stTextInput input, .stSelectbox select {{
+    .stTextInput input, .stSelectbox select, .stNumberInput input {{
         background-color: {card_bg} !important;
         color: {text_color} !important;
         border: 2px solid #3B82F6 !important;
@@ -46,22 +46,13 @@ st.markdown(
         font-size: 16px;
         box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
     }}
-    .signal-card {{
+    .risk-box {{
         background-color: {card_bg};
-        border: 2px solid #38BDF8;
-        padding: 20px;
-        border-radius: 15px;
-        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        border: 2px solid #EAB308;
+        padding: 15px;
+        border-radius: 12px;
         margin-top: 15px;
-        margin-bottom: 20px;
-    }}
-    .metric-row {{
-        display: flex;
-        justify-content: space-between;
-        margin: 10px 0;
-        font-size: 16px;
-        border-bottom: 1px solid {border_color};
-        padding-bottom: 8px;
+        margin-bottom: 15px;
     }}
     </style>
     """,
@@ -69,16 +60,16 @@ st.markdown(
 )
 
 # ==========================================
-# 2. HEADER & SIMPLE CONTROLS
+# 2. HEADER & CONTROLS
 # ==========================================
 st.markdown(
     "<h1 style='text-align: center; color: #38BDF8; font-weight: 900;'>🚀 VEER"
-    " PRO SIMPLE TERMINAL</h1>",
+    " PRO TRADING TERMINAL</h1>",
     unsafe_allow_html=True,
 )
 st.markdown(
     "<p style='text-align: center; color: #94A3B8; font-size: 14px; margin-bottom:"
-    " 20px;'>Aasaan Bhaasha Mein Live Market aur AI Buy/Sell Signals</p>",
+    " 20px;'>Live Market, AI Buy/Sell Signals & Risk Management</p>",
     unsafe_allow_html=True,
 )
 
@@ -176,7 +167,7 @@ else:
 tv_theme = "dark" if st.session_state["theme"] == "dark" else "light"
 
 # ==========================================
-# 4. CLEAN TRADINGVIEW CHART
+# 4. TRADINGVIEW CHART
 # ==========================================
 st.markdown("---")
 
@@ -211,9 +202,42 @@ tradingview_widget = f"""
 components.html(tradingview_widget, height=540)
 
 # ==========================================
-# 5. SIMPLE & COLORFUL AI SIGNAL PANEL
+# 5. RISK MANAGEMENT CALCULATOR
 # ==========================================
 st.markdown("---")
+st.markdown("### 🛡️ Risk Management & Position Sizer")
+
+col_r1, col_r2, col_r3 = st.columns(3)
+with col_r1:
+    account_balance = st.number_input(
+        "💵 Total Capital ($ / ₹)", value=1000.0, step=100.0
+    )
+with col_r2:
+    risk_percentage = st.slider(
+        "📉 Risk Per Trade (%)", min_value=0.5, max_value=5.0, value=1.0, step=0.5
+    )
+with col_r3:
+    leverage_val = st.selectbox(
+        "⚡ Leverage", ["1x", "5x", "10x", "20x", "50x", "100x"], index=2
+    )
+
+allowed_risk_amount = (account_balance * risk_percentage) / 100
+lev_num = int(leverage_val.replace("x", ""))
+position_size_allowed = allowed_risk_amount * lev_num
+
+st.markdown(
+    f"""
+    <div class="risk-box">
+        <p style="margin: 4px 0; font-size: 15px;">🔒 <b>Max Loss Limit (Risk Amount):</b> <span style="color: #EF4444; font-weight: bold;">${allowed_risk_amount:,.2f}</span> (Isse zyada ek trade mein loss nahi hona chahiye)</p>
+        <p style="margin: 4px 0; font-size: 15px;">📊 <b>Suggested Position Size ({leverage_val}):</b> <span style="color: #38BDF8; font-weight: bold;">${position_size_allowed:,.2f}</span></p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+# ==========================================
+# 6. AI SIGNAL & ENTRY PANEL
+# ==========================================
 st.markdown("### ⚡ AI Signal & Easy Entry Panel")
 
 run_signal = st.button("🚀 AI SIGNAL DEKHO (GENERATE)")
@@ -231,7 +255,6 @@ signal_title = (
     if is_bullish
     else "🔴 STRONG SELL SIGNAL (बेचने का सही मौका)"
 )
-signal_bg_color = "#14532D" if is_bullish else "#7F1D1D"
 signal_border = "#22C55E" if is_bullish else "#EF4444"
 market_mood = (
     "🟢 Market Upar Jane ki Taiyari Mein Hai (Bullish)"
@@ -247,7 +270,6 @@ tp2_p = base_price * 1.012 if is_bullish else base_price * 0.988
 if run_signal:
     st.toast("AI Signal Safaltapoorvak Load Ho Gaya!", icon="✨")
 
-# बिना किसी एरर के सुंदर कलरफुल कार्ड्स (Clean Streamlit & Safe HTML)
 st.markdown(
     f"""
     <div style="background-color: {card_bg}; border: 3px solid {signal_border}; padding: 20px; border-radius: 15px; margin-top: 10px;">
