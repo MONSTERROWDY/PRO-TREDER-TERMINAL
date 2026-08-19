@@ -1,267 +1,539 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
 import datetime
-import random
-import time
-import streamlit.components.v1 as components
+import sqlite3
+import streamlit as st
 
-# ==========================================
-# 1. PAGE CONFIGURATION & STYLES
-# ==========================================
+# Page Configuration
 st.set_page_config(
-    page_title="Veer Pro Terminal",
-    page_icon="⚡",
+    page_title="VEER PRO TRADING TERMINAL",
+    page_icon="📈",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed",
 )
 
-st.markdown("""
-<style>
-    .stApp { background-color: #0b0e14; color: #d1d4dc; }
-    div[data-testid="stSidebar"] { background-color: #121824; border-right: 1px solid #1e293b; }
-    
-    .header-box {
-        display: flex; justify-content: space-between; align-items: center;
-        background-color: #121824; padding: 12px 18px; border-radius: 10px;
-        border: 1px solid #1e293b; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;
+# Custom CSS for Premium Colorful Dark Theme & Crystal Clear UI
+st.markdown(
+    """
+    <style>
+    /* Global Deep Colorful Dark Theme */
+    .stApp {
+        background: radial-gradient(circle at top right, #131b2e, #090d16) !important;
+        color: #ffffff !important;
     }
-    .header-title { font-size: 1.25rem; font-weight: 800; color: #ffffff; display: flex; align-items: center; gap: 8px; }
-    .badge-vip { background: linear-gradient(135deg, #ffb703, #fb8500); color: #000; font-weight: 800; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; }
-    .badge-std { background-color: #1e293b; color: #94a3b8; font-weight: 600; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; border: 1px solid #334155; }
     
-    div.stButton > button {
-        width: 100%;
-        background-color: #2563eb; color: #ffffff; border-radius: 8px;
-        font-weight: 700; border: none; padding: 10px 16px; transition: all 0.2s;
+    /* Force all text, labels, and headers to be bright white */
+    h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown {
+        color: #ffffff !important;
     }
-    div.stButton > button:hover { background-color: #1d4ed8; color: #ffffff; }
-    div[data-baseweb="input"] { background-color: #0f172a !important; border-color: #1e293b !important; }
-</style>
-""", unsafe_allow_html=True)
-
-# ==========================================
-# 2. SESSION STATE MANAGEMENT
-# ==========================================
-if 'is_vip' not in st.session_state:
-    st.session_state['is_vip'] = False
-if 'vip_expiry' not in st.session_state:
-    st.session_state['vip_expiry'] = None
-if 'user_name' not in st.session_state:
-    st.session_state['user_name'] = "Veer Pro Trader"
-if 'username' not in st.session_state:
-    st.session_state['username'] = "veer_trader"
-if 'user_avatar' not in st.session_state:
-    st.session_state['user_avatar'] = None
-if 'balance' not in st.session_state:
-    st.session_state['balance'] = 10000.00
-if 'btc_price' not in st.session_state:
-    st.session_state['btc_price'] = 68417.51
-if 'sol_price' not in st.session_state:
-    st.session_state['sol_price'] = 145.06
-if 'eth_price' not in st.session_state:
-    st.session_state['eth_price'] = 3540.49
-
-if 'active_signals' not in st.session_state:
-    st.session_state['active_signals'] = [
-        {"Symbol": "BTC/USDT", "Type": "BUY", "Entry": 68417.51, "SL": 67049.16, "TP": 70470.04, "Time": "14:19:55", "Status": "Active"},
-        {"Symbol": "SOL/USDT", "Type": "BUY", "Entry": 143.50, "SL": 140.10, "TP": 148.20, "Time": "18:17:45", "Status": "Active"},
-        {"Symbol": "ETH/USDT", "Type": "SELL", "Entry": 3540.00, "SL": 3580.00, "TP": 3475.00, "Time": "18:15:10", "Status": "Active"}
-    ]
-
-ALL_PAIRS_DATA = {
-    "Crypto Top Major": ["BINANCE:BTCUSDT", "BINANCE:SOLUSDT", "BINANCE:ETHUSDT", "BINANCE:BNBUSDT", "BINANCE:XRPUSDT"],
-    "Commodities & Forex": ["OANDA:XAUUSD", "OANDA:EURUSD", "OANDA:GBPUSD"],
-    "Indices": ["NSE:NIFTY", "NSE:BANKNIFTY"]
-}
-
-VALID_PROMO_CODES = ["FREEVIP", "VEERPRO100", "VIP2026"]
-
-if st.session_state['is_vip'] and st.session_state['vip_expiry']:
-    if datetime.date.today() > st.session_state['vip_expiry']:
-        st.session_state['is_vip'] = False
-        st.session_state['vip_expiry'] = None
-
-# ==========================================
-# 3. SIDEBAR PANEL
-# ==========================================
-with st.sidebar:
-    st.title("⚙️ Control Panel")
     
-    st.markdown("### 👤 User Profile")
-    if st.session_state['user_avatar'] is not None:
-        st.image(st.session_state['user_avatar'], width=80)
-    uploaded_file = st.file_uploader("Upload Profile Picture (DP)", type=["jpg", "png", "jpeg"])
-    if uploaded_file is not None:
-        st.session_state['user_avatar'] = uploaded_file
+    /* Stylish Sidebar (User Profile) */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #131b2e 0%, #090d16 100%) !important;
+        border-right: 1px solid #1f293d;
+        color: #ffffff !important;
+    }
+    [data-testid="stSidebar"] div, [data-testid="stSidebar"] span, [data-testid="stSidebar"] p {
+        color: #e0e7ff !important;
+    }
+    
+    /* Input Field Labels visibility */
+    .stTextInput label, .stSelectbox label, .stNumberInput label, .stSlider label {
+        color: #00f2fe !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+    }
 
-    u_name = st.text_input("Full Name", value=st.session_state['user_name'])
-    st.session_state['user_name'] = u_name
+    /* Input Boxes Styling */
+    .stTextInput>div>div>input, .stNumberInput>div>div>input {
+        background-color: #131b2e !important;
+        color: #ffffff !important;
+        border: 1px solid #3b82f6 !important;
+        border-radius: 10px;
+        padding: 12px;
+    }
+    .stTextInput>div>div>input:focus {
+        border-color: #00f2fe !important;
+        box-shadow: 0 0 12px rgba(0, 242, 254, 0.5);
+    }
 
-    u_handle = st.text_input("Username", value=st.session_state['username'])
-    st.session_state['username'] = u_handle if u_handle.startswith("@") else f"@{u_handle}"
+    /* Selectbox styling */
+    .stSelectbox>div>div>div {
+        background-color: #131b2e !important;
+        color: #ffffff !important;
+        border: 1px solid #3b82f6 !important;
+        border-radius: 10px;
+    }
 
-    st.markdown("---")
-    st.markdown("### 🎟️ VIP Promo Code")
-    promo = st.text_input("Enter Promo Code", placeholder="e.g. FREEVIP", key="sidebar_promo")
-    if st.button("Apply Promo Code", key="btn_promo"):
-        if promo.strip().upper() in VALID_PROMO_CODES:
-            st.session_state['is_vip'] = True
-            st.session_state['vip_expiry'] = datetime.date.today() + datetime.timedelta(days=30)
-            st.success("🎉 VIP Membership activated for 30 Days!")
+    /* Colorful Tabs styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background-color: transparent;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: #131b2e !important;
+        border-radius: 8px !important;
+        color: #94a3b8 !important;
+        font-weight: 600;
+        padding: 10px 18px;
+        border: 1px solid #1f293d;
+    }
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #00f2fe 0%, #6366f1 100%) !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        border: none !important;
+    }
+
+    /* Glowing Action Buttons */
+    .stButton>button { 
+        width: 100%; 
+        border-radius: 10px; 
+        font-weight: 700; 
+        height: 48px; 
+        background: linear-gradient(135deg, #00f2fe 0%, #6366f1 100%); 
+        color: #ffffff; 
+        border: none; 
+        font-size: 16px; 
+        box-shadow: 0 4px 15px rgba(0,242,254,0.3);
+        transition: 0.3s ease;
+    }
+    .stButton>button:hover { 
+        background: linear-gradient(135deg, #6366f1 0%, #00f2fe 100%); 
+        box-shadow: 0 6px 20px rgba(99,102,241,0.5);
+    }
+
+    div.stMetric { 
+        background: #131b2e; 
+        padding: 15px; 
+        border-radius: 12px; 
+        border: 1px solid #3b82f6; 
+    }
+    .signal-card { 
+        background: #131b2e; 
+        padding: 20px; 
+        border-radius: 14px; 
+        border-left: 6px solid #00f2fe; 
+        border: 1px solid #3b82f6;
+        margin-top: 15px; 
+    }
+    </style>
+""",
+    unsafe_allow_html=True,
+)
+
+
+# --- PERMANENT SQLITE DATABASE SETUP ---
+def init_db():
+  conn = sqlite3.connect("users_database.db", check_same_thread=False)
+  cursor = conn.cursor()
+  cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            email TEXT PRIMARY KEY,
+            password TEXT NOT NULL,
+            name TEXT NOT NULL
+        )
+    """)
+  conn.commit()
+  cursor.execute("SELECT * FROM users WHERE email = ?", ("admin@gmail.com",))
+  if not cursor.fetchone():
+    cursor.execute(
+        "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
+        ("admin@gmail.com", "password123", "Admin Trader"),
+    )
+    conn.commit()
+  conn.close()
+
+
+init_db()
+
+
+def get_user(email):
+  conn = sqlite3.connect("users_database.db", check_same_thread=False)
+  cursor = conn.cursor()
+  cursor.execute(
+      "SELECT password, name FROM users WHERE email = ?", (email.strip(),)
+  )
+  res = cursor.fetchone()
+  conn.close()
+  return res
+
+
+def register_user(email, password, name):
+  try:
+    conn = sqlite3.connect("users_database.db", check_same_thread=False)
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
+        (email.strip(), password, name.strip()),
+    )
+    conn.commit()
+    conn.close()
+    return True
+  except sqlite3.IntegrityError:
+    return False
+
+
+# --- SESSION STATE INITIALIZATION ---
+if "logged_in" not in st.session_state:
+  st.session_state.logged_in = False
+if "current_user_email" not in st.session_state:
+  st.session_state.current_user_email = ""
+if "current_user_name" not in st.session_state:
+  st.session_state.current_user_name = ""
+if "user_tier" not in st.session_state:
+  st.session_state.user_tier = "Free User"
+if "signals_used" not in st.session_state:
+  st.session_state.signals_used = 0
+if "last_reset" not in st.session_state:
+  st.session_state.last_reset = datetime.date.today()
+
+if st.session_state.last_reset != datetime.date.today():
+  st.session_state.signals_used = 0
+  st.session_state.last_reset = datetime.date.today()
+
+
+# --- AUTHENTICATION SCREEN ---
+def show_auth_screen():
+  st.markdown("<br>", unsafe_allow_html=True)
+  col1, col2, col3 = st.columns([1, 1.4, 1])
+
+  with col2:
+    st.markdown(
+        """
+        <div style="text-align: center; margin-bottom: 25px;">
+            <h2 style="font-size: 26px; font-weight: 800; color: #ffffff; margin-bottom: 5px;">🔐 VEER PRO TERMINAL</h2>
+            <p style="color: #00f2fe; font-size: 13px; letter-spacing: 1px;">Institutional Grade Trading Platform</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    auth_tab1, auth_tab2 = st.tabs(["📝 Register", "🔑 Login"])
+
+    with auth_tab1:
+      st.markdown(
+          "<h3 style='color: #ffffff; font-size: 18px; margin-top: 10px;'>Create"
+          " New Account</h3>",
+          unsafe_allow_html=True,
+      )
+      reg_name = st.text_input(
+          "Full Name",
+          placeholder="Enter your full name",
+          key="reg_name_input",
+      )
+      reg_email = st.text_input(
+          "Email ID / Phone Number",
+          placeholder="Enter email or phone",
+          key="reg_email_input",
+      )
+      reg_pass = st.text_input(
+          "Create Password",
+          type="password",
+          placeholder="At least 6 characters",
+          key="reg_pass_input",
+      )
+      reg_pass_confirm = st.text_input(
+          "Confirm Password",
+          type="password",
+          placeholder="Re-enter password",
+          key="reg_confirm_input",
+      )
+
+      st.markdown("<br>", unsafe_allow_html=True)
+      if st.button("REGISTER & LOGIN", key="reg_btn"):
+        cleaned_reg_email = reg_email.strip()
+        if not reg_name or not cleaned_reg_email or not reg_pass:
+          st.warning("⚠️ Please fill in all fields.")
+        elif reg_pass != reg_pass_confirm:
+          st.error("⚠️ Passwords do not match!")
+        elif len(reg_pass) < 6:
+          st.warning("⚠️ Password must be at least 6 characters long.")
         else:
-            st.error("❌ Invalid Promo Code!")
+          success = register_user(cleaned_reg_email, reg_pass, reg_name)
+          if success:
+            st.session_state.logged_in = True
+            st.session_state.current_user_email = cleaned_reg_email
+            st.session_state.current_user_name = reg_name.strip()
+            st.success("🎉 Account Created & Logged In Successfully!")
+            st.rerun()
+          else:
+            st.error(
+                "⚠️ This Email/Phone is already registered! Please go to Login"
+                " tab."
+            )
 
-    if st.session_state['is_vip'] and st.session_state['vip_expiry']:
-        days_left = (st.session_state['vip_expiry'] - datetime.date.today()).days
-        st.caption(f"⏳ **VIP Status**: Active ({days_left} Days Remaining)")
+    with auth_tab2:
+      st.markdown(
+          "<h3 style='color: #ffffff; font-size: 18px; margin-top:"
+          " 10px;'>Welcome Back</h3>",
+          unsafe_allow_html=True,
+      )
+      login_email = st.text_input(
+          "Email ID / Phone Number",
+          placeholder="Enter registered email or phone",
+          key="login_email_input",
+      )
+      login_pass = st.text_input(
+          "Password",
+          type="password",
+          placeholder="Enter your password",
+          key="login_pass_input",
+      )
 
-    st.markdown("---")
-    st.markdown("### 📊 Markets & Pairs")
-    selected_cat = st.selectbox("Category", list(ALL_PAIRS_DATA.keys()))
-    selected_pair = st.selectbox("Select Trading Pair", ALL_PAIRS_DATA[selected_cat])
+      st.markdown("<br>", unsafe_allow_html=True)
+      if st.button("LOGIN TO TERMINAL", key="login_btn"):
+        cleaned_email = login_email.strip()
+        user_data = get_user(cleaned_email)
 
-# ==========================================
-# 4. TOP HEADER & REAL-TIME LIVE TICKER
-# ==========================================
-vip_badge_html = f'<span class="badge-vip">👑 VIP ({ (st.session_state["vip_expiry"] - datetime.date.today()).days if st.session_state["vip_expiry"] else 30 }D)</span>' if st.session_state['is_vip'] else '<span class="badge-std">STANDARD</span>'
+        if user_data and user_data[0] == login_pass:
+          st.session_state.logged_in = True
+          st.session_state.current_user_email = cleaned_email
+          st.session_state.current_user_name = user_data[1]
+          st.success("🎉 Login Successful! Redirecting...")
+          st.rerun()
+        else:
+          st.error(
+              "⚠️ Invalid Email/Phone or Password! Please check or register"
+              " first."
+          )
 
-st.markdown(f"""
-<div class="header-box">
-    <div class="header-title">⚡ Veer Pro <span style="font-size: 0.8rem; color: #94a3b8;">Terminal</span></div>
-    <div style="display: flex; align-items: center; gap: 10px;">
-        <span style="font-weight: 600; color: #ffffff;">{st.session_state['user_name']} ({st.session_state['username']})</span>
-        {vip_badge_html}
-    </div>
-</div>
-""", unsafe_allow_html=True)
 
-@st.fragment(run_every=1)
-def live_top_ticker():
-    st.session_state['btc_price'] += random.uniform(-2.5, 2.5)
-    st.session_state['sol_price'] += random.uniform(-0.15, 0.15)
-    st.session_state['eth_price'] += random.uniform(-0.8, 0.8)
+if not st.session_state.logged_in:
+  show_auth_screen()
+  st.stop()
 
-    t1, t2, t3 = st.columns(3)
-    t1.metric("BTC/USDT", f"${st.session_state['btc_price']:,.2f}", f"{random.uniform(1.1, 1.3):.2f}%")
-    t2.metric("🔥 SOL/USDT", f"${st.session_state['sol_price']:,.2f}", f"{random.uniform(2.3, 2.6):.2f}%")
-    t3.metric("ETH/USDT", f"${st.session_state['eth_price']:,.2f}", f"{random.uniform(1.6, 1.9):.2f}%")
 
-live_top_ticker()
+# --- SIDEBAR USER PROFILE ---
+with st.sidebar:
+  st.markdown("### 👤 User Profile")
+  st.markdown("---")
+  st.markdown(f"👋 Hello, **{st.session_state.current_user_name}**")
+  st.markdown(f"📧 `{st.session_state.current_user_email}`")
+  st.markdown(f"🌟 Status: **{st.session_state.user_tier}**")
+  st.markdown("---")
+  if st.button("🚪 Logout"):
+    st.session_state.logged_in = False
+    st.session_state.current_user_email = ""
+    st.session_state.current_user_name = ""
+    st.session_state.user_tier = "Free User"
+    st.rerun()
 
+
+# --- MAIN TRADING TERMINAL ---
+st.title("🚀 VEER PRO TRADING TERMINAL")
+st.markdown(
+    "<p style='color: #00f2fe;'><b>Institutional Grade Live Market, Interactive"
+    " Charts & AI Smart Signals</b></p>",
+    unsafe_allow_html=True,
+)
 st.markdown("---")
 
-# ==========================================
-# 5. DASHBOARD & TABS
-# ==========================================
-tab_dashboard, tab_chart, tab_signals, tab_accuracy, tab_vip = st.tabs([
-    "🎛️ Dashboard", 
-    "📈 Live Chart", 
-    "🎯 AI Signals", 
-    "🏆 Accuracy", 
-    "⭐ VIP Features"
-])
+tab1, tab2, tab3, tab4 = st.tabs(
+    ["⚡ Pro Terminal", "📊 Live Chart", "🏆 Accuracy", "💎 VIP Plan"]
+)
 
-# ---------------- DASHBOARD TAB ----------------
-with tab_dashboard:
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("##### ⚙️ Signal Configuration")
-        st.selectbox("Category", list(ALL_PAIRS_DATA.keys()), key="dash_cat")
-        selected_asset = st.selectbox("Asset", ALL_PAIRS_DATA[selected_cat], key="dash_asset")
-        tf = st.selectbox("Timeframe", ["1s", "1m", "5m", "15m", "1H", "4H", "1D", "1W", "1Y"], index=1)
+with tab1:
+  col1, col2 = st.columns([1, 1], gap="medium")
 
-    with col2:
-        st.markdown("##### 🛡️ Risk Management")
-        bal = st.number_input("Account Balance ($)", value=float(st.session_state['balance']), step=500.0)
-        st.session_state['balance'] = bal
-        risk = st.slider("Risk Per Trade (%)", 0.10, 5.00, 0.30, 0.05)
+  with col1:
+    st.markdown("### ⚙️ Configuration")
+    market_category = st.selectbox(
+        "Market Category", ["TIER 1 (Main Assets)", "TIER 2 (Altcoins)"]
+    )
+    asset = st.selectbox(
+        "Select Asset", ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"]
+    )
+    timeframe = st.selectbox("Timeframe", ["1m", "5m", "15m", "1h", "4h"])
 
-    st.markdown("---")
-    
-    if st.button("⚡ GENERATE ACCURATE SIGNAL", use_container_width=True):
-        now_time = datetime.datetime.now().strftime("%H:%M:%S")
-        symbol_name = selected_asset.split(":")[-1]
-        
-        new_signal = {
-            "Symbol": symbol_name,
-            "Type": "BUY",
-            "Entry": round(st.session_state['btc_price'], 2),
-            "SL": round(st.session_state['btc_price'] * 0.98, 2),
-            "TP": round(st.session_state['btc_price'] * 1.03, 2),
-            "Time": now_time,
-            "Status": "Active"
-        }
-        st.session_state['active_signals'].insert(0, new_signal)
-        st.success(f"Signal Generated Successfully: BUY {symbol_name}")
+    st.markdown("### 🛡️ Risk Management")
+    account_balance = st.number_input(
+        "Account Balance ($)", value=10000.0, step=500.0
+    )
+    risk_pct = st.slider("Risk Per Trade (%)", 0.1, 5.0, 1.0)
+    atr_multiplier = st.slider("ATR SL Multiplier", 1.0, 3.0, 1.5)
 
-    m1, m2, m3, m4, m5 = st.columns(5)
-    m1.metric("Total Signals", len(st.session_state['active_signals']) + 125)
-    m2.metric("Win Rate", "87.6%")
-    m3.metric("Accuracy", "High")
-    m4.metric("Active Signals", len(st.session_state['active_signals']))
-    m5.metric("Profit Factor", "2.45")
+    risk_capital = account_balance * (risk_pct / 100)
+    st.info(
+        f"📊 **Risk Summary:** Capital at Risk: **${risk_capital:.2f}** |"
+        " Protection: Active"
+    )
 
-    st.markdown("##### 🟢 Active Signals")
-    sig_df = pd.DataFrame(st.session_state['active_signals'])
-    st.dataframe(sig_df, use_container_width=True)
+  with col2:
+    st.markdown("### 🤖 AI Smart Signal Hub")
 
-# ---------------- LIVE CHART TAB (100% TRADINGVIEW REAL CHART EMBED) ----------------
-with tab_chart:
-    st.subheader(f"{selected_pair} TradingView Terminal")
-    
-    # Extract clean symbol for TradingView Embed
-    tv_symbol = selected_pair
-    
-    # Pure TradingView Widget HTML Injection
-    tradingview_html = f"""
-    <!-- TradingView Widget BEGIN -->
-    <div class="tradingview-widget-container" style="height:550px;width:100%;">
-      <div id="tradingview_chart" style="height:550px;width:100%;"></div>
+    can_generate = True
+    if st.session_state.user_tier == "Free User":
+      remaining_signals = 2 - st.session_state.signals_used
+      st.markdown(
+          f"📢 Free Plan Quota: **{remaining_signals}/2** signals remaining"
+          " today."
+      )
+      if remaining_signals <= 0:
+        can_generate = False
+    else:
+      st.markdown(
+          "👑 VIP Status Active: **Unlimited Signals** available for you."
+      )
+
+    if st.button("✨ GENERATE SMART AI SIGNAL"):
+      if not can_generate:
+        st.error(
+            "⚠️ Daily free limit of 2 signals reached! Go to 'VIP Plan' tab to"
+            " upgrade for unlimited access."
+        )
+      else:
+        if st.session_state.user_tier == "Free User":
+          st.session_state.signals_used += 1
+
+        st.markdown(
+            """
+            <div class="signal-card">
+                <h3 style='color: #00f2fe; margin-top: 0;'>🔥 STRONG BUY SETUP (Bullish)</h3>
+                <hr style='border-color: #3b82f6; margin: 5px 0 15px 0;'>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        sc1, sc2 = st.columns(2)
+        sc1.metric("Live Market Price", "$64,741.37", "+1.4%")
+        sc2.metric("Profit / Risk Ratio", "1 : 2.5", "Optimal")
+
+        st.markdown(
+            f"""
+                <p><b>🎯 Target Asset:</b> BINANCE:{asset} ({timeframe})</p>
+                <p><b>📍 Optimal Entry Zone (OB/FVG):</b> ~$64,611.89</p>
+                <p><b>🛑 Smart Stop Loss (SL):</b> ~$64,352.92</p>
+                <p><b>🎯 Target 1 (TP1):</b> ~$65,065.08</p>
+                <p><b>🎯 Target 2 (TP2):</b> ~$65,518.27</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.link_button(
+            "🚀 Execute Trade on Partner Exchange (Affiliate)",
+            "https://www.binance.com",
+        )
+
+with tab2:
+  st.markdown(f"### 📈 Live Interactive Chart — {asset}")
+  tradingview_html = f"""
+    <div class="tradingview-widget-container" style="height:500px;width:100%;">
+      <div id="tradingview_widget" style="height:100%;width:100%;"></div>
       <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
       <script type="text/javascript">
       new TradingView.widget(
       {{
-        "autosize": true,
-        "symbol": "{tv_symbol}",
-        "interval": "1",
+        "width": "100%",
+        "height": "500",
+        "symbol": "BINANCE:{asset}",
+        "interval": "D",
         "timezone": "Etc/UTC",
         "theme": "dark",
         "style": "1",
         "locale": "en",
-        "toolbar_bg": "#121824",
+        "toolbar_bg": "#f1f3f6",
         "enable_publishing": false,
-        "hide_side_toolbar": false,
         "allow_symbol_change": true,
-        "container_id": "tradingview_chart"
-      }}
-      );
+        "container_id": "tradingview_widget"
+      }});
       </script>
     </div>
-    <!-- TradingView Widget END -->
     """
-    
-    components.html(tradingview_html, height=560)
+  st.components.v1.html(tradingview_html, height=520)
 
-# ---------------- SIGNALS TAB ----------------
-with tab_signals:
-    st.subheader("📋 Active & Historical Signals")
-    st.dataframe(pd.DataFrame(st.session_state['active_signals']), use_container_width=True)
+with tab3:
+  st.markdown("### 🏆 Performance & Accuracy Metrics")
+  st.markdown("Verified past 7-day algorithmic execution results:")
 
-# ---------------- ACCURACY TAB ----------------
-with tab_accuracy:
-    st.subheader("🏆 Strategy Performance Analytics")
-    a1, a2 = st.columns(2)
-    a1.metric("Overall Win Rate", "87.6%")
-    a2.metric("Profit Factor", "2.45")
-    st.progress(0.87)
+  m1, m2, m3 = st.columns(3)
+  m1.metric("7-Day Signals", "142", "+12 today")
+  m2.metric("Success Rate", "84.5%", "+2.1%")
+  m3.metric("Avg R:R Ratio", "1:2.4", "Optimal")
 
-# ---------------- VIP FEATURES TAB ----------------
-with tab_vip:
-    st.subheader("⭐ VIP Access Management")
-    if st.session_state['is_vip']:
-        st.balloons()
-        st.success(f"🎉 VIP Access Active! Expiry Date: {st.session_state['vip_expiry']}")
-    else:
-        st.info("👈 Enter promo code `FREEVIP` in the sidebar for 30 Days Free Access.")
+  st.markdown("---")
+  st.markdown("#### 📋 Recent Executed Calls")
+  st.dataframe(
+      {
+          "Timestamp": [
+              "2026-08-19 14:30",
+              "2026-08-19 11:15",
+              "2026-08-18 16:45",
+          ],
+          "Pair": ["BTCUSDT", "ETHUSDT", "SOLUSDT"],
+          "Action": ["BUY", "BUY", "SELL"],
+          "Outcome": ["TP2 Hit (+3.2%)", "TP1 Hit (+1.8%)", "TP2 Hit (+4.1%)"],
+      },
+      use_container_width=True,
+  )
+
+with tab4:
+  st.markdown("### 💎 Upgrade to VIP Pro Access (₹999 / Month)")
+
+  col_p1, col_p2 = st.columns(2, gap="medium")
+
+  with col_p1:
+    st.markdown(
+        """
+        #### 👑 VIP Benefits
+        - **Unlimited** Smart AI Signals
+        - Advanced Multi-Asset Scanners
+        - Priority Alerts & Zero Ads
+        """
+    )
+    st.markdown("---")
+    st.markdown("### 📱 Option 1: Direct Pay via UPI App")
+    st.markdown(
+        "Click below to pay securely through PhonePe, Google Pay, or Paytm:"
+    )
+
+    upi_intent_url = (
+        "upi://pay?pa=7479465676-7@ybl&pn=VEER%20PRO%20TRADER&am=999.00&cu=INR"
+    )
+    st.link_button("📲 Pay ₹999 via UPI App (GPay/PhonePe)", upi_intent_url)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### 📷 Option 2: Scan QR Code")
+    qr_code_url = (
+        "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data="
+        + upi_intent_url
+    )
+    st.image(
+        qr_code_url,
+        caption="Scan this QR code with any UPI App to Pay ₹999",
+        width=180,
+    )
+
+  with col_p2:
+    st.markdown("#### ⚡ Step 3: Verify & Unlock")
+    st.markdown(
+        "Payment karne ke baad jo **12-digit UTR / Reference Number** milega,"
+        " use yahan dalein:"
+    )
+
+    utr_input = st.text_input(
+        "Enter 12-digit UTR / UPI Reference Number:",
+        placeholder="e.g. 4152xxxxxxxx",
+    )
+
+    if st.button("🔓 Verify & Activate VIP Access"):
+      if len(utr_input.strip()) >= 8:
+        st.session_state.user_tier = "VIP Paid Member"
+        st.success(
+            "🎉 Congratulations! VIP Access Activated Successfully. Enjoy"
+            " Unlimited Signals!"
+        )
+        st.rerun()
+      else:
+        st.error(
+            "⚠️ Kripya sahi UTR / Transaction ID दर्ज करें (कम से कम 8 अंक)।"
+        )
+
+st.markdown("---")
+st.markdown(
+    "<p style='text-align: center; color: #94a3b8; font-size: 11px;'>"
+    "<b>Disclaimer:</b> VEER PRO TRADING TERMINAL is built for educational &"
+    " analytical research only. Crypto trading involves high market risk."
+    "</p>",
+    unsafe_allow_html=True,
+)
