@@ -138,7 +138,8 @@ def init_db():
         CREATE TABLE IF NOT EXISTS promo_codes (
             code TEXT PRIMARY KEY,
             duration_type TEXT,
-            is_used INTEGER DEFAULT 0
+            is_used INTEGER DEFAULT 0,
+            used_by TEXT DEFAULT NULL
         )
     """)
   conn.commit()
@@ -174,7 +175,7 @@ def init_db():
     cursor.execute("SELECT * FROM promo_codes WHERE code = ?", (code,))
     if not cursor.fetchone():
       cursor.execute(
-          "INSERT INTO promo_codes (code, duration_type) VALUES (?, ?)",
+          "INSERT INTO promo_codes (code, duration_type, is_used) VALUES (?, ?, 0)",
           (code, dtype),
       )
       conn.commit()
@@ -231,10 +232,9 @@ def update_user_profile(email, name, username, avatar):
   conn.close()
 
 
-# --- COMPREHENSIVE LIVE MARKET PRICES (CRYPTO, FOREX, STOCKS, COMMODITIES) ---
+# --- COMPREHENSIVE LIVE MARKET PRICES ---
 def fetch_global_prices():
   try:
-    # Fetching major crypto prices from Binance Public API
     url = "https://api.binance.com/api/v3/ticker/24hr?symbols=[%22BTCUSDT%22,%22ETHUSDT%22,%22SOLUSDT%22,%22BNBUSDT%22,%22XRPUSDT%22,%22ADAUSDT%22,%22DOGEUSDT%22]"
     response = requests.get(url, timeout=2).json()
     prices = {}
@@ -243,7 +243,6 @@ def fetch_global_prices():
           "price": float(item["lastPrice"]),
           "change": float(item["priceChangePercent"]),
       }
-    # Adding global asset benchmarks (Forex, Indices, Commodities) with reliable fallback / simulated live ticks
     prices.update({
         "EURUSD": {"price": 1.0924, "change": 0.15},
         "GBPUSD": {"price": 1.3012, "change": -0.22},
@@ -422,12 +421,13 @@ with st.sidebar:
         st.rerun()
 
   st.markdown("---")
-  st.markdown("### 👑 Premium Subscription")
+  st.markdown("### 👑 Premium Subscription (Promo Code)")
 
-  promo_input = st.text_input("Enter Promo Code", key="sidebar_promo")
+  promo_input = st.text_input("Enter One-Time Promo Code", key="sidebar_promo")
   if st.button("Redeem Code"):
     conn = get_db_connection()
     cursor = conn.cursor()
+    # Check if code is valid and unused
     cursor.execute(
         "SELECT duration_type FROM promo_codes WHERE code = ? AND is_used = 0",
         (promo_input.strip().upper(),),
@@ -436,23 +436,31 @@ with st.sidebar:
     if p_data:
       duration = p_data[0]
       new_tier = f"Premium Member ({duration})"
+      # Update user tier
       cursor.execute(
           "UPDATE users SET tier = ? WHERE email = ?",
           (new_tier, st.session_state.current_user_email),
       )
+      # Mark code as permanently used by this specific user so it can never be reused
       cursor.execute(
-          "UPDATE promo_codes SET is_used = 1 WHERE code = ?",
-          (promo_input.strip().upper(),),
+          "UPDATE promo_codes SET is_used = 1, used_by = ? WHERE code = ?",
+          (st.session_state.current_user_email, promo_input.strip().upper()),
       )
       conn.commit()
       st.session_state.user_tier = new_tier
-      st.success(f"Success! Premium Activated ({duration}).")
+      st.success(
+          f"Success! Code redeemed. Premium Activated ({duration}) for"
+          " single-use."
+      )
       st.rerun()
     else:
-      st.error("Invalid or already used code.")
+      st.error(
+          "Invalid code, or this promo code has already been used by someone"
+          " else!"
+      )
     conn.close()
 
-  # --- ADMIN PANEL (FIXED & FULLY FUNCTIONAL) ---
+  # --- ADMIN PANEL (SINGLE-USE CODE MANAGEMENT) ---
   if st.session_state.current_user_email == "admin@gmail.com":
     st.markdown("---")
     st.markdown("### 🛠️ Admin Control Panel")
@@ -460,37 +468,62 @@ with st.sidebar:
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT code, duration_type FROM promo_codes WHERE is_used = 0"
+        "SELECT code, duration_type, used_by FROM promo_codes WHERE is_used = 0"
     )
     active_codes = cursor.fetchall()
+    cursor.execute(
+        "SELECT code, duration_type, used_by FROM promo_codes WHERE is_used = 1"
+    )
+    used_codes = cursor.fetchall()
     conn.close()
 
-    with st.expander("👁️ View Active Promo Codes"):
+    with st.expander("👁️ Active (Unused) Codes"):
       if active_codes:
-        st.table(pd.DataFrame(active_codes, columns=["Code", "Duration"]))
+        st.table(
+            pd.DataFrame(
+                active_codes, columns=["Code", "Duration", "Used By"]
+            )
+        )
       else:
         st.write("No active codes.")
 
-    gen_code = st.text_input("New Custom Promo Code", key="sidebar_gen_c")
+    with st.expander("🔒 Used Codes History"):
+      if used_codes:
+        st.table(
+            pd.DataFrame(used_codes, columns=["Code", "Duration", "Used By"])
+        )
+      else:
+        st.write("No codes used yet.")
+
+    gen_code = st.text_input(
+        "Generate Single-Use Code", key="sidebar_gen_c"
+    )
     dur_type = st.selectbox(
         "Duration",
         ["3 Days", "30 Days", "1 Year", "Lifetime Unlimited"],
         key="sidebar_dur",
     )
-    if st.button("Generate Code"):
-      try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO promo_codes (code, duration_type) VALUES (?, ?)",
-            (gen_code.strip().upper(), dur_type),
-        )
-        conn.commit()
-        conn.close()
-        st.success(f"Created code: '{gen_code.upper()}'")
-        st.rerun()
-      except:
-        st.error("Code already exists!")
+    if st.button("Create Single-Use Code"):
+      if gen_code.strip():
+        try:
+          conn = get_db_connection()
+          cursor = conn.cursor()
+          cursor.execute(
+              "INSERT INTO promo_codes (code, duration_type, is_used) VALUES"
+              " (?, ?, 0)",
+              (gen_code.strip().upper(), dur_type),
+          )
+          conn.commit()
+          conn.close()
+          st.success(
+              f"Single-use code created: '{gen_code.upper()}' (Valid for 1"
+              " person only)"
+          )
+          st.rerun()
+        except:
+          st.error("Code already exists!")
+      else:
+        st.warning("Please enter a valid code name.")
 
   st.markdown("---")
   if st.button("🚪 Sign Out", key="logout_btn"):
@@ -572,7 +605,6 @@ with tab_dash:
         key="cat_sel",
     )
 
-    # Dynamic asset lists mapping
     if market_category == "Crypto":
       asset_options = [
           "BINANCE:BTCUSDT",
@@ -823,7 +855,8 @@ with tab_signals:
     st.info(f"Free Plan Quota: {rem}/2 Signals Remaining Today")
   else:
     st.success(
-        "👑 Global Multi-Concept Neural Network Active — **99.8% Win Rate Precision Model (0% Loss Shield)**"
+        "👑 Global Multi-Concept Neural Network Active — **99.8% Win Rate"
+        " Precision Model (0% Loss Shield)**"
     )
 
   if st.button("🚀 GENERATE 0% LOSS AI SIGNAL & ENTRY", key="gen_sig_btn"):
@@ -839,10 +872,15 @@ with tab_signals:
       if "Premium" not in st.session_state.user_tier:
         st.session_state.signals_used += 1
 
-      # Dynamic calculation of dummy entry based on asset selected
       raw_sym = selected_asset.split(" ")[0]
-      base_p = market_prices.get(raw_sym.replace("BINANCE:", "").replace("FX:", "").replace("NASDAQ:", "").replace("NSE:", ""), {"price": 1000.0})["price"]
-      
+      base_p = market_prices.get(
+          raw_sym.replace("BINANCE:", "")
+          .replace("FX:", "")
+          .replace("NASDAQ:", "")
+          .replace("NSE:", ""),
+          {"price": 1000.0},
+      )["price"]
+
       entry_val = base_p
       sl_val = round(base_p * 0.985, 2)
       tp1_val = round(base_p * 1.025, 2)
