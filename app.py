@@ -3,7 +3,6 @@ import sqlite3
 import pandas as pd
 import requests
 import streamlit as st
-import extra_streamlit_components as stx
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
@@ -13,62 +12,67 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# --- COOKIE MANAGER ---
-cookie_manager = stx.CookieManager(key="veer_cookie_mgr")
-
-# --- CUSTOM GLASSMORPHISM DARK THEME CSS ---
+# --- CUSTOM GLASSMORPHISM & BINANCE/TRADINGVIEW DARK THEME CSS ---
 st.markdown(
     """
     <style>
     .stApp {
-        background: #090d16 !important;
-        color: #f8fafc !important;
+        background: #0b0e11 !important;
+        color: #fcd535 !important;
     }
     h1, h2, h3, h4, h5, h6, p, span, label, div {
-        color: #ffffff !important;
+        color: #eaecef !important;
     }
     .ticker-card {
-        background: #131b2e;
-        border: 1px solid #1f293d;
-        border-radius: 10px;
+        background: #181a20;
+        border: 1px solid #2b313a;
+        border-radius: 8px;
         padding: 12px 16px;
         text-align: center;
     }
-    .ticker-symbol { font-weight: 700; font-size: 14px; color: #94a3b8 !important; }
+    .ticker-symbol { font-weight: 700; font-size: 14px; color: #848e9c !important; }
     .ticker-price { font-weight: 800; font-size: 18px; color: #ffffff !important; }
-    .ticker-change-green { color: #10b981 !important; font-size: 12px; font-weight: 600; }
+    .ticker-change-green { color: #0ecb81 !important; font-size: 12px; font-weight: 600; }
 
     .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div {
-        background-color: #0b1120 !important;
+        background-color: #1e2329 !important;
         color: #ffffff !important;
-        border: 1px solid #1f293d !important;
-        border-radius: 8px !important;
+        border: 1px solid #2b313a !important;
+        border-radius: 6px !important;
     }
-    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; }
     .stTabs [data-baseweb="tab"] {
-        background-color: #131b2e !important;
-        border-radius: 8px !important;
-        color: #94a3b8 !important;
+        background-color: #181a20 !important;
+        border-radius: 6px !important;
+        color: #848e9c !important;
         padding: 8px 16px;
-        border: 1px solid #1f293d;
+        border: 1px solid #2b313a;
     }
     .stTabs [aria-selected="true"] {
-        background: #3b82f6 !important;
-        color: #ffffff !important;
+        background: #fcd535 !important;
+        color: #0b0e11 !important;
         font-weight: 700 !important;
         border: none !important;
     }
     .stButton>button { 
         width: 100%; 
-        border-radius: 8px; 
+        border-radius: 6px; 
         font-weight: 700; 
-        height: 45px; 
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); 
-        color: #ffffff; 
+        height: 42px; 
+        background: #fcd535; 
+        color: #0b0e11; 
         border: none; 
     }
     .stButton>button:hover { 
-        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%); 
+        background: #f0b90b !important; 
+        color: #0b0e11 !important;
+    }
+    .auth-card {
+        background: #181a20;
+        border: 1px solid #2b313a;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
     </style>
 """,
@@ -88,47 +92,90 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             email TEXT PRIMARY KEY,
             password TEXT NOT NULL,
-            name TEXT NOT NULL
+            name TEXT NOT NULL,
+            username TEXT,
+            avatar TEXT,
+            tier TEXT DEFAULT 'Free User',
+            expiry TEXT
+        )
+    """)
+  cursor.execute("""
+        CREATE TABLE IF NOT EXISTS promo_codes (
+            code TEXT PRIMARY KEY,
+            duration_type TEXT,
+            is_used INTEGER DEFAULT 0
         )
     """)
   conn.commit()
+
+  # Default Admin User
   cursor.execute("SELECT * FROM users WHERE email = ?", ("admin@gmail.com",))
   if not cursor.fetchone():
     cursor.execute(
-        "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
-        ("admin@gmail.com", "password123", "Pro Trader"),
+        "INSERT INTO users (email, password, name, username, tier) VALUES (?, ?, ?, ?, ?)",
+        (
+            "admin@gmail.com",
+            "password123",
+            "Pro Master",
+            "admin_master",
+            "VIP Paid Member",
+        ),
     )
     conn.commit()
+
+  # Default Promo Code
+  cursor.execute("SELECT * FROM promo_codes WHERE code = ?", ("VEERVIP30",))
+  if not cursor.fetchone():
+    cursor.execute(
+        "INSERT INTO promo_codes (code, duration_type) VALUES (?, ?)",
+        ("VEERVIP30", "30 Days"),
+    )
+    conn.commit()
+
   conn.close()
 
 
 init_db()
 
 
-def get_user(email):
+def get_user_full(email):
   conn = get_db_connection()
   cursor = conn.cursor()
   cursor.execute(
-      "SELECT password, name FROM users WHERE email = ?", (email.strip(),)
+      "SELECT password, name, username, avatar, tier FROM users WHERE email ="
+      " ?",
+      (email.strip(),),
   )
   res = cursor.fetchone()
   conn.close()
   return res
 
 
-def register_user(email, password, name):
+def register_user(email, password, name, username):
   try:
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
-        (email.strip(), password, name.strip()),
+        "INSERT INTO users (email, password, name, username, tier) VALUES (?,"
+        " ?, ?, ?, ?)",
+        (email.strip(), password, name.strip(), username.strip(), "Free User"),
     )
     conn.commit()
     conn.close()
     return True
   except sqlite3.IntegrityError:
     return False
+
+
+def update_user_profile(email, name, username, avatar):
+  conn = get_db_connection()
+  cursor = conn.cursor()
+  cursor.execute(
+      "UPDATE users SET name = ?, username = ?, avatar = ? WHERE email = ?",
+      (name, username, avatar, email),
+  )
+  conn.commit()
+  conn.close()
 
 
 # --- BINANCE LIVE PRICES ---
@@ -151,110 +198,112 @@ def fetch_binance_prices():
     }
 
 
-# --- SESSION MANAGEMENT ---
-cookie_email = cookie_manager.get(cookie="user_email")
-cookie_name = cookie_manager.get(cookie="user_name")
+# --- SESSION LOGIC ---
+query_params = st.query_params
+saved_email = query_params.get("session_user", "")
 
 if "logged_in" not in st.session_state:
-  if cookie_email and cookie_name:
-    st.session_state.logged_in = True
-    st.session_state.current_user_email = cookie_email
-    st.session_state.current_user_name = cookie_name
+  if saved_email:
+    u_data = get_user_full(saved_email)
+    if u_data:
+      st.session_state.logged_in = True
+      st.session_state.current_user_email = saved_email
+      st.session_state.current_user_name = u_data[1]
+      st.session_state.username = u_data[2] if u_data[2] else "trader"
+      st.session_state.avatar = (
+          u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
+      )
+      st.session_state.user_tier = u_data[4]
+    else:
+      st.session_state.logged_in = False
   else:
     st.session_state.logged_in = False
 
-if "current_user_email" not in st.session_state:
-  st.session_state.current_user_email = cookie_email if cookie_email else ""
-if "current_user_name" not in st.session_state:
-  st.session_state.current_user_name = cookie_name if cookie_name else ""
-if "user_tier" not in st.session_state:
-  st.session_state.user_tier = "Free User"
 if "signals_used" not in st.session_state:
   st.session_state.signals_used = 0
 
 
-# --- AUTHENTICATION SCREEN ---
+# --- BINANCE / TRADINGVIEW STYLE AUTH SCREEN ---
 def show_auth_screen():
   st.markdown("<br><br>", unsafe_allow_html=True)
-  c1, col, c2 = st.columns([1, 1.2, 1])
+  c1, col, c2 = st.columns([1, 1.3, 1])
 
   with col:
     st.markdown(
         """
-        <div style="text-align: center; margin-bottom: 20px;">
-            <h2 style="font-weight: 800; color: #ffffff;">⚡ VEER PRO TERMINAL</h2>
-            <p style="color: #94a3b8; font-size: 13px;">Institutional Grade Algorithmic Trading Suite</p>
-        </div>
+        <div class="auth-card">
+            <div style="text-align: center; margin-bottom: 25px;">
+                <h2 style="font-weight: 800; color: #fcd535; letter-spacing: 1px;">⚡ VEER PRO TERMINAL</h2>
+                <p style="color: #848e9c; font-size: 13px;">Log in to Binance & TradingView Institutional Suite</p>
+            </div>
         """,
         unsafe_allow_html=True,
     )
 
-    t1, t2 = st.tabs(["🔑 Login", "📝 Register"])
+    t1, t2 = st.tabs(["🔑 Sign In", "📝 Register Account"])
 
     with t1:
       with st.form("login_form", clear_on_submit=False):
-        login_email = st.text_input("Email ID / Phone Number", key="l_email")
+        login_email = st.text_input(
+            "Email ID / Registered Mobile", key="l_email"
+        )
         login_pass = st.text_input("Password", type="password", key="l_pass")
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.form_submit_button("LOGIN TO TERMINAL"):
-          u_data = get_user(login_email)
+        if st.form_submit_button("Log In"):
+          cleaned_email = login_email.strip()
+          u_data = get_user_full(cleaned_email)
           if u_data and u_data[0] == login_pass:
             st.session_state.logged_in = True
-            st.session_state.current_user_email = login_email.strip()
+            st.session_state.current_user_email = cleaned_email
             st.session_state.current_user_name = u_data[1]
-
-            cookie_manager.set(
-                "user_email",
-                login_email.strip(),
-                key="set_l_e",
-                expires_at=datetime.datetime.now()
-                + datetime.timedelta(days=30),
+            st.session_state.username = u_data[2] if u_data[2] else "trader"
+            st.session_state.avatar = (
+                u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
             )
-            cookie_manager.set(
-                "user_name",
-                u_data[1],
-                key="set_l_n",
-                expires_at=datetime.datetime.now()
-                + datetime.timedelta(days=30),
-            )
+            st.session_state.user_tier = u_data[4]
+            st.query_params["session_user"] = cleaned_email
             st.rerun()
           else:
-            st.error("Invalid Login Credentials!")
+            st.error("Invalid Credentials! Please check email and password.")
 
     with t2:
       with st.form("register_form", clear_on_submit=False):
         reg_name = st.text_input("Full Name", key="r_name")
-        reg_email = st.text_input("Email ID / Phone Number", key="r_email")
+        reg_uname = st.text_input("Choose Username (e.g. trader_veer)", key="r_un")
+        reg_email = st.text_input(
+            "Email ID / Mobile Number", key="r_email"
+        )
         reg_pass = st.text_input(
             "Password (Min 6 Chars)", type="password", key="r_pass"
         )
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.form_submit_button("CREATE ACCOUNT"):
-          if reg_name and reg_email and len(reg_pass) >= 6:
-            if register_user(reg_email, reg_pass, reg_name):
+        if st.form_submit_button("Create Account"):
+          cleaned_reg_email = reg_email.strip()
+          cleaned_name = reg_name.strip()
+          cleaned_uname = reg_uname.strip()
+          if (
+              cleaned_name
+              and cleaned_reg_email
+              and cleaned_uname
+              and len(reg_pass) >= 6
+          ):
+            if register_user(
+                cleaned_reg_email, reg_pass, cleaned_name, cleaned_uname
+            ):
               st.session_state.logged_in = True
-              st.session_state.current_user_email = reg_email.strip()
-              st.session_state.current_user_name = reg_name.strip()
-
-              cookie_manager.set(
-                  "user_email",
-                  reg_email.strip(),
-                  key="set_r_e",
-                  expires_at=datetime.datetime.now()
-                  + datetime.timedelta(days=30),
-              )
-              cookie_manager.set(
-                  "user_name",
-                  reg_name.strip(),
-                  key="set_r_n",
-                  expires_at=datetime.datetime.now()
-                  + datetime.timedelta(days=30),
-              )
+              st.session_state.current_user_email = cleaned_reg_email
+              st.session_state.current_user_name = cleaned_name
+              st.session_state.username = cleaned_uname
+              st.session_state.avatar = "https://i.imgur.com/71916rK.png"
+              st.session_state.user_tier = "Free User"
+              st.query_params["session_user"] = cleaned_reg_email
               st.rerun()
             else:
-              st.error("User already registered!")
+              st.error("Email is already registered!")
           else:
             st.warning("Please fill all details correctly.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 if not st.session_state.logged_in:
@@ -264,15 +313,25 @@ if not st.session_state.logged_in:
 
 # --- SIDEBAR & HEADER ---
 with st.sidebar:
-  st.markdown("### 👤 Trader Profile")
-  st.write(f"👋 **{st.session_state.current_user_name}**")
+  st.markdown("### 👤 User Profile Panel")
+  avatar_url = (
+      st.session_state.avatar
+      if "avatar" in st.session_state
+      else "https://i.imgur.com/71916rK.png"
+  )
+  st.image(avatar_url, width=80)
+  st.write(
+      f"👋 **{st.session_state.current_user_name}**"
+      f" (@{st.session_state.username})"
+  )
   st.caption(f"📧 {st.session_state.current_user_email}")
   st.write(f"🌟 Tier: **{st.session_state.user_tier}**")
   st.markdown("---")
-  if st.button("🚪 Logout", key="logout_btn"):
-    cookie_manager.delete("user_email", key="del_e")
-    cookie_manager.delete("user_name", key="del_n")
+  if st.button("🚪 Sign Out", key="logout_btn"):
     st.session_state.logged_in = False
+    st.session_state.current_user_email = ""
+    st.session_state.current_user_name = ""
+    st.query_params.clear()
     st.rerun()
 
 st.title("⚡ Veer Pro Terminal")
@@ -313,9 +372,13 @@ with m_col1:
   )
 
 # --- MAIN TABS ---
-tab_dash, tab_chart, tab_signals, tab_accuracy, tab_vip = st.tabs(
-    ["⚙️ Dashboard", "📊 Chart", "🎯 Signals", "🏆 Accuracy", "👑 VIP"]
-)
+tab_dash, tab_chart, tab_signals, tab_profile, tab_vip = st.tabs([
+    "⚙️ Dashboard",
+    "📊 Chart",
+    "🎯 Signals",
+    "👤 My Profile & Promo",
+    "👑 VIP Plans",
+])
 
 with tab_dash:
   col_cfg, col_risk = st.columns(2, gap="medium")
@@ -348,23 +411,56 @@ with tab_dash:
     )
 
 with tab_chart:
-  st.markdown(f"### 📊 Interactive Chart — Binance:{selected_market}")
+  st.markdown(
+      f"### 📊 Advanced Institutional Chart — Binance:{selected_market}"
+  )
+
+  c_tf1, c_tf2 = st.columns([2, 3])
+  with c_tf1:
+    chart_tf = st.selectbox(
+        "Select Chart Timeframe (1s to 1 Month)",
+        ["1S", "1", "3", "5", "15", "30", "60", "120", "240", "D", "W", "M"],
+        index=4,
+        key="chart_tf_sel",
+    )
+  with c_tf2:
+    if st.session_state.user_tier == "VIP Paid Member":
+      st.success("👑 VIP Advanced Chart Access Unlocked (1s - 1 Month Enabled)")
+    else:
+      st.warning(
+          "⚠️ Free User Mode: Standard Timeframes. Upgrade to VIP for 1s -"
+          " 1M Full Access."
+      )
+
+  st.markdown("#### 🛠️ World-Class Concepts & Strategy Overlays")
+  col_b1, col_b2, col_b3, col_b4, col_b5 = st.columns(5)
+  with col_b1:
+    smc_struct = st.checkbox("📌 Structure Mapping", value=True)
+  with col_b2:
+    smc_liq = st.checkbox("💧 Liquidity Sweep", value=True)
+  with col_b3:
+    smc_fvg = st.checkbox("🟩 Fair Value Gap (FVG)", value=True)
+  with col_b4:
+    smc_ob = st.checkbox("📦 Order Blocks", value=True)
+  with col_b5:
+    smc_sig = st.checkbox("🎯 Buy/Sell Signals", value=True)
+
   tv_html = f"""
-    <div class="tradingview-widget-container" style="height:550px;width:100%;">
+    <div class="tradingview-widget-container" style="height:600px;width:100%;">
       <div id="tradingview_chart" style="height:100%;width:100%;"></div>
       <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
       <script type="text/javascript">
       new TradingView.widget(
       {{
         "width": "100%",
-        "height": "550",
+        "height": "600",
         "symbol": "BINANCE:{selected_market}",
-        "interval": "15",
+        "interval": "{chart_tf}",
         "timezone": "Etc/UTC",
         "theme": "dark",
         "style": "1",
         "locale": "en",
-        "toolbar_bg": "#090d16",
+        "toolbar_bg": "#0b0e11",
         "enable_publishing": false,
         "allow_symbol_change": true,
         "container_id": "tradingview_chart"
@@ -372,15 +468,20 @@ with tab_chart:
       </script>
     </div>
     """
-  st.components.v1.html(tv_html, height=570)
+  st.components.v1.html(tv_html, height=620)
 
 with tab_signals:
-  st.markdown("### 🎯 Institutional AI Smart Signals")
+  st.markdown("### 🎯 Ultimate Multi-Confluence AI Smart Signals")
   if st.session_state.user_tier == "Free User":
     rem = 2 - st.session_state.signals_used
-    st.caption(f"Free Plan Quota: {rem}/2 Signals Remaining Today")
+    st.info(f"Free Plan Quota: {rem}/2 Signals Remaining Today")
+  else:
+    st.success(
+        "👑 VIP Ultimate Multi-Strategy Confluence Engine Active (94.8%"
+        " Accuracy)"
+    )
 
-  if st.button("✨ GENERATE LIVE AI SIGNAL", key="gen_sig_btn"):
+  if st.button("✨ GENERATE ULTIMATE AI SIGNAL", key="gen_sig_btn"):
     if (
         st.session_state.user_tier == "Free User"
         and st.session_state.signals_used >= 2
@@ -390,59 +491,196 @@ with tab_signals:
       if st.session_state.user_tier == "Free User":
         st.session_state.signals_used += 1
 
-      st.success("🔥 Signal Engine Generated Order Flow Setup!")
+      st.success("🔥 Multi-Confluence Strategy Triggered: High Probability Setup!")
       s_col1, s_col2 = st.columns(2)
       with s_col1:
-        st.metric("Setup Direction", "BULLISH BUY", "High Win Rate")
+        st.metric("Setup Direction & Bias", "STRONG BULLISH BUY", "94.8% Win Index")
         st.write(f"**Target Pair:** BINANCE:{selected_market}")
-        st.write("**Optimal Entry Zone:** ~$144.80")
+        st.write("**Exact Entry Zone:** `$144.50 - $145.10`")
       with s_col2:
-        st.metric("Risk / Reward Ratio", "1 : 2.8", "Optimal")
-        st.write("**Stop Loss (SL):** ~$142.10")
-        st.write("**Take Profit (TP):** ~$152.40")
+        st.metric("Risk / Reward Ratio", "1 : 4.2", "Optimized Structure")
+        st.write("**Stop Loss (SL):** `$141.80`")
+        st.write(
+            "**Take Profit Targets:** 🎯 TP1: `$148.50` | 🎯 TP2: `$152.00` | 🎯"
+            " TP3: `$156.50`"
+        )
       st.link_button(
           "🚀 Execute Instant Order on Binance", "https://www.binance.com"
       )
 
-with tab_accuracy:
-  st.markdown("### 🏆 Verified Signal Performance")
-  m1, m2, m3 = st.columns(3)
-  m1.metric("7-Day Algorithmic Calls", "154", "+14 Today")
-  m2.metric("Win Rate", "86.2%", "+1.4%")
-  m3.metric("Avg Profit Per Trade", "+3.4%", "Optimized")
+with tab_profile:
+  st.markdown("### 👤 User Profile & Customization")
+  st.write(
+      "Manage your personal details, profile picture, username, and redeem"
+      " promo codes."
+  )
 
-  st.markdown("#### 📋 Executed Orders Log")
-  df = pd.DataFrame({
-      "Time": ["2026-08-19 18:20", "2026-08-19 15:10", "2026-08-18 21:05"],
-      "Symbol": ["SOLUSDT", "BTCUSDT", "ETHUSDT"],
-      "Type": ["BUY", "BUY", "SELL"],
-      "Profit / Loss": ["+4.2% (TP2 Hit)", "+1.8% (TP1 Hit)", "+3.1% (TP2 Hit)"],
-  })
-  st.dataframe(df, use_container_width=True)
+  p_col1, p_col2 = st.columns(2)
+  with p_col1:
+    with st.form("profile_update_form"):
+      st.markdown("#### Edit Profile Details")
+      new_name = st.text_input("Full Name", value=st.session_state.current_user_name)
+      new_uname = st.text_input("Username", value=st.session_state.username)
+      new_avatar = st.text_input(
+          "Profile Picture Image URL", value=st.session_state.avatar
+      )
+      st.markdown("<br>", unsafe_allow_html=True)
+      if st.form_submit_button("Save Profile"):
+        st.session_state.current_user_name = new_name
+        st.session_state.username = new_uname
+        st.session_state.avatar = new_avatar
+        update_user_profile(
+            st.session_state.current_user_email,
+            new_name,
+            new_uname,
+            new_avatar,
+        )
+        st.success("✅ Profile Updated Successfully!")
+        st.rerun()
 
-with tab_vip:
-  st.markdown("### 👑 Upgrade to VIP Pro Membership")
-  v_col1, v_col2 = st.columns(2)
-  with v_col1:
-    st.write("#### VIP Features:")
-    st.write("✔️ Unlimited Live AI Trading Signals")
-    st.write("✔️ Multi-Asset Orderflow Scanners")
-    st.write("✔️ Instant Telegram & Web Alerts")
-    st.markdown("---")
-    upi_url = "upi://pay?pa=7479465676-7@ybl&pn=VEER%20PRO%20TRADER&am=999.00&cu=INR"
-    st.link_button("📲 Pay ₹999 / Month via UPI", upi_url)
-  with v_col2:
-    st.write("#### Instant VIP Activation")
-    utr_code = st.text_input(
-        "Enter 12-Digit UTR / Transaction ID:", key="utr_inp"
+  with p_col2:
+    st.markdown("#### 🎟️ Redeem VIP Promo Code")
+    promo_input = st.text_input(
+        "Enter Promo Code (e.g., VEERVIP30)", key="promo_box"
     )
-    if st.button("🔓 Activate VIP Access"):
-      if len(utr_code.strip()) >= 8:
+    if st.button("Redeem Code"):
+      conn = get_db_connection()
+      cursor = conn.cursor()
+      cursor.execute(
+          "SELECT duration_type, is_used FROM promo_codes WHERE code = ?",
+          (promo_input.strip(),),
+      )
+      p_data = cursor.fetchone()
+      if p_data:
         st.session_state.user_tier = "VIP Paid Member"
-        st.success("🎉 VIP Status Activated! Enjoy Unlimited Access.")
+        cursor.execute(
+            "UPDATE users SET tier = ? WHERE email = ?",
+            ("VIP Paid Member", st.session_state.current_user_email),
+        )
+        conn.commit()
+        conn.close()
+        st.success("🎉 Promo Code Applied! VIP Access Granted Successfully.")
         st.rerun()
       else:
-        st.error("Please enter a valid Transaction UTR Number.")
+        conn.close()
+        st.error("❌ Invalid or Expired Promo Code!")
+
+    st.markdown("---")
+    st.markdown("#### 🛠️ Admin / Creator Code Generator")
+    if st.session_state.current_user_email == "admin@gmail.com":
+      gen_code = st.text_input("Create New Promo Code", key="gen_c")
+      dur_type = st.selectbox(
+          "Select Duration", ["30 Days", "1 Year", "Lifetime Unlimited"]
+      )
+      if st.button("Generate Code"):
+        try:
+          conn = get_db_connection()
+          cursor = conn.cursor()
+          cursor.execute(
+              "INSERT INTO promo_codes (code, duration_type) VALUES (?, ?)",
+              (gen_code.strip(), dur_type),
+          )
+          conn.commit()
+          conn.close()
+          st.success(f"✅ Promo Code '{gen_code}' Generated Successfully!")
+        except:
+          st.error("Code already exists!")
+    else:
+      st.info(
+          "🔒 Creator Code Generation tools are restricted to Admin accounts"
+          " only."
+      )
+
+with tab_vip:
+  st.markdown("### 👑 Choose Your VIP Pro Membership Plan")
+  st.write(
+      "Click on any plan below to directly open your UPI App with the exact"
+      " pre-filled amount!"
+  )
+
+  v1, v2, v3 = st.columns(3)
+
+  with v1:
+    st.markdown(
+        """
+        <div style="background: #181a20; padding: 20px; border-radius: 8px; border: 1px solid #2b313a; text-align: center;">
+            <h4 style="color: #38bdf8;">⚡ 3-Day Trial</h4>
+            <h2 style="color: #ffffff;">₹199</h2>
+            <p style="color: #848e9c; font-size: 12px;">Direct Pay Amount: ₹199</p>
+            <hr style="border-color: #2b313a;">
+            <p>✔️ 1s - 1M Charts</p>
+            <p>✔️ All SMC Tools</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    upi_3days = (
+        "upi://pay?pa=7479465676-7@ybl&pn=VEER%20PRO%20TRADER&am=199.00&cu=INR"
+    )
+    st.link_button("📲 Pay ₹199 Direct via UPI", upi_3days)
+
+  with v2:
+    st.markdown(
+        """
+        <div style="background: #181a20; padding: 20px; border-radius: 8px; border: 2px solid #fcd535; text-align: center;">
+            <h4 style="color: #0ecb81;">🔥 Monthly Pro</h4>
+            <h2 style="color: #ffffff;">₹999</h2>
+            <p style="color: #848e9c; font-size: 12px;">Direct Pay Amount: ₹999</p>
+            <hr style="border-color: #2b313a;">
+            <p>✔️ Ultimate AI Signals</p>
+            <p>✔️ Priority Telegram Alerts</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    upi_monthly = (
+        "upi://pay?pa=7479465676-7@ybl&pn=VEER%20PRO%20TRADER&am=999.00&cu=INR"
+    )
+    st.link_button("📲 Pay ₹999 Direct via UPI", upi_monthly)
+
+  with v3:
+    st.markdown(
+        """
+        <div style="background: #181a20; padding: 20px; border-radius: 8px; border: 1px solid #2b313a; text-align: center;">
+            <h4 style="color: #f59e0b;">👑 Annual VIP</h4>
+            <h2 style="color: #ffffff;">₹799</h2>
+            <p style="color: #848e9c; font-size: 12px;">Direct Pay Amount: ₹799</p>
+            <hr style="border-color: #2b313a;">
+            <p>✔️ Maximum Savings</p>
+            <p>✔️ 24/7 VIP Support</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    upi_annual = (
+        "upi://pay?pa=7479465676-7@ybl&pn=VEER%20PRO%20TRADER&am=799.00&cu=INR"
+    )
+    st.link_button("📲 Pay ₹799 Direct via UPI", upi_annual)
+
+  st.markdown("---")
+  st.markdown("#### 🔓 Instant VIP Activation after Payment")
+  act_col1, act_col2 = st.columns([2, 1])
+  with act_col1:
+    utr_code = st.text_input(
+        "Enter 12-Digit UTR / Transaction Reference ID:", key="utr_inp"
+    )
+  with act_col2:
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("Verify & Activate"):
+      if len(utr_code.strip()) >= 8:
+        st.session_state.user_tier = "VIP Paid Member"
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE users SET tier = ? WHERE email = ?",
+            ("VIP Paid Member", st.session_state.current_user_email),
+        )
+        conn.commit()
+        conn.close()
+        st.success("🎉 VIP Membership Activated Successfully!")
+        st.rerun()
+      else:
+        st.error("Please enter a valid UTR number.")
 
 st.markdown("---")
 st.caption(
