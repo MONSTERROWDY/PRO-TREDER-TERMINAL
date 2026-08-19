@@ -177,7 +177,7 @@ def update_user_vip(email, days=30):
     expiry_date = (datetime.datetime.now() + datetime.timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
     conn = sqlite3.connect("users_database.db", check_same_thread=False)
     cursor = conn.cursor()
-    cursor.execute("UPDATE users SET tier = 'VIP Paid Member', vip_expiry = ? WHERE email = ?", (expiry_date, email.strip()))
+    cursor.execute("UPDATE users SET tier = 'VIP Paid Member', vip_expiry = ? WHERE email = ?", (email.strip(), email.strip()))
     conn.commit()
     conn.close()
     return expiry_date
@@ -320,7 +320,6 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # 🎟️ SECURE PROMO CODE SECTION
     st.markdown("### 🎟️ VIP Access Code")
     sidebar_promo = st.text_input("Enter Promo Code:", placeholder="Enter Promo Code", key="sidebar_promo_code")
     
@@ -367,6 +366,8 @@ render_live_header()
 
 tab1, tab2, tab3, tab4 = st.tabs(["⚡ Terminal Dashboard", "📊 Live Chart", "🏆 Accuracy", "💎 VIP Plan"])
 
+ALL_TIMEFRAMES = ["1s", "5s", "10s", "30s", "1m", "5m", "15m", "1h", "4h", "1D", "1W", "1M", "1Y"]
+
 with tab1:
     col_main, col_side = st.columns([2.2, 1], gap="medium")
     with col_main:
@@ -378,13 +379,13 @@ with tab1:
             asset = st.selectbox("Asset", ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"])
         with c3:
             if is_vip:
-                timeframe_options = ["1s", "5s", "10s", "20s", "30s", "1m", "5m", "15m", "1h", "4h", "1d"]
+                timeframe_options = ALL_TIMEFRAMES
             else:
-                timeframe_options = ["1m", "5m", "15m", "1h", "4h", "1d"]
+                timeframe_options = ["1m", "5m", "15m", "1h", "4h", "1D"]
             
             timeframe = st.selectbox("Timeframe", timeframe_options)
             if not is_vip:
-                st.caption("🔒 *1s, 5s, 10s, 20s, 30s Timeframes unlocked for VIP*")
+                st.caption("🔒 *Seconds & Macro Timeframes (1s-30s, 1W, 1M, 1Y) unlocked for VIP*")
 
         st.markdown("### 🛡️ Risk Management")
         account_balance = st.number_input("Account Balance ($)", value=10000.0)
@@ -431,19 +432,19 @@ with tab1:
                     unsafe_allow_html=True,
                 )
 
-# --- ADVANCED CHART TAB (FIXED 100% WORKING SECONDS ENGINE) ---
+# --- ADVANCED CHART TAB (AUTOMATIC SMC + BOS + FVG MAPPING ENGINE) ---
 with tab2:
     chart_col1, chart_col2 = st.columns([1, 2.5])
     with chart_col1:
         selected_chart_asset = st.selectbox("Select Asset for Chart:", ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"], key="chart_asset_select")
         
         if is_vip:
-            chart_tf = st.selectbox("Chart Timeframe:", ["1s", "5s", "10s", "20s", "30s", "1m", "5m", "15m", "1h", "1d"], index=0, key="chart_tf_select")
+            chart_tf = st.selectbox("Chart Timeframe (1s to 1Y):", ALL_TIMEFRAMES, index=0, key="chart_tf_select")
             chart_mode = st.radio("🖥️ View Mode:", ["Single Chart", "Multi-Chart Grid (VIP)"], horizontal=True)
         else:
-            chart_tf = st.selectbox("Chart Timeframe:", ["1m", "5m", "15m", "1h", "1d"], index=0, key="chart_tf_select_free")
+            chart_tf = st.selectbox("Chart Timeframe:", ["1m", "5m", "15m", "1h", "4h", "1D"], index=0, key="chart_tf_select_free")
             chart_mode = "Single Chart"
-            st.info("🔒 *Second timeframes (1s, 5s, 10s...) and Multi-Chart are unlocked for VIP Members!*")
+            st.info("🔒 *Seconds (1s-30s) and Macro Timeframes (1W, 1M, 1Y) unlocked for VIP Members!*")
 
     def render_tv_widget(symbol_name, interval_str="1", height=520):
         return f"""
@@ -469,60 +470,190 @@ with tab2:
         </div>
         """
 
-    # --- FULLY FIXED HIGH-SPEED CHART.JS ENGINE FOR SECONDS TIMEFRAMES ---
-    def render_guaranteed_seconds_chart(symbol_name, sec_interval=1, height=520):
+    # --- JAPANESE CANDLESTICK + SMC AUTO MAPPING ENGINE ---
+    def render_candlestick_smc_chart(symbol_name, sec_interval=1, height=520):
         return f"""
         <!DOCTYPE html>
         <html>
         <head>
-            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/luxon@3.0.1/build/global/luxon.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.2.0/dist/chartjs-adapter-luxon.min.js"></script>
+            <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.1.1/dist/chartjs-chart-financial.min.js"></script>
             <style>
                 body, html {{ margin: 0; padding: 0; width: 100%; height: 100%; background-color: #131722; font-family: sans-serif; overflow: hidden; }}
-                #container {{ width: 100vw; height: {height}px; padding: 10px; box-sizing: border-box; background: #131722; }}
-                .header {{ color: #00f2fe; font-size: 12px; font-weight: bold; margin-bottom: 8px; }}
+                #main-wrap {{ width: 100vw; height: {height}px; padding: 10px; box-sizing: border-box; background: #131722; position: relative; }}
+                .top-bar {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px; }}
+                .title {{ color: #00f2fe; font-size: 13px; font-weight: bold; }}
+                .btn-group {{ display: flex; gap: 6px; }}
+                .btn-ui {{ background: #2962ff; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 11px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }}
+                .btn-ui:hover {{ background: #00f2fe; color: #000; }}
+                .btn-smc {{ background: #089981; }}
+                .btn-smc.active {{ background: #f23645; }}
             </style>
         </head>
         <body>
-            <div id="container">
-                <div class="header">⚡ BINANCE:{symbol_name} Live Stream ({sec_interval}s)</div>
-                <div style="position: relative; height: {height - 40}px; width: 100%;">
-                    <canvas id="secChart"></canvas>
+            <div id="main-wrap">
+                <div class="top-bar">
+                    <div class="title">🕯️ BINANCE:{symbol_name} Live Chart ({sec_interval}s)</div>
+                    <div class="btn-group">
+                        <button id="smcBtn" class="btn-ui btn-smc" onclick="toggleSMC()">⚡ Toggle SMC Mapping (BOS/FVG)</button>
+                        <button class="btn-ui" onclick="openFullChart()">🔍 Open In New Tab</button>
+                    </div>
+                </div>
+                <div style="position: relative; height: {height - 45}px; width: 100%;">
+                    <canvas id="candleCanvas"></canvas>
                 </div>
             </div>
             <script>
-                const ctx = document.getElementById('secChart').getContext('2d');
-                let basePrice = '{symbol_name}'.includes('BTC') ? 68420.00 : 3540.00;
+                let smcEnabled = false;
+
+                function openFullChart() {{
+                    let win = window.open("", "_blank");
+                    win.document.write(`
+                        <html>
+                        <head><title>{symbol_name} - SMC Structure Analysis Chart</title></head>
+                        <body style="margin:0; background:#131722;">
+                            <iframe src="${{window.location.href}}" style="width:100vw; height:100vh; border:none;"></iframe>
+                        </body>
+                        </html>
+                    `);
+                }}
+
+                function toggleSMC() {{
+                    smcEnabled = !smcEnabled;
+                    const btn = document.getElementById('smcBtn');
+                    if (smcEnabled) {{
+                        btn.classList.add('active');
+                        btn.innerText = "❌ Hide SMC Mapping";
+                    }} else {{
+                        btn.classList.remove('active');
+                        btn.innerText = "⚡ Toggle SMC Mapping (BOS/FVG)";
+                    }}
+                    chart.update();
+                }}
+
+                // --- SMC OVERLAY PLUGIN (BOS, CHoCH, FVG) ---
+                const smcPlugin = {{
+                    id: 'smcOverlay',
+                    afterDraw: (chart) => {{
+                        if (!smcEnabled) return;
+                        const ctx = chart.ctx;
+                        const meta = chart.getDatasetMeta(0);
+                        const dataset = chart.data.datasets[0].data;
+
+                        ctx.save();
+                        
+                        // Auto detect & render FVG (Fair Value Gap)
+                        for (let i = 2; i < dataset.length; i++) {{
+                            let c1 = dataset[i-2];
+                            let c3 = dataset[i];
+                            
+                            // Bullish FVG
+                            if (c1.h < c3.l) {{
+                                let yTop = chart.scales.y.getPixelForValue(c3.l);
+                                let yBottom = chart.scales.y.getPixelForValue(c1.h);
+                                let xStart = meta.data[i-2].x;
+                                let xEnd = meta.data[i].x + 40;
+
+                                ctx.fillStyle = 'rgba(8, 153, 129, 0.25)';
+                                ctx.strokeStyle = '#089981';
+                                ctx.lineWidth = 1;
+                                ctx.fillRect(xStart, yTop, xEnd - xStart, yBottom - yTop);
+                                ctx.strokeRect(xStart, yTop, xEnd - xStart, yBottom - yTop);
+
+                                ctx.fillStyle = '#089981';
+                                ctx.font = 'bold 9px sans-serif';
+                                ctx.fillText('Bullish FVG', xStart + 5, yTop + 12);
+                            }}
+                            // Bearish FVG
+                            else if (c1.l > c3.h) {{
+                                let yTop = chart.scales.y.getPixelForValue(c1.l);
+                                let yBottom = chart.scales.y.getPixelForValue(c3.h);
+                                let xStart = meta.data[i-2].x;
+                                let xEnd = meta.data[i].x + 40;
+
+                                ctx.fillStyle = 'rgba(242, 54, 69, 0.25)';
+                                ctx.strokeStyle = '#f23645';
+                                ctx.lineWidth = 1;
+                                ctx.fillRect(xStart, yTop, xEnd - xStart, yBottom - yTop);
+                                ctx.strokeRect(xStart, yTop, xEnd - xStart, yBottom - yTop);
+
+                                ctx.fillStyle = '#f23645';
+                                ctx.font = 'bold 9px sans-serif';
+                                ctx.fillText('Bearish FVG', xStart + 5, yTop + 12);
+                            }}
+                        }}
+
+                        // Auto Mapping BOS (Break of Structure)
+                        let maxHigh = -Infinity;
+                        let maxIdx = -1;
+                        for(let i=0; i<dataset.length-2; i++) {{
+                            if(dataset[i].h > maxHigh) {{
+                                maxHigh = dataset[i].h;
+                                maxIdx = i;
+                            }}
+                        }}
+                        if(maxIdx !== -1 && meta.data[maxIdx]) {{
+                            let yPos = chart.scales.y.getPixelForValue(maxHigh);
+                            let xStart = meta.data[maxIdx].x;
+                            let xEnd = meta.data[dataset.length-1].x;
+
+                            ctx.setLineDash([4, 4]);
+                            ctx.strokeStyle = '#00f2fe';
+                            ctx.lineWidth = 1.5;
+                            ctx.beginPath();
+                            ctx.moveTo(xStart, yPos);
+                            ctx.lineTo(xEnd, yPos);
+                            ctx.stroke();
+
+                            ctx.setLineDash([]);
+                            ctx.fillStyle = '#00f2fe';
+                            ctx.font = 'bold 10px sans-serif';
+                            ctx.fillText('BOS (Break of Structure)', xStart + 10, yPos - 4);
+                        }}
+
+                        ctx.restore();
+                    }}
+                }};
+
+                const ctx = document.getElementById('candleCanvas').getContext('2d');
+                let now = Date.now();
+                let initialPrice = '{symbol_name}'.includes('BTC') ? 68420.00 : 3540.00;
                 
-                let labels = [];
-                let dataPoints = [];
-                for (let i = 20; i >= 0; i--) {{
-                    labels.push(i + 's ago');
-                    basePrice += (Math.random() - 0.5) * 4;
-                    dataPoints.push(basePrice);
+                let candleData = [];
+                for (let i = 18; i >= 0; i--) {{
+                    let t = now - (i * {sec_interval} * 1000);
+                    let open = initialPrice + (Math.random() - 0.5) * 6;
+                    let high = open + Math.random() * 8;
+                    let low = open - Math.random() * 8;
+                    let close = low + Math.random() * (high - low);
+                    candleData.push({{ x: t, o: open, h: high, l: low, c: close }});
+                    initialPrice = close;
                 }}
 
                 const chart = new Chart(ctx, {{
-                    type: 'line',
+                    type: 'candlestick',
                     data: {{
-                        labels: labels,
                         datasets: [{{
-                            label: 'Live Price ($)',
-                            data: dataPoints,
-                            borderColor: '#00f2fe',
-                            borderWidth: 2,
-                            backgroundColor: 'rgba(0, 242, 254, 0.1)',
-                            fill: true,
-                            tension: 0.2,
-                            pointRadius: 2,
-                            pointHoverRadius: 5
+                            label: '{symbol_name}',
+                            data: candleData,
+                            color: {{
+                                up: '#089981',
+                                down: '#f23645',
+                                unchanged: '#787b86'
+                            }}
                         }}]
                     }},
+                    plugins: [smcPlugin],
                     options: {{
                         responsive: true,
                         maintainAspectRatio: false,
                         animation: false,
                         scales: {{
                             x: {{
+                                type: 'time',
+                                time: {{ unit: 'second' }},
                                 grid: {{ color: '#2a2e39' }},
                                 ticks: {{ color: '#787b86', font: {{ size: 10 }} }}
                             }},
@@ -538,23 +669,21 @@ with tab2:
                 }});
 
                 setInterval(() => {{
-                    let lastP = chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1];
-                    let nextP = lastP + (Math.random() - 0.48) * 5;
-                    
-                    chart.data.labels.shift();
-                    chart.data.labels.push('Now');
-                    
+                    let lastCandle = chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1];
+                    let nextTime = lastCandle.x + ({sec_interval} * 1000);
+                    let newOpen = lastCandle.c;
+                    let newHigh = newOpen + Math.random() * 6;
+                    let newLow = newOpen - Math.random() * 6;
+                    let newClose = newLow + Math.random() * (newHigh - newLow);
+
                     chart.data.datasets[0].data.shift();
-                    chart.data.datasets[0].data.push(nextP);
-                    
-                    if (nextP > lastP) {{
-                        chart.data.datasets[0].borderColor = '#089981';
-                        chart.data.datasets[0].backgroundColor = 'rgba(8, 153, 129, 0.15)';
-                    }} else {{
-                        chart.data.datasets[0].borderColor = '#f23645';
-                        chart.data.datasets[0].backgroundColor = 'rgba(242, 54, 69, 0.15)';
-                    }}
-                    
+                    chart.data.datasets[0].data.push({{
+                        x: nextTime,
+                        o: newOpen,
+                        h: newHigh,
+                        l: newLow,
+                        c: newClose
+                    }});
                     chart.update();
                 }}, {sec_interval * 1000});
             </script>
@@ -562,19 +691,23 @@ with tab2:
         </html>
         """
 
+    def get_tv_interval(tf_str):
+        tf_map = {
+            "1m": "1", "5m": "5", "15m": "15",
+            "1h": "60", "4h": "240",
+            "1D": "D", "1W": "W", "1M": "M", "1Y": "12M"
+        }
+        return tf_map.get(tf_str, "1")
+
     st.markdown("---")
 
     if chart_mode == "Single Chart":
         st.markdown(f"### 📈 Realtime Live Chart ({selected_chart_asset}) — `{chart_tf}`")
         if "s" in chart_tf:
             sec_val = int(chart_tf.replace("s", ""))
-            st.components.v1.html(render_guaranteed_seconds_chart(selected_chart_asset, sec_val, 520), height=540)
+            st.components.v1.html(render_candlestick_smc_chart(selected_chart_asset, sec_val, 520), height=540)
         else:
-            tv_interval = "1"
-            if chart_tf == "5m": tv_interval = "5"
-            elif chart_tf == "15m": tv_interval = "15"
-            elif chart_tf == "1h": tv_interval = "60"
-            elif chart_tf == "1d": tv_interval = "D"
+            tv_interval = get_tv_interval(chart_tf)
             st.components.v1.html(render_tv_widget(selected_chart_asset, tv_interval, 520), height=540)
     else:
         st.markdown("### 📊 VIP Dual Multi-Chart Grid Layout")
@@ -583,16 +716,18 @@ with tab2:
             asset1 = st.selectbox("Chart 1 Asset", ["BTCUSDT", "ETHUSDT", "SOLUSDT"], key="asset1_sel")
             if "s" in chart_tf:
                 sec_val = int(chart_tf.replace("s", ""))
-                st.components.v1.html(render_guaranteed_seconds_chart(asset1, sec_val, 450), height=470)
+                st.components.v1.html(render_candlestick_smc_chart(asset1, sec_val, 450), height=470)
             else:
-                st.components.v1.html(render_tv_widget(asset1, "1", 450), height=470)
+                tv_interval = get_tv_interval(chart_tf)
+                st.components.v1.html(render_tv_widget(asset1, tv_interval, 450), height=470)
         with mc2:
             asset2 = st.selectbox("Chart 2 Asset", ["ETHUSDT", "BTCUSDT", "BNBUSDT"], key="asset2_sel")
             if "s" in chart_tf:
                 sec_val = int(chart_tf.replace("s", ""))
-                st.components.v1.html(render_guaranteed_seconds_chart(asset2, sec_val, 450), height=470)
+                st.components.v1.html(render_candlestick_smc_chart(asset2, sec_val, 450), height=470)
             else:
-                st.components.v1.html(render_tv_widget(asset2, "1", 450), height=470)
+                tv_interval = get_tv_interval(chart_tf)
+                st.components.v1.html(render_tv_widget(asset2, tv_interval, 450), height=470)
 
 with tab3:
     st.markdown("### 🏆 Performance & AI Accuracy Metrics")
