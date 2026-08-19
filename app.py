@@ -31,13 +31,13 @@ def clear_local_storage():
     """
     components.html(js_code, height=0, width=0)
 
-# 2. TradingView Pro UI Theme (Dark Glassmorphism)
+# 2. Ultra-Compact & Sleek Dark UI CSS
 st.markdown(
     """
     <style>
     :root {
         --bg-main: #080b11;
-        --card-bg: rgba(19, 25, 36, 0.85);
+        --card-bg: rgba(19, 25, 36, 0.9);
         --card-border: rgba(255, 255, 255, 0.08);
         --accent-blue: #2962ff;
         --neon-cyan: #00f2fe;
@@ -52,6 +52,12 @@ st.markdown(
         color: var(--text-main) !important;
     }
 
+    /* Reduce vertical padding across app */
+    .block-container {
+        padding-top: 1.5rem !important;
+        padding-bottom: 2rem !important;
+    }
+
     h1, h2, h3, h4, h5, h6, p, span, label, div {
         color: var(--text-main) !important;
     }
@@ -60,8 +66,9 @@ st.markdown(
         background-color: #131722 !important;
         color: #ffffff !important;
         border: 1px solid #2a2e39 !important;
-        border-radius: 8px !important;
-        min-height: 44px !important;
+        border-radius: 6px !important;
+        min-height: 38px !important;
+        font-size: 13px !important;
     }
 
     section[data-testid="stSidebar"] {
@@ -69,39 +76,46 @@ st.markdown(
         border-right: 1px solid #2a2e39 !important;
     }
 
+    /* Compact Main Action Buttons */
     .stButton>button, .stLinkButton>a {
         width: 100%;
-        border-radius: 8px;
+        border-radius: 6px;
         font-weight: 700;
-        min-height: 44px;
+        min-height: 38px;
+        font-size: 13px;
         background: linear-gradient(135deg, #2962ff 0%, #00f2fe 100%) !important;
         color: #ffffff !important;
         border: none !important;
-        box-shadow: 0 4px 20px rgba(41, 98, 255, 0.3);
+        box-shadow: 0 2px 10px rgba(41, 98, 255, 0.3);
         text-align: center;
         display: flex;
         justify-content: center;
         align-items: center;
-        text-decoration: none;
-    }
-    .stButton>button:hover, .stLinkButton>a:hover {
-        transform: scale(1.02);
-        box-shadow: 0 6px 24px rgba(0, 242, 254, 0.5);
     }
     
-    .stTabs [data-baseweb="tab-list"] {
+    /* Compact Quick Action Row Buttons */
+    .quick-btn-container {
+        display: flex;
         gap: 4px;
+        align-items: center;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 2px;
         background-color: #131722;
-        padding: 4px;
-        border-radius: 8px;
+        padding: 3px;
+        border-radius: 6px;
         border: 1px solid #2a2e39;
     }
     .stTabs [data-baseweb="tab"] {
         background-color: transparent !important;
-        border-radius: 6px !important;
+        border-radius: 4px !important;
         color: var(--text-sub) !important;
         font-weight: 600 !important;
-        padding: 8px 14px !important;
+        padding: 6px 12px !important;
+        font-size: 12px !important;
         border: none !important;
     }
     .stTabs [aria-selected="true"] {
@@ -236,8 +250,8 @@ def show_auth_screen():
         st.markdown(
             """
             <div style="text-align: center; margin-bottom: 20px;">
-                <h2 style="font-size: 26px; font-weight: 800; color: #ffffff;">🚀 VEER PRO TERMINAL</h2>
-                <p style="color: #00f2fe; font-size: 13px;">Institutional Grade Trading Platform</p>
+                <h2 style="font-size: 24px; font-weight: 800; color: #ffffff; margin:0;">🚀 VEER PRO TERMINAL</h2>
+                <p style="color: #00f2fe; font-size: 12px; margin:0;">Institutional Grade Trading Platform</p>
             </div>
             """,
             unsafe_allow_html=True,
@@ -338,7 +352,7 @@ with st.sidebar:
         clear_local_storage()
         st.rerun()
 
-# --- FULL ASSET DICTIONARY RESTORED ---
+# --- FULL ASSET DICTIONARY ---
 ASSET_CATEGORIES = {
     "Crypto Top Major": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT", "DOGEUSDT", "AVAXUSDT", "DOTUSDT", "LINKUSDT", "LTCUSDT", "MATICUSDT", "NEARUSDT", "TRXUSDT", "SHIBUSDT"],
     "Forex Currency Pairs": ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"],
@@ -362,7 +376,7 @@ def get_asset_price(asset_name):
     else:
         return 1.0850 + random.uniform(-0.0005, 0.0005)
 
-# --- REAL-TIME 3-WAY LIVE MARKET TICKER FRAGMENT ---
+# --- REAL-TIME 3-WAY COMPACT LIVE HEADER ---
 @st.fragment(run_every="1s")
 def render_live_header():
     sig_asset = st.session_state.get("signal_asset", "BTCUSDT")
@@ -379,20 +393,19 @@ def render_live_header():
 
     st.markdown(
         f"""
-        <div style="background: #131722; padding: 10px 14px; border-radius: 8px; border: 1px solid #2a2e39; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px; flex-wrap: wrap; gap: 8px;">
-            <div>
-                <span style="color:#787b86; font-size:11px;">🎯 SIGNAL PAIR (LEFT)</span><br>
-                <b style="color: #00f2fe;">{sig_asset}</b> <b style="color: #089981;">${sig_p:,.2f} (+{chg1:.2f}%)</b>
+        <div style="background: #131722; padding: 6px 12px; border-radius: 6px; border: 1px solid #2a2e39; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 11px;">
+            <div style="flex:1; text-align:left;">
+                <span style="color:#787b86; font-size:9px;">🎯 SIGNAL (LEFT)</span><br>
+                <b style="color: #00f2fe;">{sig_asset}</b> <b style="color: #089981;">${sig_p:,.2f}</b>
             </div>
-            <div style="border-left: 1px solid #2a2e39; border-right: 1px solid #2a2e39; padding: 0 15px;">
-                <span style="color:#787b86; font-size:11px;">📌 PERMANENT WATCH (MID)</span><br>
-                <b style="color: #ffb703;">{custom_asset}</b> <b style="color: #089981;">${custom_p:,.2f} (+{chg2:.2f}%)</b>
+            <div style="flex:1; text-align:center; border-left: 1px solid #2a2e39; border-right: 1px solid #2a2e39; padding: 0 6px;">
+                <span style="color:#787b86; font-size:9px;">📌 PERMANENT (MID)</span><br>
+                <b style="color: #ffb703;">{custom_asset}</b> <b style="color: #089981;">${custom_p:,.2f}</b>
             </div>
-            <div>
-                <span style="color:#787b86; font-size:11px;">📊 CHART PAIR (RIGHT)</span><br>
-                <b style="color: #00f2fe;">{chart_asset}</b> <b style="color: #089981;">${chart_p:,.2f} (+{chg3:.2f}%)</b>
+            <div style="flex:1; text-align:right;">
+                <span style="color:#787b86; font-size:9px;">📊 CHART (RIGHT)</span><br>
+                <b style="color: #00f2fe;">{chart_asset}</b> <b style="color: #089981;">${chart_p:,.2f}</b>
             </div>
-            <div style="color: #00f2fe; font-size:11px; font-weight: bold;">🔴 LIVE STREAM</div>
         </div>
     """,
         unsafe_allow_html=True,
@@ -400,24 +413,26 @@ def render_live_header():
 
 render_live_header()
 
-# --- PERMANENT TICKER SWITCH BAR ---
-st.markdown("<div style='background:#0e131f; padding:8px 12px; border-radius:8px; border:1px solid #2a2e39; margin-bottom:12px;'>", unsafe_allow_html=True)
-p_col1, p_col2 = st.columns([1.5, 3])
+# --- HIGHLY OPTIMIZED & COMPACT PERMANENT TICKER BAR ---
+st.markdown("<div style='background:#0e131f; padding:6px 10px; border-radius:6px; border:1px solid #2a2e39; margin-bottom:8px;'>", unsafe_allow_html=True)
+p_col1, p_col2 = st.columns([1.2, 2])
+
 with p_col1:
     cur_idx = ALL_FLAT_ASSETS.index(st.session_state.custom_ticker_asset) if st.session_state.custom_ticker_asset in ALL_FLAT_ASSETS else 0
-    sel_custom = st.selectbox("📌 Permanent Middle Live Ticker Asset:", ALL_FLAT_ASSETS, index=cur_idx, key="select_custom_ticker")
+    sel_custom = st.selectbox("📌 Mid Permanent Live Asset:", ALL_FLAT_ASSETS, index=cur_idx, key="select_custom_ticker", label_visibility="collapsed")
     if sel_custom != st.session_state.custom_ticker_asset:
         st.session_state.custom_ticker_asset = sel_custom
         st.rerun()
 
 with p_col2:
-    st.caption("⚡ Quick Buttons for Middle Live Stream:")
+    famous = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XAUUSD", "NIFTY50"]
     btn_cols = st.columns(5)
-    famous = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XAUUSD (GOLD)", "NIFTY50"]
     for i, fam in enumerate(famous):
         with btn_cols[i]:
-            if st.button(fam, key=f"perm_quick_{i}"):
-                st.session_state.custom_ticker_asset = fam
+            display_label = fam.replace("USDT", "").replace(" (GOLD)", "")
+            if st.button(display_label, key=f"perm_quick_{i}"):
+                full_asset = "XAUUSD (GOLD)" if fam == "XAUUSD" else (fam + "USDT" if fam in ["BTC", "ETH", "SOL"] else fam)
+                st.session_state.custom_ticker_asset = full_asset
                 st.rerun()
 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -426,9 +441,9 @@ tab1, tab2, tab3, tab4 = st.tabs(["⚡ Terminal Dashboard", "📊 Live Chart", "
 ALL_TIMEFRAMES = ["1s", "5s", "10s", "30s", "1m", "5m", "15m", "1h", "4h", "1D", "1W", "1M", "1Y"]
 
 with tab1:
-    col_main, col_side = st.columns([2.2, 1], gap="medium")
+    col_main, col_side = st.columns([2, 1], gap="small")
     with col_main:
-        st.markdown("### ⚙️ Signal Configuration")
+        st.markdown("##### ⚙️ Signal Configuration")
         c1, c2, c3 = st.columns(3)
         with c1:
             market_category = st.selectbox("Category", list(ASSET_CATEGORIES.keys()), key="sig_cat_sel")
@@ -445,15 +460,16 @@ with tab1:
         with c3:
             timeframe_options = ALL_TIMEFRAMES if is_vip else ["1m", "5m", "15m", "1h", "4h", "1D"]
             timeframe = st.selectbox("Timeframe", timeframe_options, key="sig_tf_sel")
-            if not is_vip:
-                st.caption("🔒 *Seconds & Macro Timeframes unlocked for VIP*")
 
-        st.markdown("### 🛡️ Risk Management")
-        account_balance = st.number_input("Account Balance ($)", value=10000.0)
-        risk_pct = st.slider("Risk Per Trade (%)", 0.1, 5.0, 1.0)
+        st.markdown("##### 🛡️ Risk Management")
+        rc1, rc2 = st.columns(2)
+        with rc1:
+            account_balance = st.number_input("Account Balance ($)", value=10000.0)
+        with rc2:
+            risk_pct = st.slider("Risk Per Trade (%)", 0.1, 5.0, 1.0)
 
     with col_side:
-        st.markdown("### 🤖 Institutional AI Signals")
+        st.markdown("##### 🤖 Institutional AI Signals")
         
         can_generate = True
         if not is_vip:
@@ -462,7 +478,7 @@ with tab1:
             if remaining_signals <= 0:
                 can_generate = False
         else:
-            st.caption("👑 VIP Status: **Unlimited Access & Ultra-Fast Signals**")
+            st.caption("👑 VIP Status: **Unlimited Signals**")
 
         if st.button("✨ GENERATE ACCURATE SIGNAL", key="gen_sig_btn"):
             if not can_generate:
@@ -478,22 +494,22 @@ with tab1:
 
                 st.markdown(
                     f"""
-                    <div style="background:#131722; padding:16px; border-radius:12px; border-left:5px solid #089981; border-top:1px solid #2a2e39; border-right:1px solid #2a2e39; border-bottom:1px solid #2a2e39; margin-top:10px;">
+                    <div style="background:#131722; padding:12px; border-radius:8px; border-left:4px solid #089981; border-top:1px solid #2a2e39; border-right:1px solid #2a2e39; border-bottom:1px solid #2a2e39; margin-top:6px;">
                         <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <h4 style="color:#089981; margin:0;">🔥 INSTITUTIONAL BUY SETUP</h4>
-                            <span style="background:#08998122; color:#089981; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:bold;">93.8% CONFIDENCE</span>
+                            <b style="color:#089981; font-size:13px;">🔥 BUY SETUP</b>
+                            <span style="background:#08998122; color:#089981; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">93.8% ACCURACY</span>
                         </div>
-                        <p style="font-size:12px; color:#787b86; margin-bottom:10px;">Asset: {asset} ({timeframe}) | Strategy: SMC + ICT Order Block Liquidity</p>
-                        <p style="margin:4px 0;"><b>📍 Optimal Entry:</b> ~${entry_p:,.2f}</p>
-                        <p style="margin:4px 0; color:#f23645;"><b>🛑 Stop Loss:</b> ~${sl_p:,.2f}</p>
-                        <p style="margin:4px 0; color:#089981;"><b>🎯 Target 1 (TP1):</b> ~${tp1_p:,.2f}</p>
-                        <p style="margin:4px 0; color:#089981;"><b>🎯 Target 2 (TP2):</b> ~${tp2_p:,.2f}</p>
+                        <p style="font-size:11px; color:#787b86; margin:2px 0 6px 0;">{asset} ({timeframe}) | SMC Order Block</p>
+                        <p style="margin:2px 0; font-size:12px;"><b>📍 Entry:</b> ~${entry_p:,.2f}</p>
+                        <p style="margin:2px 0; font-size:12px; color:#f23645;"><b>🛑 SL:</b> ~${sl_p:,.2f}</p>
+                        <p style="margin:2px 0; font-size:12px; color:#089981;"><b>🎯 TP1:</b> ~${tp1_p:,.2f}</p>
+                        <p style="margin:2px 0; font-size:12px; color:#089981;"><b>🎯 TP2:</b> ~${tp2_p:,.2f}</p>
                     </div>
                 """,
                     unsafe_allow_html=True,
                 )
 
-# --- ADVANCED HIGH-ACCURACY SMC AUTO-MAPPING CHART ENGINE ---
+# --- ADVANCED HIGH-ACCURACY SMC AUTO-MAPPING CHART ENGINE WITH DYNAMIC TIMEFRAME FIX ---
 with tab2:
     chart_col1, chart_col2 = st.columns([1, 2.5])
     with chart_col1:
@@ -510,26 +526,33 @@ with tab2:
             st.rerun()
 
         if is_vip:
-            chart_tf = st.selectbox("Chart Timeframe (1s to 1Y):", ALL_TIMEFRAMES, index=4, key="chart_tf_select")
+            chart_tf = st.selectbox("Chart Timeframe:", ALL_TIMEFRAMES, index=4, key="chart_tf_select")
             chart_mode = st.radio("🖥️ View Mode:", ["Single Chart", "Multi-Chart Grid (VIP)"], horizontal=True)
         else:
             chart_tf = st.selectbox("Chart Timeframe:", ["1m", "5m", "15m", "1h", "4h", "1D"], index=0, key="chart_tf_select_free")
             chart_mode = "Single Chart"
-            st.info("🔒 *Seconds (1s-30s) and Macro Timeframes unlocked for VIP Members!*")
 
-    # --- ADVANCED INSTITUTIONAL SMC + ICT CHART ENGINE ---
-    def render_pro_smc_engine(symbol_name, timeframe_str="1m", height=540):
-        interval_ms = 1000
-        if "s" in timeframe_str:
+    # --- ADVANCED INSTITUTIONAL SMC + ICT CHART ENGINE (TIMEFRAME SWITCHING FIXED) ---
+    def render_pro_smc_engine(symbol_name, timeframe_str="1m", height=500):
+        # Calculate dynamic interval in milliseconds based on user selected timeframe
+        interval_ms = 60000
+        if timeframe_str.endswith("s"):
             interval_ms = int(timeframe_str.replace("s", "")) * 1000
-        elif "m" in timeframe_str:
+        elif timeframe_str.endswith("m"):
             interval_ms = int(timeframe_str.replace("m", "")) * 60 * 1000
-        elif "h" in timeframe_str:
+        elif timeframe_str.endswith("h"):
             interval_ms = int(timeframe_str.replace("h", "")) * 3600 * 1000
-        elif "D" in timeframe_str:
+        elif timeframe_str == "1D":
             interval_ms = 86400 * 1000
-        else:
-            interval_ms = 60000
+        elif timeframe_str == "1W":
+            interval_ms = 7 * 86400 * 1000
+        elif timeframe_str == "1M":
+            interval_ms = 30 * 86400 * 1000
+        elif timeframe_str == "1Y":
+            interval_ms = 365 * 86400 * 1000
+
+        # Fast animation interval for live stream preview
+        tick_speed = min(interval_ms, 2000)
 
         html_code = f"""
         <!DOCTYPE html>
@@ -542,11 +565,11 @@ with tab2:
             <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-financial@0.1.1/dist/chartjs-chart-financial.min.js"></script>
             <style>
                 body, html {{ margin: 0; padding: 0; width: 100%; height: 100%; background-color: #131722; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; }}
-                #main-wrap {{ width: 100%; height: {height}px; padding: 10px; box-sizing: border-box; background: #131722; display: flex; flex-direction: column; }}
-                .top-bar {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; background: #1e222d; padding: 6px 12px; border-radius: 6px; border: 1px solid #2a2e39; }}
-                .title {{ color: #00f2fe; font-size: 13px; font-weight: bold; display: flex; align-items: center; gap: 6px; }}
-                .btn-group {{ display: flex; gap: 6px; }}
-                .btn-ui {{ background: #2962ff; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; font-size: 11px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s; }}
+                #main-wrap {{ width: 100%; height: {height}px; padding: 6px; box-sizing: border-box; background: #131722; display: flex; flex-direction: column; }}
+                .top-bar {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px; background: #1e222d; padding: 4px 10px; border-radius: 4px; border: 1px solid #2a2e39; }}
+                .title {{ color: #00f2fe; font-size: 12px; font-weight: bold; display: flex; align-items: center; gap: 4px; }}
+                .btn-group {{ display: flex; gap: 4px; }}
+                .btn-ui {{ background: #2962ff; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 10px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s; }}
                 .btn-ui:hover {{ background: #00f2fe; color: #000; }}
                 .btn-smc {{ background: #089981; }}
                 .btn-smc.active {{ background: #f23645; }}
@@ -556,10 +579,9 @@ with tab2:
         <body>
             <div id="main-wrap">
                 <div class="top-bar">
-                    <div class="title">⚡ ASSET: {symbol_name} ({timeframe_str}) — SMC/ICT VIP ENGINE</div>
+                    <div class="title">⚡ {symbol_name} ({timeframe_str}) — SMC VIP ENGINE</div>
                     <div class="btn-group">
-                        <button id="smcBtn" class="btn-ui btn-smc active" onclick="toggleSMC()">⚡ SMC Auto-Mapping: ON</button>
-                        <button class="btn-ui" onclick="openFullWindow()">🔍 Open In New Tab</button>
+                        <button id="smcBtn" class="btn-ui btn-smc active" onclick="toggleSMC()">⚡ SMC: ON</button>
                     </div>
                 </div>
                 <div class="chart-box">
@@ -568,25 +590,19 @@ with tab2:
             </div>
             <script>
                 let smcEnabled = true;
-
-                function openFullWindow() {{
-                    let htmlData = document.documentElement.outerHTML;
-                    let blob = new Blob([htmlData], {{ type: 'text/html' }});
-                    let url = URL.createObjectURL(blob);
-                    window.open(url, '_blank');
-                }}
+                let chartUpdateTimer = null;
 
                 function toggleSMC() {{
                     smcEnabled = !smcEnabled;
                     const btn = document.getElementById('smcBtn');
                     if (smcEnabled) {{
                         btn.classList.add('active');
-                        btn.innerText = "⚡ SMC Auto-Mapping: ON";
+                        btn.innerText = "⚡ SMC: ON";
                     }} else {{
                         btn.classList.remove('active');
-                        btn.innerText = "❌ SMC Auto-Mapping: OFF";
+                        btn.innerText = "❌ SMC: OFF";
                     }}
-                    chart.update('none');
+                    if(window.myChartInstance) window.myChartInstance.update('none');
                 }}
 
                 const smcInstitutionalEngine = {{
@@ -608,7 +624,7 @@ with tab2:
                                 let yTop = chart.scales.y.getPixelForValue(c3.l);
                                 let yBottom = chart.scales.y.getPixelForValue(c1.h);
                                 let xStart = meta.data[i-2].x;
-                                let xEnd = meta.data[i].x + 40;
+                                let xEnd = meta.data[i].x + 30;
 
                                 ctx.fillStyle = 'rgba(8, 153, 129, 0.18)';
                                 ctx.strokeStyle = '#089981';
@@ -619,7 +635,7 @@ with tab2:
                                 let yTop = chart.scales.y.getPixelForValue(c1.l);
                                 let yBottom = chart.scales.y.getPixelForValue(c3.h);
                                 let xStart = meta.data[i-2].x;
-                                let xEnd = meta.data[i].x + 40;
+                                let xEnd = meta.data[i].x + 30;
 
                                 ctx.fillStyle = 'rgba(242, 54, 69, 0.18)';
                                 ctx.strokeStyle = '#f23645';
@@ -642,7 +658,7 @@ with tab2:
                             ctx.setLineDash([4, 4]);
                             ctx.beginPath();
                             ctx.moveTo(meta.data[0].x, yRes);
-                            ctx.lineTo(meta.data[dataset.length-1].x + 20, yRes);
+                            ctx.lineTo(meta.data[dataset.length-1].x + 15, yRes);
                             ctx.stroke();
                         }}
 
@@ -652,36 +668,8 @@ with tab2:
                             ctx.setLineDash([4, 4]);
                             ctx.beginPath();
                             ctx.moveTo(meta.data[0].x, ySup);
-                            ctx.lineTo(meta.data[dataset.length-1].x + 20, ySup);
+                            ctx.lineTo(meta.data[dataset.length-1].x + 15, ySup);
                             ctx.stroke();
-                        }}
-
-                        let lastIdx = dataset.length - 2;
-                        if (meta.data[lastIdx]) {{
-                            let xSig = meta.data[lastIdx].x;
-                            let isBuy = dataset[lastIdx].c >= dataset[lastIdx].o;
-
-                            if (isBuy) {{
-                                let ySig = chart.scales.y.getPixelForValue(dataset[lastIdx].l);
-                                ctx.fillStyle = '#089981';
-                                ctx.beginPath();
-                                ctx.arc(xSig, ySig + 12, 5, 0, 2 * Math.PI);
-                                ctx.fill();
-
-                                ctx.fillStyle = '#ffffff';
-                                ctx.font = 'bold 10px sans-serif';
-                                ctx.fillText('🚀 BUY', xSig - 15, ySig + 28);
-                            }} else {{
-                                let ySig = chart.scales.y.getPixelForValue(dataset[lastIdx].h);
-                                ctx.fillStyle = '#f23645';
-                                ctx.beginPath();
-                                ctx.arc(xSig, ySig - 12, 5, 0, 2 * Math.PI);
-                                ctx.fill();
-
-                                ctx.fillStyle = '#ffffff';
-                                ctx.font = 'bold 10px sans-serif';
-                                ctx.fillText('🔻 SELL', xSig - 18, ySig - 20);
-                            }}
                         }}
 
                         ctx.restore();
@@ -693,8 +681,10 @@ with tab2:
                 let basePrice = '{symbol_name}'.includes('BTC') ? 68420.00 : ('{symbol_name}'.includes('NIFTY') ? 24500.0 : ('{symbol_name}'.includes('XAU') ? 2500.0 : 1.085));
                 
                 let candleData = [];
+                let intervalTime = {interval_ms};
+
                 for (let i = 24; i >= 0; i--) {{
-                    let t = now - (i * {interval_ms});
+                    let t = now - (i * intervalTime);
                     let open = basePrice + (Math.random() - 0.49) * (basePrice * 0.001);
                     let high = open + Math.random() * (basePrice * 0.0015);
                     let low = open - Math.random() * (basePrice * 0.0015);
@@ -728,12 +718,15 @@ with tab2:
                         scales: {{
                             x: {{
                                 type: 'time',
+                                time: {{
+                                    unit: '{timeframe_str}'.includes('s') ? 'second' : ('{timeframe_str}'.includes('m') ? 'minute' : 'hour')
+                                }},
                                 grid: {{ color: '#2a2e39' }},
-                                ticks: {{ color: '#787b86', font: {{ size: 10 }} }}
+                                ticks: {{ color: '#787b86', font: {{ size: 9 }} }}
                             }},
                             y: {{
                                 grid: {{ color: '#2a2e39' }},
-                                ticks: {{ color: '#00f2fe', font: {{ size: 11, weight: 'bold' }} }}
+                                ticks: {{ color: '#00f2fe', font: {{ size: 10, weight: 'bold' }} }}
                             }}
                         }},
                         plugins: {{
@@ -742,11 +735,13 @@ with tab2:
                     }}
                 }});
 
-                setInterval(() => {{
+                if (chartUpdateTimer) clearInterval(chartUpdateTimer);
+
+                chartUpdateTimer = setInterval(() => {{
                     let chart = window.myChartInstance;
                     if(!chart) return;
                     let lastCandle = chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1];
-                    let nextTime = lastCandle.x + {interval_ms};
+                    let nextTime = lastCandle.x + intervalTime;
                     let newOpen = lastCandle.c;
                     let range = newOpen * 0.0008;
                     let newHigh = newOpen + Math.random() * range;
@@ -762,30 +757,28 @@ with tab2:
                         c: newClose
                     }});
                     chart.update('none');
-                }}, {interval_ms > 2000 and 2000 or interval_ms});
+                }}, {tick_speed});
             </script>
         </body>
         </html>
         """
         return html_code
 
-    st.markdown("---")
-
     if chart_mode == "Single Chart":
-        st.markdown(f"### 📈 VIP Institutional Chart Engine ({selected_chart_asset}) — `{chart_tf}`")
-        st.components.v1.html(render_pro_smc_engine(selected_chart_asset, chart_tf, 540), height=560)
+        st.markdown(f"##### 📈 VIP Chart Engine ({selected_chart_asset}) — `{chart_tf}`")
+        st.components.v1.html(render_pro_smc_engine(selected_chart_asset, chart_tf, 500), height=510)
     else:
-        st.markdown("### 📊 VIP Dual Multi-Chart Grid Layout")
+        st.markdown("##### 📊 VIP Dual Multi-Chart Grid Layout")
         mc1, mc2 = st.columns(2)
         with mc1:
             asset1 = st.selectbox("Chart 1 Asset", ASSET_CATEGORIES["Crypto Top Major"], key="asset1_sel")
-            st.components.v1.html(render_pro_smc_engine(asset1, chart_tf, 460), height=480)
+            st.components.v1.html(render_pro_smc_engine(asset1, chart_tf, 420), height=430)
         with mc2:
             asset2 = st.selectbox("Chart 2 Asset", ASSET_CATEGORIES["Forex Currency Pairs"], key="asset2_sel")
-            st.components.v1.html(render_pro_smc_engine(asset2, chart_tf, 460), height=480)
+            st.components.v1.html(render_pro_smc_engine(asset2, chart_tf, 420), height=430)
 
 with tab3:
-    st.markdown("### 🏆 Performance & AI Accuracy Metrics")
+    st.markdown("##### 🏆 Performance & AI Accuracy Metrics")
     m1, m2, m3 = st.columns(3)
     m1.metric("7-Day Signals", "184", "+14 today")
     m2.metric("Win Rate", "93.8%", "+4.2%")
@@ -793,45 +786,20 @@ with tab3:
 
 # --- SUBSCRIPTION PLANS ---
 with tab4:
-    st.markdown("### 💎 VIP Pro Plans & Pricing")
-    
+    st.markdown("##### 💎 VIP Pro Plans & Pricing")
     p1, p2, p3 = st.columns(3)
     with p1:
-        st.markdown(
-            """
-            <div style="background:#131722; padding:15px; border-radius:10px; border:1px solid #2a2e39; text-align:center;">
-                <h4 style="color:#00f2fe; margin:0;">3-DAYS TRIAL</h4>
-                <h2 style="margin:10px 0;">₹199</h2>
-                <p style="color:#787b86; font-size:12px;">Full AI Signal Access for 3 Days</p>
-            </div>
-            """, unsafe_allow_html=True
-        )
+        st.markdown("<div style='background:#131722; padding:10px; border-radius:6px; border:1px solid #2a2e39; text-align:center;'><h5 style='color:#00f2fe; margin:0;'>3-DAYS TRIAL</h5><h3 style='margin:5px 0;'>₹199</h3></div>", unsafe_allow_html=True)
     with p2:
-        st.markdown(
-            """
-            <div style="background:#131722; padding:15px; border-radius:10px; border:2px solid #2962ff; text-align:center;">
-                <h4 style="color:#2962ff; margin:0;">MONTHLY VIP</h4>
-                <h2 style="margin:10px 0;">₹999 <span style="font-size:12px; color:#787b86;">/ Month</span></h2>
-                <p style="color:#787b86; font-size:12px;">Unlimited Signals + Multi-Chart Access (30 Days)</p>
-            </div>
-            """, unsafe_allow_html=True
-        )
+        st.markdown("<div style='background:#131722; padding:10px; border-radius:6px; border:2px solid #2962ff; text-align:center;'><h5 style='color:#2962ff; margin:0;'>MONTHLY VIP</h5><h3 style='margin:5px 0;'>₹999</h3></div>", unsafe_allow_html=True)
     with p3:
-        st.markdown(
-            """
-            <div style="background:#131722; padding:15px; border-radius:10px; border:1px solid #089981; text-align:center;">
-                <h4 style="color:#089981; margin:0;">ANNUAL PRO</h4>
-                <h2 style="margin:10px 0;">₹9,999 <span style="font-size:12px; color:#787b86;">/ Year</span></h2>
-                <p style="color:#787b86; font-size:12px;">Best Value (Save 17% Yearly Access)</p>
-            </div>
-            """, unsafe_allow_html=True
-        )
+        st.markdown("<div style='background:#131722; padding:10px; border-radius:6px; border:1px solid #089981; text-align:center;'><h5 style='color:#089981; margin:0;'>ANNUAL PRO</h5><h3 style='margin:5px 0;'>₹9,999</h3></div>", unsafe_allow_html=True)
         
     st.markdown("<br>", unsafe_allow_html=True)
-    col_p1, col_p2 = st.columns(2, gap="medium")
+    col_p1, col_p2 = st.columns(2, gap="small")
 
     with col_p1:
-        st.markdown("#### 📲 UPI Payment Option")
+        st.markdown("##### 📲 UPI Payment")
         selected_plan = st.selectbox("Select Your Plan", ["₹199 - 3 Days Access", "₹999 - 1 Month Access", "₹9,999 - 1 Year Access"])
         
         amount = "999.00"
@@ -843,11 +811,8 @@ with tab4:
         upi_intent_url = f"upi://pay?pa=7479465676-7@ybl&pn=VEER%20PRO%20TRADER&am={amount}&cu=INR"
         st.link_button(f"📲 Pay ₹{amount} via UPI App", upi_intent_url)
 
-        qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" + upi_intent_url
-        st.image(qr_code_url, caption="Scan QR with any UPI App", width=180)
-
     with col_p2:
-        st.markdown("#### ⚡ Verify Payment & Activate Plan")
+        st.markdown("##### ⚡ Verify Payment")
         utr_input = st.text_input("Enter 12-digit UTR Number:", placeholder="e.g. 4152xxxxxxxx", key="tab_utr_input")
 
         if st.button("🔓 Verify Payment & Activate VIP", key="verify_utr_btn"):
