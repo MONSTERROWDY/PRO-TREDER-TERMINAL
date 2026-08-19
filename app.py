@@ -8,7 +8,7 @@ st.set_page_config(
     page_title="VEER PRO TRADING TERMINAL",
     page_icon="🚀",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 # --- BROWSER LOCALSTORAGE JAVASCRIPT BRIDGE (REFRESH FIX) ---
@@ -68,16 +68,22 @@ st.markdown(
         min-height: 44px !important;
     }
 
+    /* Sidebar Clean Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #0e131f !important;
+        border-right: 1px solid #2a2e39 !important;
+    }
+
     /* Buttons */
     .stButton>button, .stLinkButton>a {
         width: 100%;
         border-radius: 8px;
         font-weight: 700;
-        min-height: 46px;
+        min-height: 44px;
         background: linear-gradient(135deg, #2962ff 0%, #00f2fe 100%) !important;
         color: #ffffff !important;
         border: none !important;
-        box-shadow: 0 4px 20px rgba(41, 98, 255, 0.4);
+        box-shadow: 0 4px 20px rgba(41, 98, 255, 0.3);
         text-align: center;
         display: flex;
         justify-content: center;
@@ -86,7 +92,7 @@ st.markdown(
     }
     .stButton>button:hover, .stLinkButton>a:hover {
         transform: scale(1.02);
-        box-shadow: 0 6px 24px rgba(0, 242, 254, 0.6);
+        box-shadow: 0 6px 24px rgba(0, 242, 254, 0.5);
     }
     
     /* Tabs */
@@ -253,14 +259,34 @@ if not st.session_state.logged_in:
     show_auth_screen()
     st.stop()
 
-# --- SIDEBAR LOGOUT ---
+# --- OPTIMIZED SIDEBAR (PROMO CODE INCLUDED HERE) ---
 with st.sidebar:
     st.markdown("### 👤 User Profile")
     st.markdown(f"👋 **{st.session_state.current_user_name}**")
     st.markdown(f"📧 `{st.session_state.current_user_email}`")
-    st.markdown(f"🌟 Status: **{st.session_state.user_tier}**")
+    
+    if st.session_state.user_tier == "VIP Paid Member":
+        st.markdown("🌟 Status: <b style='color:#00f2fe;'>👑 VIP Member</b>", unsafe_allow_html=True)
+    else:
+        st.markdown("🌟 Status: **Free User**")
+
     st.markdown("---")
-    if st.button("🚪 Logout"):
+    
+    # 🎟️ PROMO CODE SECTION IN SIDEBAR
+    st.markdown("### 🎟️ VIP Access Code")
+    sidebar_promo = st.text_input("Enter Promo Code:", placeholder="e.g. FREEVIP2026", key="sidebar_promo_code")
+    
+    if st.button("Redeem Promo Code", key="apply_sidebar_promo"):
+        if sidebar_promo.strip().upper() == "FREEVIP2026":
+            st.session_state.user_tier = "VIP Paid Member"
+            st.success("🎉 VIP Access Activated!")
+            st.rerun()
+        else:
+            st.error("❌ Invalid Promo Code")
+
+    st.markdown("---")
+    
+    if st.button("🚪 Logout", key="logout_btn"):
         st.session_state.logged_in = False
         st.session_state.current_user_email = ""
         st.session_state.current_user_name = ""
@@ -311,7 +337,7 @@ with tab1:
         else:
             st.caption("👑 VIP Status: **Unlimited Access**")
 
-        if st.button("✨ GENERATE SIGNAL"):
+        if st.button("✨ GENERATE SIGNAL", key="gen_sig_btn"):
             if not can_generate:
                 st.error("⚠️ Free limit reached! Upgrade to VIP Plan.")
             else:
@@ -365,7 +391,7 @@ with tab3:
     m2.metric("Success Rate", "84.5%", "+2.1%")
     m3.metric("Avg R:R Ratio", "1:2.4", "Optimal")
 
-# --- PROMO CODE / VIP TAB IMPLEMENTATION ---
+# --- CLEAN VIP TAB (ONLY UTR VERIFICATION) ---
 with tab4:
     st.markdown("### 💎 VIP Pro Access (₹999 / Month)")
     col_p1, col_p2 = st.columns(2, gap="medium")
@@ -390,22 +416,14 @@ with tab4:
         st.image(qr_code_url, caption="Scan QR with any UPI App", width=180)
 
     with col_p2:
-        st.markdown("#### ⚡ Verify Transaction / Promo Code")
-        utr_input = st.text_input("Enter 12-digit UTR or Promo Code:", placeholder="e.g. FREEVIP2026 or UTR")
+        st.markdown("#### ⚡ Verify Transaction")
+        utr_input = st.text_input("Enter 12-digit UTR Number:", placeholder="e.g. 4152xxxxxxxx", key="tab_utr_input")
 
-        if st.button("🔓 Verify & Activate VIP Access"):
-            cleaned_input = utr_input.strip().upper()
-            
-            # CUSTOME PROMO CODE SETTING
-            FREE_PROMO_CODE = "FREEVIP2026"
-
-            if cleaned_input == FREE_PROMO_CODE:
+        if st.button("🔓 Verify Payment & Activate VIP", key="verify_utr_btn"):
+            cleaned_utr = utr_input.strip()
+            if len(cleaned_utr) >= 10:
                 st.session_state.user_tier = "VIP Paid Member"
-                st.success("🎉 Special Promo Applied! Free VIP Access Activated.")
-                st.rerun()
-            elif len(cleaned_input) >= 8:
-                st.session_state.user_tier = "VIP Paid Member"
-                st.success("🎉 VIP Access Activated Successfully!")
+                st.success("🎉 Payment Verified! VIP Access Activated.")
                 st.rerun()
             else:
-                st.error("⚠️ Invalid UTR Number or Promo Code!")
+                st.error("⚠️ Please enter a valid 12-digit UTR number!")
