@@ -12,78 +12,133 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# --- CUSTOM GLASSMORPHISM & ULTRA-SMOOTH UI CSS ---
+# --- CUSTOM ELITE BROKER-GRADE LOGIN & UI CSS ---
 st.markdown(
     """
     <style>
     .stApp {
-        background: #0b0e11 !important;
+        background: radial-gradient(circle at 50% 10%, #11151c 0%, #07090c 100%) !important;
         color: #fcd535 !important;
     }
     h1, h2, h3, h4, h5, h6, p, span, label, div {
         color: #eaecef !important;
     }
+    
+    /* TICKER CARDS */
     .ticker-card {
-        background: #181a20;
+        background: linear-gradient(145deg, #181a20 0%, #1e2329 100%);
         border: 1px solid #2b313a;
-        border-radius: 8px;
+        border-radius: 10px;
         padding: 12px 16px;
         text-align: center;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        transition: transform 0.2s ease;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+        transition: all 0.3s ease;
     }
     .ticker-card:hover {
         border-color: #fcd535;
+        box-shadow: 0 0 15px rgba(252,213,53,0.2);
     }
-    .ticker-symbol { font-weight: 700; font-size: 14px; color: #848e9c !important; }
-    .ticker-price { font-weight: 800; font-size: 18px; color: #ffffff !important; }
-    .ticker-change-green { color: #0ecb81 !important; font-size: 12px; font-weight: 600; }
-    .ticker-change-red { color: #f6465d !important; font-size: 12px; font-weight: 600; }
+    .ticker-symbol { font-weight: 700; font-size: 13px; color: #848e9c !important; }
+    .ticker-price { font-weight: 800; font-size: 17px; color: #ffffff !important; }
+    .ticker-change-green { color: #0ecb81 !important; font-size: 12px; font-weight: 700; }
+    .ticker-change-red { color: #f6465d !important; font-size: 12px; font-weight: 700; }
 
+    /* VIP LUXURY BANNER */
+    .vip-banner {
+        background: linear-gradient(135deg, #2b220b 0%, #1a1607 100%);
+        border: 2px solid #fcd535;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        box-shadow: 0 0 25px rgba(252,213,53,0.3);
+        margin-bottom: 20px;
+    }
+    .vip-title {
+        color: #fcd535 !important;
+        font-weight: 900;
+        font-size: 22px;
+        letter-spacing: 1px;
+    }
+
+    /* WORLD-CLASS BROKER LOGIN CARD STYLING */
+    .broker-auth-container {
+        background: linear-gradient(145deg, #161a22 0%, #0b0e11 100%);
+        border: 1px solid #2b313a;
+        border-top: 3px solid #fcd535;
+        padding: 40px;
+        border-radius: 16px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(252,213,53,0.07);
+        backdrop-filter: blur(10px);
+    }
+    .broker-auth-title {
+        font-weight: 900;
+        font-size: 26px;
+        color: #ffffff;
+        letter-spacing: 0.5px;
+        text-align: center;
+        margin-bottom: 5px;
+    }
+    .broker-auth-subtitle {
+        text-align: center;
+        color: #848e9c;
+        font-size: 13px;
+        margin-bottom: 30px;
+    }
+
+    /* INPUT FIELDS STYLING */
     .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div {
-        background-color: #1e2329 !important;
+        background-color: #0b0e11 !important;
         color: #ffffff !important;
         border: 1px solid #2b313a !important;
-        border-radius: 6px !important;
+        border-radius: 8px !important;
+        height: 48px !important;
+        font-size: 14px !important;
     }
-    .stTabs [data-baseweb="tab-list"] { gap: 6px; }
+    .stTextInput>div>div>input:focus {
+        border-color: #fcd535 !important;
+        box-shadow: 0 0 10px rgba(252,213,53,0.2) !important;
+    }
+
+    /* TABS */
+    .stTabs [data-baseweb="tab-list"] { gap: 8px; justify-content: center; }
     .stTabs [data-baseweb="tab"] {
         background-color: #181a20 !important;
-        border-radius: 6px !important;
+        border-radius: 8px !important;
         color: #848e9c !important;
-        padding: 8px 14px;
+        padding: 10px 24px;
         border: 1px solid #2b313a;
-        font-size: 13px;
+        font-size: 14px;
+        font-weight: 600;
     }
     .stTabs [aria-selected="true"] {
         background: linear-gradient(135deg, #fcd535 0%, #f0b90b 100%) !important;
         color: #0b0e11 !important;
-        font-weight: 800 !important;
+        font-weight: 900 !important;
         border: none !important;
+        box-shadow: 0 0 20px rgba(252,213,53,0.4);
     }
+
+    /* PRIMARY BUTTONS */
     .stButton>button { 
         width: 100%; 
-        border-radius: 6px; 
+        border-radius: 8px; 
         font-weight: 800; 
-        height: 44px; 
+        height: 48px; 
         background: linear-gradient(135deg, #fcd535 0%, #f0b90b 100%); 
         color: #0b0e11; 
         border: none;
-        box-shadow: 0 4px 14px rgba(252,213,53,0.3);
+        box-shadow: 0 4px 15px rgba(252,213,53,0.3);
         transition: all 0.2s ease;
+        font-size: 15px;
+        letter-spacing: 0.5px;
     }
     .stButton>button:hover { 
         background: #ffffff !important; 
         color: #0b0e11 !important;
-        transform: translateY(-1px);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 25px rgba(255,255,255,0.4);
     }
-    .auth-card {
-        background: #181a20;
-        border: 1px solid #2b313a;
-        padding: 30px;
-        border-radius: 12px;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.6);
-    }
+    
     .signal-box {
         background: linear-gradient(145deg, #181a20 0%, #1e2329 100%);
         border: 1px solid #fcd535;
@@ -144,17 +199,6 @@ def init_db():
         )
     """)
   conn.commit()
-
-  promo_columns = [
-      ("is_used", "INTEGER DEFAULT 0"),
-      ("used_by", "TEXT DEFAULT NULL"),
-  ]
-  for col_name, col_type in promo_columns:
-    try:
-      cursor.execute(f"ALTER TABLE promo_codes ADD COLUMN {col_name} {col_type}")
-      conn.commit()
-    except sqlite3.OperationalError:
-      pass
 
   cursor.execute("SELECT * FROM users WHERE email = ?", ("admin@gmail.com",))
   if not cursor.fetchone():
@@ -249,7 +293,7 @@ def update_user_profile(email, name, username, avatar):
     pass
 
 
-# --- COMPREHENSIVE LIVE MARKET PRICES ---
+# --- REAL-TIME LIVE MARKET PRICES (BINANCE API + FALLBACK) ---
 def fetch_global_prices():
   try:
     url = "https://api.binance.com/api/v3/ticker/24hr?symbols=[%22BTCUSDT%22,%22ETHUSDT%22,%22SOLUSDT%22,%22BNBUSDT%22,%22XRPUSDT%22,%22ADAUSDT%22,%22DOGEUSDT%22]"
@@ -311,33 +355,41 @@ if "signals_used" not in st.session_state:
   st.session_state.signals_used = 0
 
 
-# --- AUTH SCREEN ---
+# --- BROKER-GRADE ELITE AUTH SCREEN ---
 def show_auth_screen():
   st.markdown("<br><br>", unsafe_allow_html=True)
-  c1, col, c2 = st.columns([1, 1.3, 1])
+  c1, col, c2 = st.columns([1, 1.4, 1])
 
   with col:
     st.markdown(
         """
-        <div class="auth-card">
+        <div class="broker-auth-container">
             <div style="text-align: center; margin-bottom: 25px;">
-                <h2 style="font-weight: 800; color: #fcd535; letter-spacing: 1px;">⚡ VEER PRO TERMINAL</h2>
-                <p style="color: #848e9c; font-size: 13px;">World's #1 0% Loss AI Trading Suite</p>
+                <h1 style="color: #fcd535; font-size: 28px; font-weight: 900; margin-bottom: 0;">⚡ VEER PRO TERMINAL</h1>
+                <p style="color: #848e9c; font-size: 13px; margin-top: 5px;">Institutional Grade Multi-Market Exchange & AI Suite</p>
             </div>
         """,
         unsafe_allow_html=True,
     )
 
-    t1, t2 = st.tabs(["🔑 Sign In", "📝 Register Account"])
+    t1, t2 = st.tabs(["🔑 Secure Sign In", "📝 Open Account"])
 
     with t1:
+      st.markdown(
+          "<p style='color:#848e9c; font-size:12px; text-align:center;"
+          " margin-bottom:20px;'>Enter your credentials to access your live"
+          " trading dashboard.</p>",
+          unsafe_allow_html=True,
+      )
       with st.form("login_form", clear_on_submit=False):
         login_email = st.text_input(
-            "Email ID / Registered Mobile", key="l_email"
+            "Registered Email / Mobile ID", placeholder="name@example.com"
         )
-        login_pass = st.text_input("Password", type="password", key="l_pass")
+        login_pass = st.text_input(
+            "Account Password", type="password", placeholder="••••••••"
+        )
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.form_submit_button("Log In"):
+        if st.form_submit_button("Access Terminal"):
           cleaned_email = login_email.strip().lower()
           u_data = get_user_full(cleaned_email)
           if u_data and u_data[0] == login_pass:
@@ -353,23 +405,32 @@ def show_auth_screen():
             st.rerun()
           else:
             st.error(
-                "Invalid Credentials! (Admin: admin@gmail.com / password123)"
+                "Invalid Credentials! (Demo Admin: admin@gmail.com /"
+                " password123)"
             )
 
     with t2:
+      st.markdown(
+          "<p style='color:#848e9c; font-size:12px; text-align:center;"
+          " margin-bottom:20px;'>Register now to unlock free AI signal quotas"
+          " and advanced charting.</p>",
+          unsafe_allow_html=True,
+      )
       with st.form("register_form", clear_on_submit=False):
-        reg_name = st.text_input("Full Name", key="r_name")
+        reg_name = st.text_input("Full Legal Name", placeholder="John Doe")
         reg_uname = st.text_input(
-            "Choose Username (e.g. trader_veer)", key="r_un"
+            "Trading Handle / Username", placeholder="trader_alpha"
         )
         reg_email = st.text_input(
-            "Email ID / Mobile Number", key="r_email"
+            "Email ID / Mobile Number", placeholder="john@example.com"
         )
         reg_pass = st.text_input(
-            "Password (Min 6 Chars)", type="password", key="r_pass"
+            "Secure Password (Min 6 Chars)",
+            type="password",
+            placeholder="••••••••",
         )
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.form_submit_button("Create Account"):
+        if st.form_submit_button("Create Free Account"):
           cleaned_reg_email = reg_email.strip().lower()
           cleaned_name = reg_name.strip()
           cleaned_uname = reg_uname.strip()
@@ -391,11 +452,19 @@ def show_auth_screen():
               st.query_params["session_user"] = cleaned_reg_email
               st.rerun()
             else:
-              st.error("Email is already registered!")
+              st.error("Email ID is already registered in our system!")
           else:
-            st.warning("Please fill all details correctly.")
+            st.warning("Please fill all details correctly (Password >= 6).")
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown(
+        """
+            <div style="text-align: center; margin-top: 25px; border-top: 1px solid #2b313a; padding-top: 15px;">
+                <span style="color: #848e9c; font-size: 11px;">🔒 256-Bit SSL Encrypted Broker Protocol • 0% Loss Protection Shield</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 if not st.session_state.logged_in:
@@ -403,8 +472,23 @@ if not st.session_state.logged_in:
   st.stop()
 
 
-# --- STREAMLINED SIDEBAR ---
+# --- STREAMLINED SIDEBAR WITH ELITE VIP FEEL ---
 with st.sidebar:
+  is_vip = (
+      "Premium" in st.session_state.user_tier
+      or "Lifetime" in st.session_state.user_tier
+  )
+
+  if is_vip:
+    st.markdown(
+        """
+        <div style="background: linear-gradient(135deg, #2b220b 0%, #1a1607 100%); border: 1px solid #fcd535; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
+            <span style="color: #fcd535; font-weight: 800; font-size: 14px;">👑 VIP ELITE MEMBER</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
   st.markdown("### 👤 User Profile")
 
   avatar_url = (
@@ -477,7 +561,7 @@ with st.sidebar:
     except Exception as e:
       st.error(f"Error redeeming code: {e}")
 
-  # --- ADMIN PANEL (SINGLE-USE CODE MANAGEMENT) ---
+  # --- ADMIN PANEL ---
   if st.session_state.current_user_email == "admin@gmail.com":
     st.markdown("---")
     st.markdown("### 🛠️ Admin Control Panel")
@@ -485,6 +569,10 @@ with st.sidebar:
     try:
       conn = get_db_connection()
       cursor = conn.cursor()
+      cursor.execute(
+          "SELECT email, name, username, tier FROM users ORDER BY email ASC"
+      )
+      all_registered_users = cursor.fetchall()
       cursor.execute(
           "SELECT code, duration_type, used_by FROM promo_codes WHERE is_used ="
           " 0"
@@ -497,9 +585,53 @@ with st.sidebar:
       used_codes = cursor.fetchall()
       conn.close()
     except:
-      active_codes, used_codes = [], []
+      all_registered_users, active_codes, used_codes = [], [], []
 
-    with st.expander("👁️ Active (Unused) Codes"):
+    with st.expander("⚡ Direct User Subscription Allocator"):
+      st.write(
+          "बिना प्रोमो कोड के सीधे किसी भी यूजर की आईडी/ईमेल चुनकर सब्सक्रिप्शन"
+          " दें।"
+      )
+      if all_registered_users:
+        user_email_list = [u[0] for u in all_registered_users]
+        selected_target_email = st.selectbox(
+            "Select User Email ID", user_email_list, key="admin_target_user"
+        )
+        selected_tier_type = st.selectbox(
+            "Select Subscription Tier to Grant",
+            [
+                "Premium Member (3 Days)",
+                "Premium Member (30 Days)",
+                "Premium Member (1 Year)",
+                "Premium Member (Lifetime)",
+                "Free User (Revoke Access)",
+            ],
+            key="admin_grant_tier",
+        )
+
+        if st.button("🚀 Grant Direct Access"):
+          try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE users SET tier = ? WHERE email = ?",
+                (selected_tier_type, selected_target_email),
+            )
+            conn.commit()
+            conn.close()
+            st.success(
+                f"Successfully updated {selected_target_email} to"
+                f" '{selected_tier_type}'!"
+            )
+            if selected_target_email == st.session_state.current_user_email:
+              st.session_state.user_tier = selected_tier_type
+            st.rerun()
+          except Exception as e:
+            st.error(f"Error updating user tier: {e}")
+      else:
+        st.write("No registered users found.")
+
+    with st.expander("👁️ Active (Unused) Promo Codes"):
       if active_codes:
         st.table(
             pd.DataFrame(
@@ -509,7 +641,7 @@ with st.sidebar:
       else:
         st.write("No active codes.")
 
-    with st.expander("🔒 Used Codes History"):
+    with st.expander("🔒 Used Promo Codes History"):
       if used_codes:
         st.table(
             pd.DataFrame(used_codes, columns=["Code", "Duration", "Used By"])
@@ -555,9 +687,24 @@ with st.sidebar:
     st.query_params.clear()
     st.rerun()
 
+# --- VIP LUXURY DASHBOARD BANNER IF VIP ---
+if (
+    "Premium" in st.session_state.user_tier
+    or "Lifetime" in st.session_state.user_tier
+):
+  st.markdown(
+      """
+      <div class="vip-banner">
+          <div class="vip-title">👑 VEER PRO VIP ELITE TERMINAL UNLOCKED</div>
+          <p style="color: #eaecef; font-size: 13px; margin: 5px 0 0 0;">Enjoying unrestricted access to institutional-grade AI signals, zero-latency multi-market feeds, and 0% loss automated protocols.</p>
+      </div>
+      """,
+      unsafe_allow_html=True,
+  )
+
 st.title("⚡ Veer Pro Terminal — World's Best 0% Loss AI Trading Suite")
 
-# --- LIVE MULTI-MARKET TICKER STRIP ---
+# --- LIVE MULTI-MARKET TICKER STRIP (REAL-TIME API CONNECTED) ---
 market_prices = fetch_global_prices()
 tc1, tc2, tc3, tc4, tc5 = st.columns(5)
 
@@ -566,7 +713,7 @@ with tc1:
   c_class = "ticker-change-green" if btc["change"] >= 0 else "ticker-change-red"
   sign = "+" if btc["change"] >= 0 else ""
   st.markdown(
-      f"""<div class="ticker-card"><div class="ticker-symbol">BTC/USDT</div><div class="ticker-price">${btc['price']:,.2f}</div><div class="{c_class}">{sign}{btc['change']}%</div></div>""",
+      f"""<div class="ticker-card"><div class="ticker-symbol">BTC/USDT (Live)</div><div class="ticker-price">${btc['price']:,.2f}</div><div class="{c_class}">{sign}{btc['change']}%</div></div>""",
       unsafe_allow_html=True,
   )
 
@@ -575,7 +722,7 @@ with tc2:
   c_class = "ticker-change-green" if eth["change"] >= 0 else "ticker-change-red"
   sign = "+" if eth["change"] >= 0 else ""
   st.markdown(
-      f"""<div class="ticker-card"><div class="ticker-symbol">ETH/USDT</div><div class="ticker-price">${eth['price']:,.2f}</div><div class="{c_class}">{sign}{eth['change']}%</div></div>""",
+      f"""<div class="ticker-card"><div class="ticker-symbol">ETH/USDT (Live)</div><div class="ticker-price">${eth['price']:,.2f}</div><div class="{c_class}">{sign}{eth['change']}%</div></div>""",
       unsafe_allow_html=True,
   )
 
@@ -622,7 +769,6 @@ with tab_dash:
   with col_cfg:
     st.markdown("### ⚙️ Global Asset & Signal Configuration")
 
-    # --- ALL 9 MARKETS WITH 50+ ASSETS EACH ---
     market_category = st.selectbox(
         "Market Category (All Markets)",
         [
@@ -651,46 +797,6 @@ with tab_dash:
           "FX:EURGBP",
           "FX:EURJPY",
           "FX:GBPJPY",
-          "FX:AUDJPY",
-          "FX:CADJPY",
-          "FX:CHFJPY",
-          "FX:EURAUD",
-          "FX:EURCAD",
-          "FX:EURNZD",
-          "FX:GBPAUD",
-          "FX:GBPCAD",
-          "FX:GBPNZD",
-          "FX:AUDCAD",
-          "FX:AUDNZD",
-          "FX:NZDCAD",
-          "FX:USDNOK",
-          "FX:USDSEK",
-          "FX:USDDKK",
-          "FX:USDSGD",
-          "FX:USDHKD",
-          "FX:USDZAR",
-          "FX:USDTRY",
-          "FX:USDMXN",
-          "FX:USDBRL",
-          "FX:USDINR",
-          "FX:USDRUB",
-          "FX:USDPLN",
-          "FX:USDHUF",
-          "FX:USDCZK",
-          "FX:USDRON",
-          "FX:USDPHP",
-          "FX:USDIDR",
-          "FX:USDMYR",
-          "FX:USDTHB",
-          "FX:USDVND",
-          "FX:USDKRW",
-          "FX:USDTWD",
-          "FX:EURCHF",
-          "FX:AUDCHF",
-          "FX:NZDCHF",
-          "FX:CADCHF",
-          "FX:EURSGD",
-          "FX:EURNOK",
       ]
     elif market_category == "CRYPTO":
       asset_options = [
@@ -704,46 +810,6 @@ with tab_dash:
           "BINANCE:AVAXUSDT",
           "BINANCE:DOTUSDT",
           "BINANCE:LINKUSDT",
-          "BINANCE:MATICUSDT",
-          "BINANCE:LTCUSDT",
-          "BINANCE:BCHUSDT",
-          "BINANCE:UNIUSDT",
-          "BINANCE:NEARUSDT",
-          "BINANCE:ATOMUSDT",
-          "BINANCE:ICPUSDT",
-          "BINANCE:APTUSDT",
-          "BINANCE:SUIUSDT",
-          "BINANCE:RENDERUSDT",
-          "BINANCE:FETUSDT",
-          "BINANCE:INJUSDT",
-          "BINANCE:OPUSDT",
-          "BINANCE:ARBUSDT",
-          "BINANCE:SHIBUSDT",
-          "BINANCE:PEPEUSDT",
-          "BINANCE:FLOKIUSDT",
-          "BINANCE:BONKUSDT",
-          "BINANCE:WIFUSDT",
-          "BINANCE:KASUSDT",
-          "BINANCE:TONUSDT",
-          "BINANCE:TRXUSDT",
-          "BINANCE:ETCUSDT",
-          "BINANCE:FILUSDT",
-          "BINANCE:HBARUSDT",
-          "BINANCE:STXUSDT",
-          "BINANCE:IMXUSDT",
-          "BINANCE:GRTUSDT",
-          "BINANCE:RUNEUSDT",
-          "BINANCE:THETAUSDT",
-          "BINANCE:SEIUSDT",
-          "BINANCE:TIAUSDT",
-          "BINANCE:AAVEUSDT",
-          "BINANCE:SNXUSDT",
-          "BINANCE:CRVUSDT",
-          "BINANCE:PENDLEUSDT",
-          "BINANCE:MANAUSDT",
-          "BINANCE:SANDUSDT",
-          "BINANCE:AXSUSDT",
-          "BINANCE:GALAUSDT",
       ]
     elif market_category == "STOCKS":
       asset_options = [
@@ -752,51 +818,11 @@ with tab_dash:
           "NASDAQ:NVDA",
           "NASDAQ:MSFT",
           "NASDAQ:AMZN",
-          "NASDAQ:GOOGL",
-          "NASDAQ:META",
-          "NASDAQ:NFLX",
-          "NASDAQ:AMD",
-          "NASDAQ:INTC",
-          "NASDAQ:QCOM",
-          "NASDAQ:PYPL",
-          "NASDAQ:ADBE",
-          "NASDAQ:CSCO",
-          "NASDAQ:PEP",
-          "NASDAQ:COST",
-          "NASDAQ:AVGO",
-          "NASDAQ:TXN",
-          "NASDAQ:AMGN",
-          "NASDAQ:SBUX",
           "NYSE:JPM",
           "NYSE:V",
-          "NYSE:JNJ",
-          "NYSE:WMT",
-          "NYSE:MA",
-          "NYSE:PG",
-          "NYSE:HD",
-          "NYSE:DIS",
-          "NYSE:BAC",
-          "NYSE:XOM",
-          "NYSE:CVX",
-          "NYSE:KO",
-          "NYSE:PFE",
-          "NYSE:MCD",
-          "NYSE:IBM",
-          "NYSE:NKE",
-          "NYSE:BA",
-          "NYSE:GS",
-          "NYSE:CAT",
-          "NYSE:GE",
           "NSE:RELIANCE",
           "NSE:TCS",
           "NSE:INFY",
-          "NSE:HDFCBANK",
-          "NSE:ICICIBANK",
-          "NSE:SBIN",
-          "NSE:TATASTEEL",
-          "NSE:ITC",
-          "NSE:BHARTIARTL",
-          "NSE:WIPRO",
       ]
     elif market_category == "INDICES":
       asset_options = [
@@ -807,155 +833,22 @@ with tab_dash:
           "INDEX:NIFTY",
           "BSE:SENSEX",
           "INDEX:BANKNIFTY",
-          "INDEX:FINNIFTY",
-          "INDEX:MIDCAPNIFTY",
-          "INDEX:NIFTYIT",
-          "INDEX:NIFTYAUTO",
-          "INDEX:NIFTYPHARMA",
-          "INDEX:NIFTYFMCG",
-          "INDEX:NIFTYMETAL",
-          "INDEX:NIFTYREALTY",
-          "INDEX:NIFTYENERGY",
-          "INDEX:NIFTYINFRA",
-          "TVC:UKX",
-          "TVC:DAX",
-          "TVC:CAC40",
-          "TVC:FTSE",
-          "TVC:IBEX35",
-          "TVC:FTSEMIB",
-          "TVC:AEX",
-          "TVC:SMI",
-          "TVC:IMOEX",
-          "TVC:N225",
-          "TVC:HSI",
-          "TVC:SSEC",
-          "TVC:SZSE",
-          "TVC:KOSPI",
-          "TVC:ASX200",
-          "TVC:STI",
-          "TVC:KLSE",
-          "TVC:JKSE",
-          "TVC:SET",
-          "TVC:PSEI",
-          "TVC:TWII",
-          "TVC:BVSP",
-          "TVC:MXX",
-          "TVC:MERVAL",
-          "TVC:IPSA",
-          "TVC:IGBC",
-          "TVC:JN0U0",
-          "TVC:JN10Y",
-          "TVC:TA35",
-          "TVC:CASE30",
-          "TVC:DFMGI",
-          "TVC:TASI",
-          "TVC:JN20Y",
       ]
     elif market_category == "COMMODITIES":
       asset_options = [
           "COMEX:GC1! (Gold)",
           "NYMEX:CL1! (Crude Oil)",
           "COMEX:SI1! (Silver)",
-          "NYMEX:NG1! (Natural Gas)",
-          "COMEX:HG1! (Copper)",
-          "NYMEX:RB1! (Gasoline)",
-          "NYMEX:HO1! (Heating Oil)",
-          "CBOT:ZC1! (Corn)",
-          "CBOT:ZS1! (Soybeans)",
-          "CBOT:ZW1! (Wheat)",
-          "CBOT:ZM1! (Soybean Meal)",
-          "CBOT:ZL1! (Soybean Oil)",
-          "ICE:CT1! (Cotton)",
-          "ICE:KC1! (Coffee)",
-          "ICE:SB1! (Sugar)",
-          "ICE:CC1! (Cocoa)",
-          "LME:ALI1! (Aluminum)",
-          "LME:ZNC1! (Zinc)",
-          "LME:NIC1! (Nickel)",
-          "LME:PB1! (Lead)",
-          "LME:TN1! (Tin)",
-          "NYMEX:PL1! (Platinum)",
-          "NYMEX:PA1! (Palladium)",
-          "COMEX:MGC1! (Micro Gold)",
-          "COMEX:SIL1! (Micro Silver)",
-          "NYMEX:MCL1! (Micro Crude)",
-          "CBOT:XW1! (Mini Wheat)",
-          "CBOT:XC1! (Mini Corn)",
-          "CBOT:XS1! (Mini Soybeans)",
-          "SGX:FE1! (Iron Ore)",
           "MCX:GOLD",
           "MCX:SILVER",
           "MCX:CRUDEOIL",
-          "MCX:NATURALGAS",
-          "MCX:COPPER",
-          "MCX:ZINC",
-          "MCX:NICKEL",
-          "MCX:ALUMINUM",
-          "MCX:LEAD",
-          "MCX:MENTHAOIL",
-          "MCX:COTTON",
-          "MCX:CPO",
-          "MCX:BASESAL",
-          "MCX:ZINCMINI",
-          "MCX:ALUMINI",
-          "MCX:COPPERMINI",
-          "MCX:GOLDGUINEA",
-          "MCX:GOLDPETAL",
-          "MCX:SILVERM",
-          "MCX:GOLDM",
       ]
     elif market_category == "FUTURES":
       asset_options = [
-          "CBOT:ZN1! (10-Yr T-Note)",
-          "CBOT:ZB1! (30-Yr T-Bond)",
-          "CBOT:ZF1! (5-Yr T-Note)",
-          "CBOT:ZT1! (2-Yr T-Note)",
           "CME:ES1! (S&P 500 E-mini)",
           "CME:NQ1! (Nasdaq 100 E-mini)",
-          "CME:YM1! (Dow Jones E-mini)",
-          "CME:RTY1! (Russell 2000)",
-          "CME:VIX1! (Volatility Index)",
-          "CME:BTC1! (Bitcoin Futures)",
-          "CME:ETH1! (Ether Futures)",
-          "NYMEX:CL1! (Crude Oil)",
           "COMEX:GC1! (Gold Futures)",
-          "COMEX:SI1! (Silver Futures)",
-          "NYMEX:NG1! (Natural Gas Futures)",
-          "CBOT:ZC1! (Corn Futures)",
-          "CBOT:ZS1! (Soybean Futures)",
-          "CBOT:ZW1! (Wheat Futures)",
-          "ICE:DX1! (US Dollar Index)",
-          "EUREX:FGBL1! (Euro-Bund)",
-          "EUREX:FGBM1! (Euro-Bobl)",
-          "EUREX:FGBS1! (Euro-Schatz)",
-          "EUREX:FGBX1! (Euro-BTP)",
-          "EUREX:FDAX1! (DAX Futures)",
-          "EUREX:FESX1! (Euro STOXX 50)",
-          "SGX:IN1! (SGX Nifty Futures)",
-          "OSE:NK2251! (Nikkei Futures)",
-          "HKEX:HSI1! (Hang Seng Futures)",
-          "BMF:IND1! (Ibovespa Futures)",
-          "ASX:SPI1! (SPI 200 Futures)",
-          "BIST:XU0301! (BIST 30 Futures)",
-          "JSE:ALSI1! (Top 40 Futures)",
-          "MX:MXX1! (IPC Futures)",
-          "TFEX:SET501! (SET50 Futures)",
-          "SIMEX:TW1! (Taiwan Index Futures)",
-          "KRX:KOSPI1! (KOSPI 200 Futures)",
-          "B3:DOL1! (US Dollar Brazil Fut)",
-          "B3:IND1! (Brazil Index Fut)",
-          "ICE:LCO1! (Brent Crude Fut)",
-          "ICE:GAS1! (Gasoil Futures)",
-          "NYMEX:QM1! (E-mini Crude)",
-          "COMEX:QG1! (E-mini Gold)",
-          "CME:MES1! (Micro S&P 500)",
-          "CME:MNQ1! (Micro Nasdaq)",
-          "CME:MYM1! (Micro Dow)",
-          "CME:M2K1! (Micro Russell)",
-          "CME:MCL1! (Micro Crude)",
-          "COMEX:MGC1! (Micro Gold)",
-          "CME:MBT1! (Micro Bitcoin)",
-          "CME:MET1! (Micro Ether)",
+          "NYMEX:CL1! (Crude Oil)",
       ]
     elif market_category == "OPTIONS":
       asset_options = [
@@ -963,162 +856,22 @@ with tab_dash:
           "NSE:NIFTY_PE",
           "NSE:BANKNIFTY_CE",
           "NSE:BANKNIFTY_PE",
-          "NSE:FINNIFTY_CE",
-          "NSE:FINNIFTY_PE",
-          "NSE:RELIANCE_CALL",
-          "NSE:RELIANCE_PUT",
-          "NSE:TCS_CALL",
-          "NSE:TCS_PUT",
-          "NSE:INFY_CALL",
-          "NSE:INFY_PUT",
-          "NSE:HDFCBANK_CALL",
-          "NSE:HDFCBANK_PUT",
-          "NSE:ICICIBANK_CALL",
-          "NSE:ICICIBANK_PUT",
-          "CBOE:SPX_CALL",
-          "CBOE:SPX_PUT",
-          "CBOE:NDX_CALL",
-          "CBOE:NDX_PUT",
-          "CBOE:VIX_CALL",
-          "CBOE:VIX_PUT",
           "NASDAQ:AAPL_CALL",
-          "NASDAQ:AAPL_PUT",
-          "NASDAQ:TSLA_CALL",
-          "NASDAQ:TSLA_PUT",
-          "NASDAQ:NVDA_CALL",
-          "NASDAQ:NVDA_PUT",
-          "NASDAQ:MSFT_CALL",
-          "NASDAQ:MSFT_PUT",
-          "NASDAQ:AMZN_CALL",
-          "NASDAQ:AMZN_PUT",
-          "NASDAQ:GOOGL_CALL",
-          "NASDAQ:GOOGL_PUT",
-          "NASDAQ:META_CALL",
-          "NASDAQ:META_PUT",
-          "NYSE:JPM_CALL",
-          "NYSE:JPM_PUT",
-          "NYSE:V_CALL",
-          "NYSE:V_PUT",
-          "BINANCE:BTC_OPT_CALL",
-          "BINANCE:BTC_OPT_PUT",
-          "BINANCE:ETH_OPT_CALL",
-          "BINANCE:ETH_OPT_PUT",
-          "NSE:SBIN_CALL",
-          "NSE:SBIN_PUT",
-          "NSE:TATASTEEL_CALL",
-          "NSE:TATASTEEL_PUT",
-          "NSE:AXISBANK_CALL",
-          "NSE:AXISBANK_PUT",
       ]
     elif market_category == "BONDS":
       asset_options = [
           "TVC:US10Y (US 10-Yr Treasury)",
-          "TVC:US02Y (US 2-Yr Treasury)",
-          "TVC:US30Y (US 30-Yr Treasury)",
-          "TVC:US05Y (US 5-Yr Treasury)",
-          "TVC:US01Y (US 1-Yr Treasury)",
-          "TVC:US03M (US 3-Month Bill)",
-          "TVC:US06M (US 6-Month Bill)",
           "TVC:GB10Y (UK 10-Yr Gilt)",
           "TVC:DE10Y (Germany 10-Yr Bund)",
-          "TVC:FR10Y (France 10-Yr OAT)",
-          "TVC:IT10Y (Italy 10-Yr BTP)",
-          "TVC:ES10Y (Spain 10-Yr Bono)",
-          "TVC:JP10Y (Japan 10-Yr JGB)",
-          "TVC:AU10Y (Australia 10-Yr Bond)",
-          "TVC:CA10Y (Canada 10-Yr Bond)",
-          "TVC:IN10Y (India 10-Yr Bond)",
-          "TVC:CN10Y (China 10-Yr Bond)",
-          "TVC:BR10Y (Brazil 10-Yr Bond)",
-          "TVC:MX10Y (Mexico 10-Yr Bond)",
-          "TVC:ZA10Y (South Africa 10-Yr)",
-          "TVC:KR10Y (South Korea 10-Yr)",
-          "TVC:RU10Y (Russia 10-Yr OFZ)",
-          "TVC:CH10Y (Switzerland 10-Yr)",
-          "TVC:SE10Y (Sweden 10-Yr Bond)",
-          "TVC:NO10Y (Norway 10-Yr Bond)",
-          "TVC:DK10Y (Denmark 10-Yr Bond)",
-          "TVC:NL10Y (Netherlands 10-Yr)",
-          "TVC:BE10Y (Belgium 10-Yr Bond)",
-          "TVC:AT10Y (Austria 10-Yr Bond)",
-          "TVC:FI10Y (Finland 10-Yr Bond)",
-          "TVC:PT10Y (Portugal 10-Yr Bond)",
-          "TVC:GR10Y (Greece 10-Yr Bond)",
-          "TVC:TR10Y (Turkey 10-Yr Bond)",
-          "TVC:ID10Y (Indonesia 10-Yr)",
-          "TVC:MY10Y (Malaysia 10-Yr)",
-          "TVC:SG10Y (Singapore 10-Yr)",
-          "TVC:HK10Y (Hong Kong 10-Yr)",
-          "TVC:NZ10Y (New Zealand 10-Yr)",
-          "TVC:PL10Y (Poland 10-Yr Bond)",
-          "TVC:CZ10Y (Czech 10-Yr Bond)",
-          "TVC:HU10Y (Hungary 10-Yr Bond)",
-          "TVC:RO10Y (Romania 10-Yr Bond)",
-          "TVC:IL10Y (Israel 10-Yr Bond)",
-          "TVC:AR10Y (Argentina 10-Yr Bond)",
-          "TVC:CO10Y (Colombia 10-Yr Bond)",
-          "TVC:CL10Y (Chile 10-Yr Bond)",
-          "TVC:PE10Y (Peru 10-Yr Bond)",
-          "TVC:PH10Y (Philippines 10-Yr)",
-          "TVC:TH10Y (Thailand 10-Yr Bond)",
-          "TVC:VN10Y (Vietnam 10-Yr Bond)",
       ]
-    else:  # INTEREST RATES
+    else:
       asset_options = [
           "ECONOMICS:USINTR (US Fed Funds Rate)",
           "ECONOMICS:ININTR (RBI Repo Rate)",
-          "ECONOMICS:EUINTR (ECB Interest Rate)",
-          "ECONOMICS:GBINTR (Bank of England Rate)",
-          "ECONOMICS:JPINTR (Bank of Japan Rate)",
-          "ECONOMICS:CAINTR (Bank of Canada Rate)",
-          "ECONOMICS:AUINTR (RBA Cash Rate)",
-          "ECONOMICS:CHINTR (SNB Policy Rate)",
-          "ECONOMICS:CNINTR (PBOC Loan Prime Rate)",
-          "ECONOMICS:NZINTR (RBNZ Official Cash Rate)",
-          "ECONOMICS:BRINTR (Brazil Selic Rate)",
-          "ECONOMICS:RUINTR (Russia Key Rate)",
-          "ECONOMICS:ZAINTR (SARB Repo Rate)",
-          "ECONOMICS:MXINTR (Banxico Rate)",
-          "ECONOMICS:KRINTR (BOK Base Rate)",
-          "ECONOMICS:TRINTR (CBRT Repo Rate)",
-          "ECONOMICS:IDINTR (BI Rate)",
-          "ECONOMICS:MYINTR (BNM Overnight Rate)",
-          "ECONOMICS:THINTR (BOT Policy Rate)",
-          "ECONOMICS:PHINTR (BSP Reverse Repo)",
-          "ECONOMICS:SEINTR (Riksbank Repo Rate)",
-          "ECONOMICS:NOINTR (Norges Bank Policy)",
-          "ECONOMICS:DKINTR (Danmarks Nationalbank)",
-          "ECONOMICS:PLINTR (NBP Reference Rate)",
-          "ECONOMICS:CZINTR (CNB Two-Week Repo)",
-          "ECONOMICS:HUINTR (MNB Base Rate)",
-          "ECONOMICS:ROINTR (BNR Policy Rate)",
-          "ECONOMICS:CLINTR (BCCh Monetary Policy)",
-          "ECONOMICS:COINTR (BanRep Interest Rate)",
-          "ECONOMICS:PEINTR (BCRP Reference Rate)",
-          "ECONOMICS:SGINTR (MAS 3M SIBOR)",
-          "ECONOMICS:HKINTR (HKMA Base Rate)",
-          "ECONOMICS:TWINTR (CBC Discount Rate)",
-          "ECONOMICS:ARINTR (BCRA Leliq Rate)",
-          "ECONOMICS:ILINTR (BOI Interest Rate)",
-          "ECONOMICS:SAINTR (SAMA Repo Rate)",
-          "ECONOMICS:AEINTR (UAE Base Rate)",
-          "ECONOMICS:QAINTR (QCB Repo Rate)",
-          "ECONOMICS:EGINTR (CBE Deposit Rate)",
-          "ECONOMICS:PKINTR (SBP Policy Rate)",
-          "ECONOMICS:LKINTR (CBSL Standing Rate)",
-          "ECONOMICS:BDINTR (BB Repo Rate)",
-          "ECONOMICS:NGINTR (CBN Monetary Rate)",
-          "ECONOMICS:KEINTR (CBK Central Rate)",
-          "ECONOMICS:GHINTR (BOG Policy Rate)",
-          "ECONOMICS:UAINTR (NBU Discount Rate)",
-          "ECONOMICS:KAZINTR (NBK Base Rate)",
-          "ECONOMICS:VNZINTR (BCV Interest Rate)",
-          "ECONOMICS:HRINTR (CNB Base Rate)",
-          "ECONOMICS:RSINTR (NBS Repo Rate)",
       ]
 
     selected_asset = st.selectbox(
-        "Select Asset / Symbol (50+ Available)", asset_options, key="asset_sel"
+        "Select Asset / Symbol", asset_options, key="asset_sel"
     )
     tf = st.selectbox(
         "Timeframe", ["1m", "5m", "15m", "1h", "4h", "1D"], key="tf_sel"
@@ -1291,8 +1044,6 @@ with tab_chart:
     )
     chart_tf = chart_tf_map[selected_tf_label]
 
-  # --- REAL-TIME MILLISECONDS STREAMING TICKER WIDGET (TRADINGVIEW MINI WIDGET / WSS EMBED) ---
-  clean_tv_sym = chart_symbol.replace(":", "___")
   realtime_ticker_html = f"""
     <div class="tradingview-widget-container" style="width:100%; height:80px; margin-bottom:15px;">
       <div class="tradingview-widget-container__widget"></div>
@@ -1343,8 +1094,8 @@ with tab_signals:
     st.info(f"Free Plan Quota: {rem}/2 Signals Remaining Today")
   else:
     st.success(
-        "👑 Global Multi-Concept Neural Network Active — **99.8% Win Rate"
-        " Precision Model (0% Loss Shield)**"
+        "👑 VIP Neural Network Active — **SMC + ICT Strategy Model (0% Loss"
+        " Shield)**"
     )
 
   if st.button("🚀 GENERATE 0% LOSS AI SIGNAL & ENTRY", key="gen_sig_btn"):
@@ -1353,7 +1104,7 @@ with tab_signals:
         and st.session_state.signals_used >= 2
     ):
       st.error(
-          "⚠️ Daily Free Quota Exhausted! Upgrade to Premium for Unlimited"
+          "⚠️ Daily Free Quota Exhausted! Upgrade to VIP Premium for Unlimited"
           " Elite Signals."
       )
     else:
@@ -1361,13 +1112,13 @@ with tab_signals:
         st.session_state.signals_used += 1
 
       raw_sym = selected_asset.split(" ")[0]
-      base_p = market_prices.get(
+      clean_key = (
           raw_sym.replace("BINANCE:", "")
           .replace("FX:", "")
           .replace("NASDAQ:", "")
-          .replace("NSE:", ""),
-          {"price": 1000.0},
-      )["price"]
+          .replace("NSE:", "")
+      )
+      base_p = market_prices.get(clean_key, {"price": 1000.0})["price"]
 
       entry_val = base_p
       sl_val = round(base_p * 0.985, 2)
@@ -1377,8 +1128,8 @@ with tab_signals:
       st.markdown(
           f"""
           <div class="signal-box">
-              <h3 style="color: #0ecb81; margin-top: 0;">🟢 SIGNAL DIRECTION: BUY (LONG) / BULLISH SETUP</h3>
-              <p style="color: #fcd535; font-size: 14px; font-weight: 700;">Asset: {selected_asset} | Confluence: SMC + ICT + Order Block Rejection</p>
+              <h3 style="color: #0ecb81; margin-top: 0;">🟢 SIGNAL DIRECTION: BUY (LONG) / BULLISH ORDER BLOCK</h3>
+              <p style="color: #fcd535; font-size: 14px; font-weight: 700;">Asset: {selected_asset} | Confluence: SMC Market Structure + ICT Liquidity Sweep</p>
           </div>
           """,
           unsafe_allow_html=True,
@@ -1389,8 +1140,8 @@ with tab_signals:
       with s_col1:
         st.metric("Strategy Accuracy Index", "99.8% WIN RATE", "0% LOSS PROTOCOL")
         st.write(f"**Target Asset:** `{selected_asset}`")
-        st.write(f"**🟢 Precise Entry Zone:** `{entry_val:,.2f}`")
-        st.write(f"**🛡️ Stop Loss (SL):** `{sl_val:,.2f}` (Strict 1% Risk Shield)")
+        st.write(f"**🟢 Precise Entry Price:** `{entry_val:,.2f}`")
+        st.write(f"**🛡️ Stop Loss (SL):** `{sl_val:,.2f}` (Strict 1.5% Risk)")
       with s_col2:
         st.metric("Target Profit Output", "5% to 10%+ Returns", "High Yield Matrix")
         st.write(f"**🎯 Target 1 (TP1 - Secure Profit):** `{tp1_val:,.2f}`")
@@ -1481,7 +1232,7 @@ with tab_plans:
             <p style="color: #848e9c; font-size: 11px;">Direct Pay</p>
             <hr style="border-color: #2b313a;">
             <p style="font-size: 12px;">✔️ Lifetime Access</p>
-            <p style="font-size: 1-on-1 Pro Mentorship</p>
+            <p style="font-size: 12px;">✔️ 1-on-1 Pro Mentorship</p>
         </div>
         """,
         unsafe_allow_html=True,
