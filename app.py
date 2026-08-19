@@ -49,7 +49,6 @@ tab1, tab2, tab3, tab4 = st.tabs(
 )
 
 with tab1:
-  # Responsive Columns: stacks automatically on mobile devices
   col1, col2 = st.columns([1, 1], gap="medium")
 
   with col1:
@@ -101,7 +100,6 @@ with tab1:
         if user_tier == "Free User":
           st.session_state.signals_used += 1
 
-        # Professional Smart Signal Card UI
         st.markdown(
             """
             <div class="signal-card">
@@ -134,13 +132,33 @@ with tab1:
         )
 
 with tab2:
-  st.markdown(f"### 📈 Interactive Market Chart — {asset}")
+  st.markdown(f"### 📈 Live Interactive Chart — {asset}")
+  
+  # Fixed TradingView Embed URL to prevent "Something went wrong" error
   tradingview_html = f"""
-    <div class="tradingview-widget-container" style="height:480px;width:100%">
-      <iframe scrolling="no" allowtransparency="true" frameborder="0" src="https://s.tradingview.com/embed-widget/advanced-chart/?locale=en#%7B%22autosize%22%3Atrue%2C%22symbol%22%3A%22BINANCE%3A{asset}%22%2C%22interval%22%3A%22{timeframe}%22%2C%22theme%22%3A%22dark%22%2C%22style%22%3A%221%22%2C%22locale%22%3A%22en%22%2C%22toolbar_bg%22%3A%22%23f1f3f6%22%2C%22enable_publishing%22%3Afalse%2C%22hide_top_toolbar%22%3Afalse%2C%22save_image%22%3Afalse%2C%22container_id%22%3A%22tradingview_widget%22%7D" style="box-sizing: border-box; height: 100%; width: 100%;"></iframe>
+    <div class="tradingview-widget-container" style="height:500px;width:100%;">
+      <div id="tradingview_widget" style="height:100%;width:100%;"></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+      <script type="text/javascript">
+      new TradingView.widget(
+      {{
+        "width": "100%",
+        "height": "500",
+        "symbol": "BINANCE:{asset}",
+        "interval": "D",
+        "timezone": "Etc/UTC",
+        "theme": "dark",
+        "style": "1",
+        "locale": "en",
+        "toolbar_bg": "#f1f3f6",
+        "enable_publishing": false,
+        "allow_symbol_change": true,
+        "container_id": "tradingview_widget"
+      }});
+      </script>
     </div>
     """
-  st.components.v1.html(tradingview_html, height=500)
+  st.components.v1.html(tradingview_html, height=520)
 
 with tab3:
   st.markdown("### 🏆 Performance & Accuracy Metrics")
