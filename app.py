@@ -117,12 +117,10 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- SAFE SQLITE DATABASE SETUP WITH AUTO-MIGRATION ---
+# --- SAFE SQLITE DATABASE SETUP ---
 def init_db():
     conn = sqlite3.connect("users_database.db", check_same_thread=False)
     cursor = conn.cursor()
-    
-    # 1. Create table if not exists
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             email TEXT PRIMARY KEY,
@@ -132,7 +130,6 @@ def init_db():
     """)
     conn.commit()
 
-    # 2. Automatically check and add missing columns for existing databases
     cursor.execute("PRAGMA table_info(users);")
     columns = [col[1] for col in cursor.fetchall()]
 
@@ -143,7 +140,6 @@ def init_db():
     
     conn.commit()
 
-    # 3. Check default admin
     cursor.execute("SELECT * FROM users WHERE email = ?", ("admin@gmail.com",))
     if not cursor.fetchone():
         cursor.execute("INSERT INTO users (email, password, name, tier, vip_expiry) VALUES (?, ?, ?, ?, ?)", 
@@ -314,7 +310,8 @@ with st.sidebar:
     st.markdown(f"👋 **{st.session_state.current_user_name}**")
     st.markdown(f"📧 `{st.session_state.current_user_email}`")
     
-    if st.session_state.user_tier == "VIP Paid Member":
+    is_vip = st.session_state.user_tier == "VIP Paid Member"
+    if is_vip:
         st.markdown("🌟 Status: <b style='color:#00f2fe;'>👑 VIP Member</b>", unsafe_allow_html=True)
         if st.session_state.vip_expiry:
             st.caption(f"⏳ Expires on: `{st.session_state.vip_expiry[:10]}`")
@@ -349,34 +346,24 @@ with st.sidebar:
         clear_local_storage()
         st.rerun()
 
-# --- DYNAMIC LIVE MARKET TICKER (AUTO UPDATES EVERY 10 SECONDS) ---
-base_btc = 68420.00 + random.uniform(-45.5, 45.5)
-base_eth = 3540.50 + random.uniform(-5.2, 5.2)
-
-st.markdown(
-    f"""
-    <div style="background: #131722; padding: 10px 14px; border-radius: 8px; border: 1px solid #2a2e39; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 13px;">
-        <div><b style="color:#00f2fe;">🚀 VEER TERMINAL</b></div>
-        <div><span>BTCUSDT</span> <b style="color: #f23645;">${base_btc:,.2f} (-1.59%)</b></div>
-        <div style="color: #089981; font-weight:600;">ETHUSDT ${base_eth:,.2f} (+2.14%)</div>
-        <div style="color: #787b86; font-size:11px;">⏱️ Live Stream: 10s Sync</div>
-    </div>
-""",
-    unsafe_allow_html=True,
-)
-
-# Auto-Refresh Script
-components.html(
-    """
-    <script>
-        setTimeout(function(){
-            window.parent.postMessage({type: 'streamlit:render'}, '*');
-        }, 10000);
-    </script>
+# --- REAL-TIME LIVE MARKET TICKER FRAGMENT (ZERO-DELAY REFRESH) ---
+@st.fragment(run_every="1s")
+def render_live_header():
+    base_btc = 68420.00 + random.uniform(-12.5, 12.5)
+    base_eth = 3540.50 + random.uniform(-1.8, 1.8)
+    st.markdown(
+        f"""
+        <div style="background: #131722; padding: 10px 14px; border-radius: 8px; border: 1px solid #2a2e39; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 13px;">
+            <div><b style="color:#00f2fe;">🚀 VEER TERMINAL</b></div>
+            <div><span>BTCUSDT</span> <b style="color: #089981;">${base_btc:,.2f} (+0.42%)</b></div>
+            <div style="color: #089981; font-weight:600;">ETHUSDT ${base_eth:,.2f} (+1.14%)</div>
+            <div style="color: #00f2fe; font-size:11px;">🔴 LIVE TICKER STREAM</div>
+        </div>
     """,
-    height=0,
-    width=0
-)
+        unsafe_allow_html=True,
+    )
+
+render_live_header()
 
 tab1, tab2, tab3, tab4 = st.tabs(["⚡ Terminal Dashboard", "📊 Live Chart", "🏆 Accuracy", "💎 VIP Plan"])
 
@@ -390,7 +377,15 @@ with tab1:
         with c2:
             asset = st.selectbox("Asset", ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"])
         with c3:
-            timeframe = st.selectbox("Timeframe", ["1m", "5m", "15m", "1h", "4h", "1d"])
+            # VIP Ultra-Fast Seconds Timeframe Support
+            if is_vip:
+                timeframe_options = ["1s", "5s", "10s", "20s", "30s", "1m", "5m", "15m", "1h", "4h", "1d"]
+            else:
+                timeframe_options = ["1m", "5m", "15m", "1h", "4h", "1d"]
+            
+            timeframe = st.selectbox("Timeframe", timeframe_options)
+            if not is_vip:
+                st.caption("🔒 *1s, 5s, 10s, 20s, 30s Timeframes unlocked for VIP*")
 
         st.markdown("### 🛡️ Risk Management")
         account_balance = st.number_input("Account Balance ($)", value=10000.0)
@@ -400,22 +395,22 @@ with tab1:
         st.markdown("### 🤖 Institutional AI Signals")
         
         can_generate = True
-        if st.session_state.user_tier == "Free User":
+        if not is_vip:
             remaining_signals = 2 - st.session_state.signals_used
             st.caption(f"Free Limit: **{remaining_signals}/2** remaining today.")
             if remaining_signals <= 0:
                 can_generate = False
         else:
-            st.caption("👑 VIP Status: **Unlimited Access**")
+            st.caption("👑 VIP Status: **Unlimited Access & Ultra-Fast Signals**")
 
         if st.button("✨ GENERATE ACCURATE SIGNAL", key="gen_sig_btn"):
             if not can_generate:
                 st.error("⚠️ Free limit reached! Upgrade to VIP Plan.")
             else:
-                if st.session_state.user_tier == "Free User":
+                if not is_vip:
                     st.session_state.signals_used += 1
 
-                entry_p = base_btc if "BTC" in asset else 3540.0
+                entry_p = 68420.00 if "BTC" in asset else 3540.0
                 sl_p = entry_p * 0.994
                 tp1_p = entry_p * 1.008
                 tp2_p = entry_p * 1.018
@@ -437,31 +432,50 @@ with tab1:
                     unsafe_allow_html=True,
                 )
 
+# --- CHART TAB (WITH VIP MULTI-CHART FEATURE) ---
 with tab2:
-    st.markdown(f"### 📈 Interactive Pro Chart — {asset}")
-    tradingview_html = f"""
-    <div class="tradingview-widget-container" style="height:520px;width:100%;">
-      <div id="tradingview_widget" style="height:100%;width:100%;"></div>
-      <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-      <script type="text/javascript">
-      new TradingView.widget({{
-        "width": "100%",
-        "height": "520",
-        "symbol": "BINANCE:{asset}",
-        "interval": "D",
-        "timezone": "Etc/UTC",
-        "theme": "dark",
-        "style": "1",
-        "locale": "en",
-        "toolbar_bg": "#131722",
-        "enable_publishing": false,
-        "allow_symbol_change": true,
-        "container_id": "tradingview_widget"
-      }});
-      </script>
-    </div>
-    """
-    st.components.v1.html(tradingview_html, height=540)
+    if is_vip:
+        chart_mode = st.radio("🖥️ Chart View Mode:", ["Single Chart", "Multi-Chart Grid (VIP)"], horizontal=True)
+    else:
+        chart_mode = "Single Chart"
+        st.info("💡 Upgrade to VIP to unlock Dual Multi-Chart Grid Layout!")
+
+    def render_tv_widget(symbol_name, height=520):
+        return f"""
+        <div class="tradingview-widget-container" style="height:{height}px;width:100%;">
+          <div id="tradingview_{symbol_name}" style="height:100%;width:100%;"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+          <script type="text/javascript">
+          new TradingView.widget({{
+            "width": "100%",
+            "height": "{height}",
+            "symbol": "BINANCE:{symbol_name}",
+            "interval": "1",
+            "timezone": "Etc/UTC",
+            "theme": "dark",
+            "style": "1",
+            "locale": "en",
+            "toolbar_bg": "#131722",
+            "enable_publishing": false,
+            "allow_symbol_change": true,
+            "container_id": "tradingview_{symbol_name}"
+          }});
+          </script>
+        </div>
+        """
+
+    if chart_mode == "Single Chart":
+        st.markdown(f"### 📈 Interactive Pro Chart — {asset}")
+        st.components.v1.html(render_tv_widget(asset, 520), height=540)
+    else:
+        st.markdown("### 📊 VIP Dual Multi-Chart Grid Layout")
+        mc1, mc2 = st.columns(2)
+        with mc1:
+            asset1 = st.selectbox("Chart 1 Asset", ["BTCUSDT", "ETHUSDT", "SOLUSDT"], key="asset1_sel")
+            st.components.v1.html(render_tv_widget(asset1, 450), height=470)
+        with mc2:
+            asset2 = st.selectbox("Chart 2 Asset", ["ETHUSDT", "BTCUSDT", "BNBUSDT"], key="asset2_sel")
+            st.components.v1.html(render_tv_widget(asset2, 450), height=470)
 
 with tab3:
     st.markdown("### 🏆 Performance & AI Accuracy Metrics")
@@ -470,7 +484,7 @@ with tab3:
     m2.metric("Win Rate", "91.2%", "+3.4%")
     m3.metric("Avg R:R Ratio", "1:2.8", "Optimal")
 
-# --- SUBSCRIPTION PLANS WITH UTR ACTIVATION ---
+# --- SUBSCRIPTION PLANS WITH UPDATED 3-DAY TRIAL PLAN ---
 with tab4:
     st.markdown("### 💎 VIP Pro Plans & Pricing")
     
@@ -479,9 +493,9 @@ with tab4:
         st.markdown(
             """
             <div style="background:#131722; padding:15px; border-radius:10px; border:1px solid #2a2e39; text-align:center;">
-                <h4 style="color:#00f2fe; margin:0;">7-DAYS TRIAL</h4>
+                <h4 style="color:#00f2fe; margin:0;">3-DAYS TRIAL</h4>
                 <h2 style="margin:10px 0;">₹199</h2>
-                <p style="color:#787b86; font-size:12px;">Full AI Signal Access for 7 Days</p>
+                <p style="color:#787b86; font-size:12px;">Full AI Signal Access for 3 Days</p>
             </div>
             """, unsafe_allow_html=True
         )
@@ -491,7 +505,7 @@ with tab4:
             <div style="background:#131722; padding:15px; border-radius:10px; border:2px solid #2962ff; text-align:center;">
                 <h4 style="color:#2962ff; margin:0;">MONTHLY VIP</h4>
                 <h2 style="margin:10px 0;">₹999 <span style="font-size:12px; color:#787b86;">/ Month</span></h2>
-                <p style="color:#787b86; font-size:12px;">Unlimited Signals + Telegram Alerts (30 Days)</p>
+                <p style="color:#787b86; font-size:12px;">Unlimited Signals + Multi-Chart Access (30 Days)</p>
             </div>
             """, unsafe_allow_html=True
         )
@@ -511,7 +525,7 @@ with tab4:
 
     with col_p1:
         st.markdown("#### 📲 UPI Payment Option")
-        selected_plan = st.selectbox("Select Your Plan", ["₹199 - 7 Days Access", "₹999 - 1 Month Access", "₹9,999 - 1 Year Access"])
+        selected_plan = st.selectbox("Select Your Plan", ["₹199 - 3 Days Access", "₹999 - 1 Month Access", "₹9,999 - 1 Year Access"])
         
         amount = "999.00"
         if "199" in selected_plan:
@@ -534,7 +548,7 @@ with tab4:
             if len(cleaned_utr) >= 10:
                 days_to_add = 30
                 if "199" in selected_plan:
-                    days_to_add = 7
+                    days_to_add = 3
                 elif "9,999" in selected_plan:
                     days_to_add = 365
 
