@@ -1,4 +1,5 @@
 import datetime
+import sqlite3
 import streamlit as st
 
 # Page Configuration
@@ -8,26 +9,75 @@ st.set_page_config(
     layout="wide",
 )
 
-# Custom CSS for Professional & Smart Look
+# Custom CSS for Ultra-Optimized Professional UI
 st.markdown(
     """
     <style>
     .main { background-color: #0b0e14; }
-    .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; height: 45px; background: linear-gradient(135deg, #FF4B4B 0%, #FF914D 100%); color: white; border: none; }
+    .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; height: 48px; background: linear-gradient(135deg, #FF4B4B 0%, #FF914D 100%); color: white; border: none; font-size: 16px; box-shadow: 0 4px 12px rgba(255,75,75,0.3); }
     .stButton>button:hover { background: linear-gradient(135deg, #ff3333 0%, #ff7b29 100%); color: white; }
     div.stMetric { background-color: #161b22; padding: 12px; border-radius: 10px; border: 1px solid #30363d; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     .signal-card { background: linear-gradient(135deg, #161b22 0%, #1f242c 100%); padding: 20px; border-radius: 12px; border-left: 5px solid #238636; border-top: 1px solid #30363d; border-right: 1px solid #30363d; border-bottom: 1px solid #30363d; margin-top: 15px; }
+    .auth-container { background: #161b22; padding: 30px; border-radius: 16px; border: 1px solid #30363d; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
     </style>
 """,
     unsafe_allow_html=True,
 )
 
-# Initialize Persistent User Database using st.session_state with Global Persistence Check
-if "users_db" not in st.session_state:
-  st.session_state.users_db = {
-      "admin@gmail.com": {"password": "password123", "name": "Admin Trader"}
-  }
 
+# --- PERMANENT SQLITE DATABASE SETUP ---
+def init_db():
+  conn = sqlite3.connect("users_database.db", check_same_thread=False)
+  cursor = conn.cursor()
+  cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            email TEXT PRIMARY KEY,
+            password TEXT NOT NULL,
+            name TEXT NOT NULL
+        )
+    """)
+  conn.commit()
+  # Default Admin Account check & insert
+  cursor.execute("SELECT * FROM users WHERE email = ?", ("admin@gmail.com",))
+  if not cursor.fetchone():
+    cursor.execute(
+        "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
+        ("admin@gmail.com", "password123", "Admin Trader"),
+    )
+    conn.commit()
+  conn.close()
+
+
+init_db()
+
+
+def get_user(email):
+  conn = sqlite3.connect("users_database.db", check_same_thread=False)
+  cursor = conn.cursor()
+  cursor.execute(
+      "SELECT password, name FROM users WHERE email = ?", (email.strip(),)
+  )
+  res = cursor.fetchone()
+  conn.close()
+  return res  # returns (password, name) or None
+
+
+def register_user(email, password, name):
+  try:
+    conn = sqlite3.connect("users_database.db", check_same_thread=False)
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO users (email, password, name) VALUES (?, ?, ?)",
+        (email.strip(), password, name.strip()),
+    )
+    conn.commit()
+    conn.close()
+    return True
+  except sqlite3.IntegrityError:
+    return False  # Email already exists
+
+
+# --- SESSION STATE INITIALIZATION ---
 if "logged_in" not in st.session_state:
   st.session_state.logged_in = False
 if "current_user_email" not in st.session_state:
@@ -47,15 +97,15 @@ if st.session_state.last_reset != datetime.date.today():
   st.session_state.last_reset = datetime.date.today()
 
 
-# --- AUTHENTICATION SCREEN ---
+# --- ULTRA-OPTIMIZED AUTHENTICATION SCREEN ---
 def show_auth_screen():
   st.markdown("<br>", unsafe_allow_html=True)
-  col1, col2, col3 = st.columns([1, 1.3, 1])
+  col1, col2, col3 = st.columns([1, 1.4, 1])
 
   with col2:
     st.markdown(
         """
-        <div style="text-align: center; margin-bottom: 15px;">
+        <div style="text-align: center; margin-bottom: 20px;">
             <h2>🔐 VEER PRO TERMINAL</h2>
             <p style="color: #8b949e; font-size: 14px;">Institutional Grade Trading Platform</p>
         </div>
@@ -81,20 +131,19 @@ def show_auth_screen():
 
       if st.button("LOGIN TO TERMINAL", key="login_btn"):
         cleaned_email = login_email.strip()
-        if (
-            cleaned_email in st.session_state.users_db
-            and st.session_state.users_db[cleaned_email]["password"]
-            == login_pass
-        ):
+        user_data = get_user(cleaned_email)
+
+        if user_data and user_data[0] == login_pass:
           st.session_state.logged_in = True
           st.session_state.current_user_email = cleaned_email
-          st.session_state.current_user_name = st.session_state.users_db[
-              cleaned_email
-          ]["name"]
+          st.session_state.current_user_name = user_data[1]
           st.success("🎉 Login Successful! Redirecting...")
           st.rerun()
         else:
-          st.error("⚠️ Invalid Email/Phone or Password! Please check.")
+          st.error(
+              "⚠️ Invalid Email/Phone or Password! Please check or register"
+              " first."
+          )
 
     with auth_tab2:
       st.markdown("### Create New Account")
@@ -125,27 +174,24 @@ def show_auth_screen():
         cleaned_reg_email = reg_email.strip()
         if not reg_name or not cleaned_reg_email or not reg_pass:
           st.warning("⚠️ Please fill in all fields.")
-        elif cleaned_reg_email in st.session_state.users_db:
-          st.error(
-              "⚠️ This Email/Phone is already registered. Please go to Login"
-              " tab."
-          )
         elif reg_pass != reg_pass_confirm:
           st.error("⚠️ Passwords do not match!")
         elif len(reg_pass) < 6:
           st.warning("⚠️ Password must be at least 6 characters long.")
         else:
-          # Save user in global session database dictionary safely
-          st.session_state.users_db[cleaned_reg_email] = {
-              "password": reg_pass,
-              "name": reg_name.strip(),
-          }
-          # Instant auto-login upon successful registration
-          st.session_state.logged_in = True
-          st.session_state.current_user_email = cleaned_reg_email
-          st.session_state.current_user_name = reg_name.strip()
-          st.success("🎉 Account Created & Logged In Successfully!")
-          st.rerun()
+          success = register_user(cleaned_reg_email, reg_pass, reg_name)
+          if success:
+            # Instant auto-login upon successful registration
+            st.session_state.logged_in = True
+            st.session_state.current_user_email = cleaned_reg_email
+            st.session_state.current_user_name = reg_name.strip()
+            st.success("🎉 Account Created & Logged In Successfully!")
+            st.rerun()
+          else:
+            st.error(
+                "⚠️ This Email/Phone is already registered! Please go to the"
+                " Login tab."
+            )
 
 
 # If not logged in, stop execution and show only the auth screen
@@ -156,7 +202,7 @@ if not st.session_state.logged_in:
 
 # --- MAIN TRADING TERMINAL (Accessible only when logged in) ---
 
-# Sidebar Profile & Logout (User Name visible exclusively here on the left)
+# Sidebar Profile & Logout
 st.sidebar.header("👤 User Profile")
 st.sidebar.markdown(f"👋 Hello, **{st.session_state.current_user_name}**")
 st.sidebar.markdown(f"📧 `{st.session_state.current_user_email}`")
@@ -168,7 +214,7 @@ if st.sidebar.button("🚪 Logout"):
   st.session_state.user_tier = "Free User"
   st.rerun()
 
-# Header Section (Standard Name Retained Fixed in Center)
+# Header Section (Fixed Standard Title in Center)
 st.title("🚀 VEER PRO TRADING TERMINAL")
 st.markdown(
     "**Institutional Grade Live Market, Interactive Charts & AI Smart"
@@ -389,5 +435,5 @@ st.markdown(
     "<b>Disclaimer:</b> VEER PRO TRADING TERMINAL is built for educational &"
     " analytical research only. Crypto trading involves high market risk."
     "</p>",
-    unsafe_allow_html=True,
+    unsafe_call_html=True,
 )
