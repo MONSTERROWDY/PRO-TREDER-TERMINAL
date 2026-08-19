@@ -219,6 +219,14 @@ if "vip_expiry" not in st.session_state:
 if "signals_used" not in st.session_state:
     st.session_state.signals_used = 0
 
+# --- SEPARATE STATE TRACKING FOR MULTI-TICKER ---
+if "signal_asset" not in st.session_state:
+    st.session_state.signal_asset = "BTCUSDT"
+if "chart_asset" not in st.session_state:
+    st.session_state.chart_asset = "ETHUSDT"
+if "custom_ticker_asset" not in st.session_state:
+    st.session_state.custom_ticker_asset = "SOLUSDT"
+
 # --- AUTHENTICATION SCREEN ---
 def show_auth_screen():
     st.markdown("<br>", unsafe_allow_html=True)
@@ -330,29 +338,6 @@ with st.sidebar:
         clear_local_storage()
         st.rerun()
 
-# --- REAL-TIME LIVE MARKET TICKER FRAGMENT ---
-@st.fragment(run_every="1s")
-def render_live_header():
-    base_btc = 68420.00 + random.uniform(-12.5, 12.5)
-    base_eth = 3540.50 + random.uniform(-1.8, 1.8)
-    st.markdown(
-        f"""
-        <div style="background: #131722; padding: 10px 14px; border-radius: 8px; border: 1px solid #2a2e39; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 13px;">
-            <div><b style="color:#00f2fe;">🚀 VEER TERMINAL</b></div>
-            <div><span>BTCUSDT</span> <b style="color: #089981;">${base_btc:,.2f} (+0.42%)</b></div>
-            <div style="color: #089981; font-weight:600;">ETHUSDT ${base_eth:,.2f} (+1.14%)</div>
-            <div style="color: #00f2fe; font-size:11px;">🔴 LIVE TICKER STREAM</div>
-        </div>
-    """,
-        unsafe_allow_html=True,
-    )
-
-render_live_header()
-
-tab1, tab2, tab3, tab4 = st.tabs(["⚡ Terminal Dashboard", "📊 Live Chart", "🏆 Accuracy", "💎 VIP Plan"])
-
-ALL_TIMEFRAMES = ["1s", "5s", "10s", "30s", "1m", "5m", "15m", "1h", "4h", "1D", "1W", "1M", "1Y"]
-
 # --- FULL ASSET DICTIONARY RESTORED ---
 ASSET_CATEGORIES = {
     "Crypto Top Major": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT", "DOGEUSDT", "AVAXUSDT", "DOTUSDT", "LINKUSDT", "LTCUSDT", "MATICUSDT", "NEARUSDT", "TRXUSDT", "SHIBUSDT"],
@@ -361,18 +346,105 @@ ASSET_CATEGORIES = {
     "Indian Market (NSE/BSE)": ["NIFTY50", "BANKNIFTY", "FINNIFTY", "RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "TATAMOTORS", "SBIN"]
 }
 
+ALL_FLAT_ASSETS = [asset for sublist in ASSET_CATEGORIES.values() for asset in sublist]
+
+def get_asset_price(asset_name):
+    if "BTC" in asset_name:
+        return 68420.00 + random.uniform(-12.5, 12.5)
+    elif "ETH" in asset_name:
+        return 3540.50 + random.uniform(-1.8, 1.8)
+    elif "SOL" in asset_name:
+        return 145.20 + random.uniform(-0.5, 0.5)
+    elif "NIFTY" in asset_name:
+        return 24500.00 + random.uniform(-8.0, 8.0)
+    elif "XAU" in asset_name:
+        return 2500.00 + random.uniform(-1.5, 1.5)
+    else:
+        return 1.0850 + random.uniform(-0.0005, 0.0005)
+
+# --- REAL-TIME 3-WAY LIVE MARKET TICKER FRAGMENT ---
+@st.fragment(run_every="1s")
+def render_live_header():
+    sig_asset = st.session_state.get("signal_asset", "BTCUSDT")
+    chart_asset = st.session_state.get("chart_asset", "ETHUSDT")
+    custom_asset = st.session_state.get("custom_ticker_asset", "SOLUSDT")
+
+    sig_p = get_asset_price(sig_asset)
+    chart_p = get_asset_price(chart_asset)
+    custom_p = get_asset_price(custom_asset)
+
+    chg1 = random.uniform(0.1, 2.5)
+    chg2 = random.uniform(0.1, 2.5)
+    chg3 = random.uniform(0.1, 2.5)
+
+    st.markdown(
+        f"""
+        <div style="background: #131722; padding: 10px 14px; border-radius: 8px; border: 1px solid #2a2e39; display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px; flex-wrap: wrap; gap: 8px;">
+            <div>
+                <span style="color:#787b86; font-size:11px;">🎯 SIGNAL PAIR (LEFT)</span><br>
+                <b style="color: #00f2fe;">{sig_asset}</b> <b style="color: #089981;">${sig_p:,.2f} (+{chg1:.2f}%)</b>
+            </div>
+            <div style="border-left: 1px solid #2a2e39; border-right: 1px solid #2a2e39; padding: 0 15px;">
+                <span style="color:#787b86; font-size:11px;">📌 PERMANENT WATCH (MID)</span><br>
+                <b style="color: #ffb703;">{custom_asset}</b> <b style="color: #089981;">${custom_p:,.2f} (+{chg2:.2f}%)</b>
+            </div>
+            <div>
+                <span style="color:#787b86; font-size:11px;">📊 CHART PAIR (RIGHT)</span><br>
+                <b style="color: #00f2fe;">{chart_asset}</b> <b style="color: #089981;">${chart_p:,.2f} (+{chg3:.2f}%)</b>
+            </div>
+            <div style="color: #00f2fe; font-size:11px; font-weight: bold;">🔴 LIVE STREAM</div>
+        </div>
+    """,
+        unsafe_allow_html=True,
+    )
+
+render_live_header()
+
+# --- PERMANENT TICKER SWITCH BAR ---
+st.markdown("<div style='background:#0e131f; padding:8px 12px; border-radius:8px; border:1px solid #2a2e39; margin-bottom:12px;'>", unsafe_allow_html=True)
+p_col1, p_col2 = st.columns([1.5, 3])
+with p_col1:
+    cur_idx = ALL_FLAT_ASSETS.index(st.session_state.custom_ticker_asset) if st.session_state.custom_ticker_asset in ALL_FLAT_ASSETS else 0
+    sel_custom = st.selectbox("📌 Permanent Middle Live Ticker Asset:", ALL_FLAT_ASSETS, index=cur_idx, key="select_custom_ticker")
+    if sel_custom != st.session_state.custom_ticker_asset:
+        st.session_state.custom_ticker_asset = sel_custom
+        st.rerun()
+
+with p_col2:
+    st.caption("⚡ Quick Buttons for Middle Live Stream:")
+    btn_cols = st.columns(5)
+    famous = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XAUUSD (GOLD)", "NIFTY50"]
+    for i, fam in enumerate(famous):
+        with btn_cols[i]:
+            if st.button(fam, key=f"perm_quick_{i}"):
+                st.session_state.custom_ticker_asset = fam
+                st.rerun()
+st.markdown("</div>", unsafe_allow_html=True)
+
+tab1, tab2, tab3, tab4 = st.tabs(["⚡ Terminal Dashboard", "📊 Live Chart", "🏆 Accuracy", "💎 VIP Plan"])
+
+ALL_TIMEFRAMES = ["1s", "5s", "10s", "30s", "1m", "5m", "15m", "1h", "4h", "1D", "1W", "1M", "1Y"]
+
 with tab1:
     col_main, col_side = st.columns([2.2, 1], gap="medium")
     with col_main:
         st.markdown("### ⚙️ Signal Configuration")
         c1, c2, c3 = st.columns(3)
         with c1:
-            market_category = st.selectbox("Category", list(ASSET_CATEGORIES.keys()))
+            market_category = st.selectbox("Category", list(ASSET_CATEGORIES.keys()), key="sig_cat_sel")
         with c2:
-            asset = st.selectbox("Asset", ASSET_CATEGORIES[market_category])
+            sig_idx = 0
+            if st.session_state.signal_asset in ASSET_CATEGORIES[market_category]:
+                sig_idx = ASSET_CATEGORIES[market_category].index(st.session_state.signal_asset)
+            
+            asset = st.selectbox("Asset", ASSET_CATEGORIES[market_category], index=sig_idx, key="sig_asset_sel")
+            if asset != st.session_state.signal_asset:
+                st.session_state.signal_asset = asset
+                st.rerun()
+
         with c3:
             timeframe_options = ALL_TIMEFRAMES if is_vip else ["1m", "5m", "15m", "1h", "4h", "1D"]
-            timeframe = st.selectbox("Timeframe", timeframe_options)
+            timeframe = st.selectbox("Timeframe", timeframe_options, key="sig_tf_sel")
             if not is_vip:
                 st.caption("🔒 *Seconds & Macro Timeframes unlocked for VIP*")
 
@@ -399,7 +471,7 @@ with tab1:
                 if not is_vip:
                     st.session_state.signals_used += 1
 
-                entry_p = 68420.00 if "BTC" in asset else (24500.00 if "NIFTY" in asset else (2500.00 if "XAU" in asset else 1.0850))
+                entry_p = get_asset_price(asset)
                 sl_p = entry_p * 0.994
                 tp1_p = entry_p * 1.008
                 tp2_p = entry_p * 1.018
@@ -426,8 +498,17 @@ with tab2:
     chart_col1, chart_col2 = st.columns([1, 2.5])
     with chart_col1:
         cat_select = st.selectbox("Market Category:", list(ASSET_CATEGORIES.keys()), key="chart_cat_select")
-        selected_chart_asset = st.selectbox("Select Asset for Chart:", ASSET_CATEGORIES[cat_select], key="chart_asset_select")
         
+        c_asset_idx = 0
+        if st.session_state.chart_asset in ASSET_CATEGORIES[cat_select]:
+            c_asset_idx = ASSET_CATEGORIES[cat_select].index(st.session_state.chart_asset)
+            
+        selected_chart_asset = st.selectbox("Select Asset for Chart:", ASSET_CATEGORIES[cat_select], index=c_asset_idx, key="chart_asset_select")
+        
+        if selected_chart_asset != st.session_state.chart_asset:
+            st.session_state.chart_asset = selected_chart_asset
+            st.rerun()
+
         if is_vip:
             chart_tf = st.selectbox("Chart Timeframe (1s to 1Y):", ALL_TIMEFRAMES, index=4, key="chart_tf_select")
             chart_mode = st.radio("🖥️ View Mode:", ["Single Chart", "Multi-Chart Grid (VIP)"], horizontal=True)
@@ -436,7 +517,7 @@ with tab2:
             chart_mode = "Single Chart"
             st.info("🔒 *Seconds (1s-30s) and Macro Timeframes unlocked for VIP Members!*")
 
-    # --- ADVANCED INSTITUTIONAL SMC + ICT + PRICE ACTION CHART ENGINE (NO FLICKER / SMOOTH) ---
+    # --- ADVANCED INSTITUTIONAL SMC + ICT CHART ENGINE ---
     def render_pro_smc_engine(symbol_name, timeframe_str="1m", height=540):
         interval_ms = 1000
         if "s" in timeframe_str:
@@ -475,7 +556,7 @@ with tab2:
         <body>
             <div id="main-wrap">
                 <div class="top-bar">
-                    <div class="title">⚡ ASSET:{symbol_name} ({timeframe_str}) — SMC/ICT VIP ENGINE</div>
+                    <div class="title">⚡ ASSET: {symbol_name} ({timeframe_str}) — SMC/ICT VIP ENGINE</div>
                     <div class="btn-group">
                         <button id="smcBtn" class="btn-ui btn-smc active" onclick="toggleSMC()">⚡ SMC Auto-Mapping: ON</button>
                         <button class="btn-ui" onclick="openFullWindow()">🔍 Open In New Tab</button>
@@ -505,10 +586,9 @@ with tab2:
                         btn.classList.remove('active');
                         btn.innerText = "❌ SMC Auto-Mapping: OFF";
                     }}
-                    chart.update('none'); // Update without flickering
+                    chart.update('none');
                 }}
 
-                // --- INSTITUTIONAL SMC + ICT AUTO-MAPPING PLUGIN ---
                 const smcInstitutionalEngine = {{
                     id: 'smcInstitutionalEngine',
                     afterDraw: (chart) => {{
@@ -520,7 +600,6 @@ with tab2:
 
                         ctx.save();
 
-                        // 1. FAIR VALUE GAP (FVG)
                         for (let i = 2; i < dataset.length; i++) {{
                             let c1 = dataset[i-2];
                             let c3 = dataset[i];
@@ -550,7 +629,6 @@ with tab2:
                             }}
                         }}
 
-                        // 2. SUPPORT & RESISTANCE ZONES
                         let maxHigh = -Infinity, minLow = Infinity;
                         let maxIdx = -1, minIdx = -1;
                         for (let i = 0; i < dataset.length; i++) {{
@@ -578,7 +656,6 @@ with tab2:
                             ctx.stroke();
                         }}
 
-                        // 3. ACCURATE BUY / SELL SIGNALS MARKERS
                         let lastIdx = dataset.length - 2;
                         if (meta.data[lastIdx]) {{
                             let xSig = meta.data[lastIdx].x;
@@ -665,7 +742,6 @@ with tab2:
                     }}
                 }});
 
-                // Smooth Non-Blinking Tick Stream
                 setInterval(() => {{
                     let chart = window.myChartInstance;
                     if(!chart) return;
@@ -685,7 +761,7 @@ with tab2:
                         l: newLow,
                         c: newClose
                     }});
-                    chart.update('none'); // Mode 'none' disables full element refresh/flicker
+                    chart.update('none');
                 }}, {interval_ms > 2000 and 2000 or interval_ms});
             </script>
         </body>
