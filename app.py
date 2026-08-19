@@ -8,7 +8,7 @@ st.set_page_config(
     layout="wide",
 )
 
-# Custom CSS for Professional Look
+# Custom CSS for Professional & Smart Look
 st.markdown(
     """
     <style>
@@ -17,14 +17,14 @@ st.markdown(
     .stButton>button:hover { background: linear-gradient(135deg, #ff3333 0%, #ff7b29 100%); color: white; }
     div.stMetric { background-color: #161b22; padding: 12px; border-radius: 10px; border: 1px solid #30363d; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     .signal-card { background: linear-gradient(135deg, #161b22 0%, #1f242c 100%); padding: 20px; border-radius: 12px; border-left: 5px solid #238636; border-top: 1px solid #30363d; border-right: 1px solid #30363d; border-bottom: 1px solid #30363d; margin-top: 15px; }
+    .auth-card { background: #161b22; padding: 25px; border-radius: 16px; border: 1px solid #30363d; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
     </style>
 """,
     unsafe_allow_html=True,
 )
 
-# Initialize Database & Session States for User Accounts & Profiles
+# Initialize Persistent User Database using st.session_state
 if "users_db" not in st.session_state:
-  # Structure: { email: {"password": "...", "name": "..."} }
   st.session_state.users_db = {
       "admin@gmail.com": {"password": "password123", "name": "Admin Trader"}
   }
@@ -48,17 +48,17 @@ if st.session_state.last_reset != datetime.date.today():
   st.session_state.last_reset = datetime.date.today()
 
 
-# --- AUTHENTICATION & REGISTRATION SCREEN WITH NAME ---
+# --- SMART & CLEAN AUTHENTICATION SCREEN ---
 def show_auth_screen():
-  st.markdown("<br><br>", unsafe_allow_html=True)
-  col1, col2, col3 = st.columns([1, 1.5, 1])
+  st.markdown("<br>", unsafe_allow_html=True)
+  col1, col2, col3 = st.columns([1, 1.3, 1])
 
   with col2:
     st.markdown(
         """
-        <div style="text-align: center; margin-bottom: 20px;">
+        <div style="text-align: center; margin-bottom: 15px;">
             <h2>🔐 VEER PRO TERMINAL</h2>
-            <p style="color: #8b949e;">Login or Register to access your terminal</p>
+            <p style="color: #8b949e; font-size: 14px;">Institutional Grade Trading Platform</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -70,13 +70,17 @@ def show_auth_screen():
       st.markdown("### Welcome Back")
       login_email = st.text_input(
           "Email ID / Phone Number",
-          placeholder="Enter your registered email or phone",
+          placeholder="Enter registered email or phone",
+          key="login_email_input",
       )
       login_pass = st.text_input(
-          "Password", type="password", placeholder="Enter your password"
+          "Password",
+          type="password",
+          placeholder="Enter your password",
+          key="login_pass_input",
       )
 
-      if st.button("LOGIN TO TERMINAL"):
+      if st.button("LOGIN TO TERMINAL", key="login_btn"):
         if login_email in st.session_state.users_db and st.session_state.users_db[
             login_email
         ]["password"] == login_pass:
@@ -85,55 +89,69 @@ def show_auth_screen():
           st.session_state.current_user_name = st.session_state.users_db[
               login_email
           ]["name"]
-          st.success("🎉 Login Successful!")
+          st.success("🎉 Login Successful! Redirecting...")
           st.rerun()
         else:
-          st.error("⚠️ Invalid Email ID or Password! Please check.")
+          st.error("⚠️ Invalid Email/Phone or Password! Please check.")
 
     with auth_tab2:
       st.markdown("### Create New Account")
       reg_name = st.text_input(
-          "Full Name", placeholder="Enter your full name (e.g. Veer Sharma)"
+          "Full Name",
+          placeholder="Enter your full name",
+          key="reg_name_input",
       )
       reg_email = st.text_input(
-          "Email ID / Phone Number ", placeholder="Enter email or phone"
+          "Email ID / Phone Number",
+          placeholder="Enter email or phone",
+          key="reg_email_input",
       )
       reg_pass = st.text_input(
-          "Create Password", type="password", placeholder="Set a strong password"
+          "Create Password",
+          type="password",
+          placeholder="At least 6 characters",
+          key="reg_pass_input",
       )
       reg_pass_confirm = st.text_input(
-          "Confirm Password", type="password", placeholder="Re-enter password"
+          "Confirm Password",
+          type="password",
+          placeholder="Re-enter password",
+          key="reg_confirm_input",
       )
 
-      if st.button("REGISTER ACCOUNT"):
+      if st.button("REGISTER & LOGIN", key="reg_btn"):
         if not reg_name or not reg_email or not reg_pass:
-          st.warning("⚠️ Please fill in all fields including your name.")
+          st.warning("⚠️ Please fill in all fields.")
         elif reg_email in st.session_state.users_db:
           st.error(
-              "⚠️ This Email/Phone is already registered. Please login"
-              " directly."
+              "⚠️ This Email/Phone is already registered. Please go to Login"
+              " tab."
           )
         elif reg_pass != reg_pass_confirm:
           st.error("⚠️ Passwords do not match!")
         elif len(reg_pass) < 6:
           st.warning("⚠️ Password must be at least 6 characters long.")
         else:
+          # Save user in database
           st.session_state.users_db[reg_email] = {
               "password": reg_pass,
               "name": reg_name.strip(),
           }
-          st.success(
-              "✅ Registration Successful! Now switch to 'Login' tab to sign in."
-          )
+          # Instant auto-login upon successful registration
+          st.session_state.logged_in = True
+          st.session_state.current_user_email = reg_email
+          st.session_state.current_user_name = reg_name.strip()
+          st.success("🎉 Account Created & Logged In Successfully!")
+          st.rerun()
 
 
-# Stop execution if not logged in
+# If not logged in, stop execution and show only the auth screen
 if not st.session_state.logged_in:
   show_auth_screen()
   st.stop()
 
 
-# --- MAIN APP (Customized with User's Profile Name) ---
+# --- MAIN TRADING TERMINAL (Accessible only when logged in) ---
 
 # Sidebar Profile & Logout
 st.sidebar.header("👤 User Profile")
@@ -147,7 +165,7 @@ if st.sidebar.button("🚪 Logout"):
   st.session_state.user_tier = "Free User"
   st.rerun()
 
-# Header Section with Personalized Greeting
+# Header Section with Personalized Name
 st.title(
     f"🚀 {st.session_state.current_user_name.upper()}'S PRO TRADING TERMINAL"
 )
