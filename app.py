@@ -80,7 +80,7 @@ st.markdown(
 )
 
 
-# --- DATABASE SETUP ---
+# --- DATABASE SETUP & AUTO MIGRATION ---
 def get_db_connection():
   return sqlite3.connect("users_database.db", check_same_thread=False)
 
@@ -92,13 +92,25 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             email TEXT PRIMARY KEY,
             password TEXT NOT NULL,
-            name TEXT NOT NULL,
-            username TEXT,
-            avatar TEXT,
-            tier TEXT DEFAULT 'Free User',
-            expiry TEXT
+            name TEXT NOT NULL
         )
     """)
+  conn.commit()
+
+  # Safe Migration for existing databases to prevent OperationalError
+  columns_to_add = [
+      ("username", "TEXT"),
+      ("avatar", "TEXT"),
+      ("tier", "TEXT DEFAULT 'Free User'"),
+      ("expiry", "TEXT"),
+  ]
+  for col_name, col_type in columns_to_add:
+    try:
+      cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}")
+      conn.commit()
+    except sqlite3.OperationalError:
+      pass  # Column already exists
+
   cursor.execute("""
         CREATE TABLE IF NOT EXISTS promo_codes (
             code TEXT PRIMARY KEY,
@@ -209,11 +221,13 @@ if "logged_in" not in st.session_state:
       st.session_state.logged_in = True
       st.session_state.current_user_email = saved_email
       st.session_state.current_user_name = u_data[1]
-      st.session_state.username = u_data[2] if u_data[2] else "trader"
-      st.session_state.avatar = (
-          u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
+      st.session_state.username = (
+          u_data[2] if u_data and u_data[2] else "trader"
       )
-      st.session_state.user_tier = u_data[4]
+      st.session_state.avatar = (
+          u_data[3] if u_data and u_data[3] else "https://i.imgur.com/71916rK.png"
+      )
+      st.session_state.user_tier = u_data[4] if u_data and u_data[4] else "Free User"
     else:
       st.session_state.logged_in = False
   else:
@@ -260,7 +274,7 @@ def show_auth_screen():
             st.session_state.avatar = (
                 u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
             )
-            st.session_state.user_tier = u_data[4]
+            st.session_state.user_tier = u_data[4] if u_data[4] else "Free User"
             st.query_params["session_user"] = cleaned_email
             st.rerun()
           else:
@@ -316,13 +330,13 @@ with st.sidebar:
   st.markdown("### 👤 User Profile Panel")
   avatar_url = (
       st.session_state.avatar
-      if "avatar" in st.session_state
+      if "avatar" in st.session_state and st.session_state.avatar
       else "https://i.imgur.com/71916rK.png"
   )
   st.image(avatar_url, width=80)
   st.write(
       f"👋 **{st.session_state.current_user_name}**"
-      f" (@{st.session_state.username})"
+      f" (@{st.session_state.get('username', 'trader')})"
   )
   st.caption(f"📧 {st.session_state.current_user_email}")
   st.write(f"🌟 Tier: **{st.session_state.user_tier}**")
@@ -520,9 +534,17 @@ with tab_profile:
     with st.form("profile_update_form"):
       st.markdown("#### Edit Profile Details")
       new_name = st.text_input("Full Name", value=st.session_state.current_user_name)
-      new_uname = st.text_input("Username", value=st.session_state.username)
+      new_uname = st.text_input(
+          "Username",
+          value=st.session_state.get(
+              "username", st.session_state.current_user_name
+          ),
+      )
       new_avatar = st.text_input(
-          "Profile Picture Image URL", value=st.session_state.avatar
+          "Profile Picture Image URL",
+          value=st.session_state.get(
+              "avatar", "https://i.imgur.com/71916rK.png"
+          ),
       )
       st.markdown("<br>", unsafe_allow_html=True)
       if st.form_submit_button("Save Profile"):
