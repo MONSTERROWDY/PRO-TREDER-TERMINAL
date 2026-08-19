@@ -9,16 +9,57 @@ st.set_page_config(
     layout="wide",
 )
 
-# Custom CSS for Ultra-Optimized Professional UI
+# Custom CSS for Colorful, Unique & Premium Dark UI
 st.markdown(
     """
     <style>
-    .main { background-color: #0b0e14; }
-    .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; height: 48px; background: linear-gradient(135deg, #FF4B4B 0%, #FF914D 100%); color: white; border: none; font-size: 16px; box-shadow: 0 4px 12px rgba(255,75,75,0.3); }
-    .stButton>button:hover { background: linear-gradient(135deg, #ff3333 0%, #ff7b29 100%); color: white; }
-    div.stMetric { background-color: #161b22; padding: 12px; border-radius: 10px; border: 1px solid #30363d; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-    .signal-card { background: linear-gradient(135deg, #161b22 0%, #1f242c 100%); padding: 20px; border-radius: 12px; border-left: 5px solid #238636; border-top: 1px solid #30363d; border-right: 1px solid #30363d; border-bottom: 1px solid #30363d; margin-top: 15px; }
-    .auth-container { background: #161b22; padding: 30px; border-radius: 16px; border: 1px solid #30363d; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+    .stApp {
+        background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1f242c 100%);
+        color: #e6edf3;
+    }
+    .stButton>button { 
+        width: 100%; 
+        border-radius: 10px; 
+        font-weight: bold; 
+        height: 48px; 
+        background: linear-gradient(135deg, #00b4d8 0%, #0077b6 50%, #7209b7 100%); 
+        color: white; 
+        border: none; 
+        font-size: 16px; 
+        box-shadow: 0 4px 15px rgba(0,180,216,0.4);
+        transition: 0.3s ease;
+    }
+    .stButton>button:hover { 
+        background: linear-gradient(135deg, #90e0ef 0%, #00b4d8 50%, #3a0ca3 100%); 
+        color: white; 
+        box-shadow: 0 6px 20px rgba(114,9,183,0.6);
+    }
+    div.stMetric { 
+        background: rgba(22, 27, 34, 0.8); 
+        padding: 15px; 
+        border-radius: 12px; 
+        border: 1px solid #30363d; 
+        box-shadow: 0 8px 16px rgba(0,0,0,0.3); 
+    }
+    .signal-card { 
+        background: linear-gradient(135deg, #161b22 0%, #21262d 100%); 
+        padding: 20px; 
+        border-radius: 14px; 
+        border-left: 6px solid #00b4d8; 
+        border-top: 1px solid #30363d; 
+        border-right: 1px solid #30363d; 
+        border-bottom: 1px solid #30363d; 
+        margin-top: 15px; 
+        box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .auth-card {
+        background: rgba(22, 27, 34, 0.75);
+        padding: 30px;
+        border-radius: 16px;
+        border: 1px solid #30363d;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+        backdrop-filter: blur(10px);
+    }
     </style>
 """,
     unsafe_allow_html=True,
@@ -37,7 +78,6 @@ def init_db():
         )
     """)
   conn.commit()
-  # Default Admin Account check & insert
   cursor.execute("SELECT * FROM users WHERE email = ?", ("admin@gmail.com",))
   if not cursor.fetchone():
     cursor.execute(
@@ -59,7 +99,7 @@ def get_user(email):
   )
   res = cursor.fetchone()
   conn.close()
-  return res  # returns (password, name) or None
+  return res
 
 
 def register_user(email, password, name):
@@ -74,7 +114,7 @@ def register_user(email, password, name):
     conn.close()
     return True
   except sqlite3.IntegrityError:
-    return False  # Email already exists
+    return False
 
 
 # --- SESSION STATE INITIALIZATION ---
@@ -91,13 +131,12 @@ if "signals_used" not in st.session_state:
 if "last_reset" not in st.session_state:
   st.session_state.last_reset = datetime.date.today()
 
-# Reset daily signals if date changes
 if st.session_state.last_reset != datetime.date.today():
   st.session_state.signals_used = 0
   st.session_state.last_reset = datetime.date.today()
 
 
-# --- ULTRA-OPTIMIZED AUTHENTICATION SCREEN ---
+# --- AUTHENTICATION SCREEN (Register First, Login Second) ---
 def show_auth_screen():
   st.markdown("<br>", unsafe_allow_html=True)
   col1, col2, col3 = st.columns([1, 1.4, 1])
@@ -113,39 +152,10 @@ def show_auth_screen():
         unsafe_allow_html=True,
     )
 
-    auth_tab1, auth_tab2 = st.tabs(["🔑 Login", "📝 Register"])
+    # REGISTER TAB FIRST, LOGIN TAB SECOND AS REQUESTED
+    auth_tab1, auth_tab2 = st.tabs(["📝 Register", "🔑 Login"])
 
     with auth_tab1:
-      st.markdown("### Welcome Back")
-      login_email = st.text_input(
-          "Email ID / Phone Number",
-          placeholder="Enter registered email or phone",
-          key="login_email_input",
-      )
-      login_pass = st.text_input(
-          "Password",
-          type="password",
-          placeholder="Enter your password",
-          key="login_pass_input",
-      )
-
-      if st.button("LOGIN TO TERMINAL", key="login_btn"):
-        cleaned_email = login_email.strip()
-        user_data = get_user(cleaned_email)
-
-        if user_data and user_data[0] == login_pass:
-          st.session_state.logged_in = True
-          st.session_state.current_user_email = cleaned_email
-          st.session_state.current_user_name = user_data[1]
-          st.success("🎉 Login Successful! Redirecting...")
-          st.rerun()
-        else:
-          st.error(
-              "⚠️ Invalid Email/Phone or Password! Please check or register"
-              " first."
-          )
-
-    with auth_tab2:
       st.markdown("### Create New Account")
       reg_name = st.text_input(
           "Full Name",
@@ -181,7 +191,6 @@ def show_auth_screen():
         else:
           success = register_user(cleaned_reg_email, reg_pass, reg_name)
           if success:
-            # Instant auto-login upon successful registration
             st.session_state.logged_in = True
             st.session_state.current_user_email = cleaned_reg_email
             st.session_state.current_user_name = reg_name.strip()
@@ -193,16 +202,43 @@ def show_auth_screen():
                 " Login tab."
             )
 
+    with auth_tab2:
+      st.markdown("### Welcome Back")
+      login_email = st.text_input(
+          "Email ID / Phone Number",
+          placeholder="Enter registered email or phone",
+          key="login_email_input",
+      )
+      login_pass = st.text_input(
+          "Password",
+          type="password",
+          placeholder="Enter your password",
+          key="login_pass_input",
+      )
 
-# If not logged in, stop execution and show only the auth screen
+      if st.button("LOGIN TO TERMINAL", key="login_btn"):
+        cleaned_email = login_email.strip()
+        user_data = get_user(cleaned_email)
+
+        if user_data and user_data[0] == login_pass:
+          st.session_state.logged_in = True
+          st.session_state.current_user_email = cleaned_email
+          st.session_state.current_user_name = user_data[1]
+          st.success("🎉 Login Successful! Redirecting...")
+          st.rerun()
+        else:
+          st.error(
+              "⚠️ Invalid Email/Phone or Password! Please check or register"
+              " first."
+          )
+
+
 if not st.session_state.logged_in:
   show_auth_screen()
   st.stop()
 
 
-# --- MAIN TRADING TERMINAL (Accessible only when logged in) ---
-
-# Sidebar Profile & Logout
+# --- MAIN TRADING TERMINAL ---
 st.sidebar.header("👤 User Profile")
 st.sidebar.markdown(f"👋 Hello, **{st.session_state.current_user_name}**")
 st.sidebar.markdown(f"📧 `{st.session_state.current_user_email}`")
@@ -214,7 +250,6 @@ if st.sidebar.button("🚪 Logout"):
   st.session_state.user_tier = "Free User"
   st.rerun()
 
-# Header Section (Fixed Standard Title in Center)
 st.title("🚀 VEER PRO TRADING TERMINAL")
 st.markdown(
     "**Institutional Grade Live Market, Interactive Charts & AI Smart"
@@ -222,7 +257,6 @@ st.markdown(
 )
 st.markdown("---")
 
-# Main Navigation Tabs
 tab1, tab2, tab3, tab4 = st.tabs(
     ["⚡ Pro Terminal", "📊 Live Chart", "🏆 Accuracy", "💎 VIP Plan"]
 )
@@ -286,7 +320,7 @@ with tab1:
         st.markdown(
             """
             <div class="signal-card">
-                <h3 style='color: #2ea043; margin-top: 0;'>🔥 STRONG BUY SETUP (Bullish)</h3>
+                <h3 style='color: #00b4d8; margin-top: 0;'>🔥 STRONG BUY SETUP (Bullish)</h3>
                 <hr style='border-color: #30363d; margin: 5px 0 15px 0;'>
             """,
             unsafe_allow_html=True,
@@ -428,12 +462,11 @@ with tab4:
             "⚠️ Kripya sahi UTR / Transaction ID दर्ज करें (कम से कम 8 अंक)।"
         )
 
-# Footer Disclaimer
 st.markdown("---")
 st.markdown(
     "<p style='text-align: center; color: #8b949e; font-size: 11px;'>"
     "<b>Disclaimer:</b> VEER PRO TRADING TERMINAL is built for educational &"
     " analytical research only. Crypto trading involves high market risk."
     "</p>",
-    unsafe_call_html=True,
+    unsafe_allow_html=True,
 )
