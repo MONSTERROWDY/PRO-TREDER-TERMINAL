@@ -17,6 +17,7 @@ st.markdown(
     .stButton>button:hover { background: linear-gradient(135deg, #ff3333 0%, #ff7b29 100%); color: white; }
     div.stMetric { background-color: #161b22; padding: 12px; border-radius: 10px; border: 1px solid #30363d; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     .signal-card { background: linear-gradient(135deg, #161b22 0%, #1f242c 100%); padding: 20px; border-radius: 12px; border-left: 5px solid #238636; border-top: 1px solid #30363d; border-right: 1px solid #30363d; border-bottom: 1px solid #30363d; margin-top: 15px; }
+    .pay-box { background-color: #161b22; padding: 20px; border-radius: 12px; border: 1px solid #30363d; text-align: center; }
     </style>
 """,
     unsafe_allow_html=True,
@@ -30,11 +31,10 @@ st.markdown(
 )
 st.markdown("---")
 
-# Sidebar for Access Control
-st.sidebar.header("🔐 User Account")
-user_tier = st.sidebar.selectbox("Access Tier", ["Free User", "VIP Paid Member"])
+# Initialize session state for user tier and UTR tracking
+if "user_tier" not in st.session_state:
+  st.session_state.user_tier = "Free User"
 
-# Session state initialization for free signal tracking
 if "signals_used" not in st.session_state:
   st.session_state.signals_used = 0
   st.session_state.last_reset = datetime.date.today()
@@ -42,6 +42,13 @@ if "signals_used" not in st.session_state:
 if st.session_state.last_reset != datetime.date.today():
   st.session_state.signals_used = 0
   st.session_state.last_reset = datetime.date.today()
+
+# Sidebar for Access Control Status
+st.sidebar.header("🔐 User Account")
+st.sidebar.markdown(f"Current Status: **{st.session_state.user_tier}**")
+if st.sidebar.button("Reset Session / Logout"):
+  st.session_state.user_tier = "Free User"
+  st.rerun()
 
 # Main Navigation Tabs
 tab1, tab2, tab3, tab4 = st.tabs(
@@ -81,7 +88,7 @@ with tab1:
     st.markdown("### 🤖 AI Smart Signal Hub")
 
     can_generate = True
-    if user_tier == "Free User":
+    if st.session_state.user_tier == "Free User":
       remaining_signals = 5 - st.session_state.signals_used
       st.markdown(
           f"📢 Free Plan Quota: **{remaining_signals}/5** signals remaining"
@@ -93,11 +100,11 @@ with tab1:
     if st.button("✨ GENERATE SMART AI SIGNAL"):
       if not can_generate:
         st.error(
-            "⚠️ Daily free limit reached! Upgrade to VIP for unlimited"
-            " access."
+            "⚠️ Daily free limit reached! Go to 'VIP Plan' tab to unlock"
+            " unlimited access."
         )
       else:
-        if user_tier == "Free User":
+        if st.session_state.user_tier == "Free User":
           st.session_state.signals_used += 1
 
         st.markdown(
@@ -133,8 +140,6 @@ with tab1:
 
 with tab2:
   st.markdown(f"### 📈 Live Interactive Chart — {asset}")
-  
-  # Fixed TradingView Embed URL to prevent "Something went wrong" error
   tradingview_html = f"""
     <div class="tradingview-widget-container" style="height:500px;width:100%;">
       <div id="tradingview_widget" style="height:100%;width:100%;"></div>
@@ -186,30 +191,68 @@ with tab3:
   )
 
 with tab4:
-  st.markdown("### 💎 Upgrade Your Terminal Experience")
-  p1, p2 = st.columns(2)
+  st.markdown("### 💎 Upgrade to VIP Pro Access (₹999 / Month)")
 
-  with p1:
+  col_p1, col_p2 = st.columns(2, gap="medium")
+
+  with col_p1:
     st.markdown(
         """
-        #### 🆓 Free Plan
-        - 5 AI Signals / day
-        - Standard Charts
-        - Basic Support
-        """
-    )
-
-  with p2:
-    st.markdown(
-        """
-        #### 👑 VIP Pro Plan (₹999/mo)
-        - **Unlimited** Smart Signals
+        #### 👑 VIP Benefits
+        - **Unlimited** Smart AI Signals
         - Advanced Multi-Asset Scanners
         - Priority Alerts & Zero Ads
         """
     )
-    if st.button("Unlock VIP Access Now"):
-      st.success("Redirecting to secure gateway...")
+    st.markdown("---")
+    st.markdown("### 📱 Option 1: Direct Pay via UPI App")
+    st.markdown(
+        "Click below to pay securely through PhonePe, Google Pay, or Paytm:"
+    )
+
+    # UPI Intent link configured with your UPI ID (Hidden from plain text view)
+    upi_intent_url = (
+        "upi://pay?pa=7479465676-7@ybl&pn=VEER%20PRO%20TRADER&am=999.00&cu=INR"
+    )
+    st.link_button("📲 Pay ₹999 via UPI App (GPay/PhonePe)", upi_intent_url)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### 📷 Option 2: Scan QR Code")
+    # Public standard UPI QR generator API using your hidden UPI ID
+    qr_code_url = (
+        "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data="
+        + upi_intent_url
+    )
+    st.image(
+        qr_code_url,
+        caption="Scan this QR code with any UPI App to Pay ₹999",
+        width=180,
+    )
+
+  with col_p2:
+    st.markdown("#### ⚡ Step 3: Verify & Unlock")
+    st.markdown(
+        "Payment karne ke baad jo **12-digit UTR / Reference Number** milega,"
+        " use yahan dalein:"
+    )
+
+    utr_input = st.text_input(
+        "Enter 12-digit UTR / UPI Reference Number:",
+        placeholder="e.g. 4152xxxxxxxx",
+    )
+
+    if st.button("🔓 Verify & Activate VIP Access"):
+      if len(utr_input.strip()) >= 8:
+        st.session_state.user_tier = "VIP Paid Member"
+        st.success(
+            "🎉 Congratulations! VIP Access Activated Successfully. Enjoy"
+            " Unlimited Signals!"
+        )
+        st.rerun()
+      else:
+        st.error(
+            "⚠️ Kripya sahi UTR / Transaction ID दर्ज करें (कम से कम 8 अंक)।"
+        )
 
 # Footer Disclaimer
 st.markdown("---")
