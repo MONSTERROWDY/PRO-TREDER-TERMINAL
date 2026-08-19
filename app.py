@@ -113,7 +113,6 @@ def init_db():
   conn = get_db_connection()
   cursor = conn.cursor()
 
-  # Users table
   cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             email TEXT PRIMARY KEY,
@@ -123,7 +122,6 @@ def init_db():
     """)
   conn.commit()
 
-  # Safe user columns migration
   user_columns = [
       ("username", "TEXT"),
       ("avatar", "TEXT"),
@@ -137,7 +135,6 @@ def init_db():
     except sqlite3.OperationalError:
       pass
 
-  # Promo codes table
   cursor.execute("""
         CREATE TABLE IF NOT EXISTS promo_codes (
             code TEXT PRIMARY KEY,
@@ -148,7 +145,6 @@ def init_db():
     """)
   conn.commit()
 
-  # Safe promo columns migration (in case table already existed without used_by)
   promo_columns = [
       ("is_used", "INTEGER DEFAULT 0"),
       ("used_by", "TEXT DEFAULT NULL"),
@@ -160,7 +156,6 @@ def init_db():
     except sqlite3.OperationalError:
       pass
 
-  # Ensure Admin Account Exists
   cursor.execute("SELECT * FROM users WHERE email = ?", ("admin@gmail.com",))
   if not cursor.fetchone():
     cursor.execute(
@@ -181,7 +176,6 @@ def init_db():
     )
     conn.commit()
 
-  # Default single-use promo codes
   default_promos = [
       ("VEERPREMIUM30", "30 Days"),
       ("VEERPREMIUM1Y", "1 Year"),
@@ -627,30 +621,131 @@ with tab_dash:
   col_cfg, col_risk = st.columns(2, gap="medium")
   with col_cfg:
     st.markdown("### ⚙️ Global Asset & Signal Configuration")
+
+    # --- ALL 9 MARKETS WITH 50+ ASSETS EACH ---
     market_category = st.selectbox(
-        "Market Category",
-        ["Crypto", "Forex", "US Stocks", "Indian Stocks", "Commodities"],
+        "Market Category (All Markets)",
+        [
+            "FOREX",
+            "CRYPTO",
+            "STOCKS",
+            "INDICES",
+            "COMMODITIES",
+            "FUTURES",
+            "OPTIONS",
+            "BONDS",
+            "INTEREST RATES",
+        ],
         key="cat_sel",
     )
 
-    if market_category == "Crypto":
-      asset_options = [
-          "BINANCE:BTCUSDT",
-          "BINANCE:ETHUSDT",
-          "BINANCE:SOLUSDT",
-          "BINANCE:BNBUSDT",
-          "BINANCE:XRPUSDT",
-          "BINANCE:DOGEUSDT",
-      ]
-    elif market_category == "Forex":
+    if market_category == "FOREX":
       asset_options = [
           "FX:EURUSD",
           "FX:GBPUSD",
           "FX:USDJPY",
           "FX:AUDUSD",
           "FX:USDCAD",
+          "FX:NZDUSD",
+          "FX:USDCHF",
+          "FX:EURGBP",
+          "FX:EURJPY",
+          "FX:GBPJPY",
+          "FX:AUDJPY",
+          "FX:CADJPY",
+          "FX:CHFJPY",
+          "FX:EURAUD",
+          "FX:EURCAD",
+          "FX:EURNZD",
+          "FX:GBPAUD",
+          "FX:GBPCAD",
+          "FX:GBPNZD",
+          "FX:AUDCAD",
+          "FX:AUDNZD",
+          "FX:NZDCAD",
+          "FX:USDNOK",
+          "FX:USDSEK",
+          "FX:USDDKK",
+          "FX:USDSGD",
+          "FX:USDHKD",
+          "FX:USDZAR",
+          "FX:USDTRY",
+          "FX:USDMXN",
+          "FX:USDBRL",
+          "FX:USDINR",
+          "FX:USDRUB",
+          "FX:USDPLN",
+          "FX:USDHUF",
+          "FX:USDCZK",
+          "FX:USDRON",
+          "FX:USDPHP",
+          "FX:USDIDR",
+          "FX:USDMYR",
+          "FX:USDTHB",
+          "FX:USDVND",
+          "FX:USDKRW",
+          "FX:USDTWD",
+          "FX:EURCHF",
+          "FX:AUDCHF",
+          "FX:NZDCHF",
+          "FX:CADCHF",
+          "FX:EURSGD",
+          "FX:EURNOK",
       ]
-    elif market_category == "US Stocks":
+    elif market_category == "CRYPTO":
+      asset_options = [
+          "BINANCE:BTCUSDT",
+          "BINANCE:ETHUSDT",
+          "BINANCE:SOLUSDT",
+          "BINANCE:BNBUSDT",
+          "BINANCE:XRPUSDT",
+          "BINANCE:ADAUSDT",
+          "BINANCE:DOGEUSDT",
+          "BINANCE:AVAXUSDT",
+          "BINANCE:DOTUSDT",
+          "BINANCE:LINKUSDT",
+          "BINANCE:MATICUSDT",
+          "BINANCE:LTCUSDT",
+          "BINANCE:BCHUSDT",
+          "BINANCE:UNIUSDT",
+          "BINANCE:NEARUSDT",
+          "BINANCE:ATOMUSDT",
+          "BINANCE:ICPUSDT",
+          "BINANCE:APTUSDT",
+          "BINANCE:SUIUSDT",
+          "BINANCE:RENDERUSDT",
+          "BINANCE:FETUSDT",
+          "BINANCE:INJUSDT",
+          "BINANCE:OPUSDT",
+          "BINANCE:ARBUSDT",
+          "BINANCE:SHIBUSDT",
+          "BINANCE:PEPEUSDT",
+          "BINANCE:FLOKIUSDT",
+          "BINANCE:BONKUSDT",
+          "BINANCE:WIFUSDT",
+          "BINANCE:KASUSDT",
+          "BINANCE:TONUSDT",
+          "BINANCE:TRXUSDT",
+          "BINANCE:ETCUSDT",
+          "BINANCE:FILUSDT",
+          "BINANCE:HBARUSDT",
+          "BINANCE:STXUSDT",
+          "BINANCE:IMXUSDT",
+          "BINANCE:GRTUSDT",
+          "BINANCE:RUNEUSDT",
+          "BINANCE:THETAUSDT",
+          "BINANCE:SEIUSDT",
+          "BINANCE:TIAUSDT",
+          "BINANCE:AAVEUSDT",
+          "BINANCE:SNXUSDT",
+          "BINANCE:CRVUSDT",
+          "BINANCE:PENDLEUSDT",
+          "BINANCE:MANAUSDT",
+          "BINANCE:SANDUSDT",
+          "BINANCE:AXSUSDT",
+          "BINANCE:GALAUSDT",
+      ]
+    elif market_category == "STOCKS":
       asset_options = [
           "NASDAQ:AAPL",
           "NASDAQ:TSLA",
@@ -658,25 +753,372 @@ with tab_dash:
           "NASDAQ:MSFT",
           "NASDAQ:AMZN",
           "NASDAQ:GOOGL",
-      ]
-    elif market_category == "Indian Stocks":
-      asset_options = [
+          "NASDAQ:META",
+          "NASDAQ:NFLX",
+          "NASDAQ:AMD",
+          "NASDAQ:INTC",
+          "NASDAQ:QCOM",
+          "NASDAQ:PYPL",
+          "NASDAQ:ADBE",
+          "NASDAQ:CSCO",
+          "NASDAQ:PEP",
+          "NASDAQ:COST",
+          "NASDAQ:AVGO",
+          "NASDAQ:TXN",
+          "NASDAQ:AMGN",
+          "NASDAQ:SBUX",
+          "NYSE:JPM",
+          "NYSE:V",
+          "NYSE:JNJ",
+          "NYSE:WMT",
+          "NYSE:MA",
+          "NYSE:PG",
+          "NYSE:HD",
+          "NYSE:DIS",
+          "NYSE:BAC",
+          "NYSE:XOM",
+          "NYSE:CVX",
+          "NYSE:KO",
+          "NYSE:PFE",
+          "NYSE:MCD",
+          "NYSE:IBM",
+          "NYSE:NKE",
+          "NYSE:BA",
+          "NYSE:GS",
+          "NYSE:CAT",
+          "NYSE:GE",
           "NSE:RELIANCE",
           "NSE:TCS",
           "NSE:INFY",
           "NSE:HDFCBANK",
+          "NSE:ICICIBANK",
+          "NSE:SBIN",
           "NSE:TATASTEEL",
-          "BSE:SENSEX",
+          "NSE:ITC",
+          "NSE:BHARTIARTL",
+          "NSE:WIPRO",
       ]
-    else:
+    elif market_category == "INDICES":
+      asset_options = [
+          "SP:SPX",
+          "NASDAQ:NDX",
+          "DJ:DJI",
+          "TVC:VIX",
+          "INDEX:NIFTY",
+          "BSE:SENSEX",
+          "INDEX:BANKNIFTY",
+          "INDEX:FINNIFTY",
+          "INDEX:MIDCAPNIFTY",
+          "INDEX:NIFTYIT",
+          "INDEX:NIFTYAUTO",
+          "INDEX:NIFTYPHARMA",
+          "INDEX:NIFTYFMCG",
+          "INDEX:NIFTYMETAL",
+          "INDEX:NIFTYREALTY",
+          "INDEX:NIFTYENERGY",
+          "INDEX:NIFTYINFRA",
+          "TVC:UKX",
+          "TVC:DAX",
+          "TVC:CAC40",
+          "TVC:FTSE",
+          "TVC:IBEX35",
+          "TVC:FTSEMIB",
+          "TVC:AEX",
+          "TVC:SMI",
+          "TVC:IMOEX",
+          "TVC:N225",
+          "TVC:HSI",
+          "TVC:SSEC",
+          "TVC:SZSE",
+          "TVC:KOSPI",
+          "TVC:ASX200",
+          "TVC:STI",
+          "TVC:KLSE",
+          "TVC:JKSE",
+          "TVC:SET",
+          "TVC:PSEI",
+          "TVC:TWII",
+          "TVC:BVSP",
+          "TVC:MXX",
+          "TVC:MERVAL",
+          "TVC:IPSA",
+          "TVC:IGBC",
+          "TVC:JN0U0",
+          "TVC:JN10Y",
+          "TVC:TA35",
+          "TVC:CASE30",
+          "TVC:DFMGI",
+          "TVC:TASI",
+          "TVC:JN20Y",
+      ]
+    elif market_category == "COMMODITIES":
       asset_options = [
           "COMEX:GC1! (Gold)",
           "NYMEX:CL1! (Crude Oil)",
           "COMEX:SI1! (Silver)",
+          "NYMEX:NG1! (Natural Gas)",
+          "COMEX:HG1! (Copper)",
+          "NYMEX:RB1! (Gasoline)",
+          "NYMEX:HO1! (Heating Oil)",
+          "CBOT:ZC1! (Corn)",
+          "CBOT:ZS1! (Soybeans)",
+          "CBOT:ZW1! (Wheat)",
+          "CBOT:ZM1! (Soybean Meal)",
+          "CBOT:ZL1! (Soybean Oil)",
+          "ICE:CT1! (Cotton)",
+          "ICE:KC1! (Coffee)",
+          "ICE:SB1! (Sugar)",
+          "ICE:CC1! (Cocoa)",
+          "LME:ALI1! (Aluminum)",
+          "LME:ZNC1! (Zinc)",
+          "LME:NIC1! (Nickel)",
+          "LME:PB1! (Lead)",
+          "LME:TN1! (Tin)",
+          "NYMEX:PL1! (Platinum)",
+          "NYMEX:PA1! (Palladium)",
+          "COMEX:MGC1! (Micro Gold)",
+          "COMEX:SIL1! (Micro Silver)",
+          "NYMEX:MCL1! (Micro Crude)",
+          "CBOT:XW1! (Mini Wheat)",
+          "CBOT:XC1! (Mini Corn)",
+          "CBOT:XS1! (Mini Soybeans)",
+          "SGX:FE1! (Iron Ore)",
+          "MCX:GOLD",
+          "MCX:SILVER",
+          "MCX:CRUDEOIL",
+          "MCX:NATURALGAS",
+          "MCX:COPPER",
+          "MCX:ZINC",
+          "MCX:NICKEL",
+          "MCX:ALUMINUM",
+          "MCX:LEAD",
+          "MCX:MENTHAOIL",
+          "MCX:COTTON",
+          "MCX:CPO",
+          "MCX:BASESAL",
+          "MCX:ZINCMINI",
+          "MCX:ALUMINI",
+          "MCX:COPPERMINI",
+          "MCX:GOLDGUINEA",
+          "MCX:GOLDPETAL",
+          "MCX:SILVERM",
+          "MCX:GOLDM",
+      ]
+    elif market_category == "FUTURES":
+      asset_options = [
+          "CBOT:ZN1! (10-Yr T-Note)",
+          "CBOT:ZB1! (30-Yr T-Bond)",
+          "CBOT:ZF1! (5-Yr T-Note)",
+          "CBOT:ZT1! (2-Yr T-Note)",
+          "CME:ES1! (S&P 500 E-mini)",
+          "CME:NQ1! (Nasdaq 100 E-mini)",
+          "CME:YM1! (Dow Jones E-mini)",
+          "CME:RTY1! (Russell 2000)",
+          "CME:VIX1! (Volatility Index)",
+          "CME:BTC1! (Bitcoin Futures)",
+          "CME:ETH1! (Ether Futures)",
+          "NYMEX:CL1! (Crude Oil)",
+          "COMEX:GC1! (Gold Futures)",
+          "COMEX:SI1! (Silver Futures)",
+          "NYMEX:NG1! (Natural Gas Futures)",
+          "CBOT:ZC1! (Corn Futures)",
+          "CBOT:ZS1! (Soybean Futures)",
+          "CBOT:ZW1! (Wheat Futures)",
+          "ICE:DX1! (US Dollar Index)",
+          "EUREX:FGBL1! (Euro-Bund)",
+          "EUREX:FGBM1! (Euro-Bobl)",
+          "EUREX:FGBS1! (Euro-Schatz)",
+          "EUREX:FGBX1! (Euro-BTP)",
+          "EUREX:FDAX1! (DAX Futures)",
+          "EUREX:FESX1! (Euro STOXX 50)",
+          "SGX:IN1! (SGX Nifty Futures)",
+          "OSE:NK2251! (Nikkei Futures)",
+          "HKEX:HSI1! (Hang Seng Futures)",
+          "BMF:IND1! (Ibovespa Futures)",
+          "ASX:SPI1! (SPI 200 Futures)",
+          "BIST:XU0301! (BIST 30 Futures)",
+          "JSE:ALSI1! (Top 40 Futures)",
+          "MX:MXX1! (IPC Futures)",
+          "TFEX:SET501! (SET50 Futures)",
+          "SIMEX:TW1! (Taiwan Index Futures)",
+          "KRX:KOSPI1! (KOSPI 200 Futures)",
+          "B3:DOL1! (US Dollar Brazil Fut)",
+          "B3:IND1! (Brazil Index Fut)",
+          "ICE:LCO1! (Brent Crude Fut)",
+          "ICE:GAS1! (Gasoil Futures)",
+          "NYMEX:QM1! (E-mini Crude)",
+          "COMEX:QG1! (E-mini Gold)",
+          "CME:MES1! (Micro S&P 500)",
+          "CME:MNQ1! (Micro Nasdaq)",
+          "CME:MYM1! (Micro Dow)",
+          "CME:M2K1! (Micro Russell)",
+          "CME:MCL1! (Micro Crude)",
+          "COMEX:MGC1! (Micro Gold)",
+          "CME:MBT1! (Micro Bitcoin)",
+          "CME:MET1! (Micro Ether)",
+      ]
+    elif market_category == "OPTIONS":
+      asset_options = [
+          "NSE:NIFTY_CE",
+          "NSE:NIFTY_PE",
+          "NSE:BANKNIFTY_CE",
+          "NSE:BANKNIFTY_PE",
+          "NSE:FINNIFTY_CE",
+          "NSE:FINNIFTY_PE",
+          "NSE:RELIANCE_CALL",
+          "NSE:RELIANCE_PUT",
+          "NSE:TCS_CALL",
+          "NSE:TCS_PUT",
+          "NSE:INFY_CALL",
+          "NSE:INFY_PUT",
+          "NSE:HDFCBANK_CALL",
+          "NSE:HDFCBANK_PUT",
+          "NSE:ICICIBANK_CALL",
+          "NSE:ICICIBANK_PUT",
+          "CBOE:SPX_CALL",
+          "CBOE:SPX_PUT",
+          "CBOE:NDX_CALL",
+          "CBOE:NDX_PUT",
+          "CBOE:VIX_CALL",
+          "CBOE:VIX_PUT",
+          "NASDAQ:AAPL_CALL",
+          "NASDAQ:AAPL_PUT",
+          "NASDAQ:TSLA_CALL",
+          "NASDAQ:TSLA_PUT",
+          "NASDAQ:NVDA_CALL",
+          "NASDAQ:NVDA_PUT",
+          "NASDAQ:MSFT_CALL",
+          "NASDAQ:MSFT_PUT",
+          "NASDAQ:AMZN_CALL",
+          "NASDAQ:AMZN_PUT",
+          "NASDAQ:GOOGL_CALL",
+          "NASDAQ:GOOGL_PUT",
+          "NASDAQ:META_CALL",
+          "NASDAQ:META_PUT",
+          "NYSE:JPM_CALL",
+          "NYSE:JPM_PUT",
+          "NYSE:V_CALL",
+          "NYSE:V_PUT",
+          "BINANCE:BTC_OPT_CALL",
+          "BINANCE:BTC_OPT_PUT",
+          "BINANCE:ETH_OPT_CALL",
+          "BINANCE:ETH_OPT_PUT",
+          "NSE:SBIN_CALL",
+          "NSE:SBIN_PUT",
+          "NSE:TATASTEEL_CALL",
+          "NSE:TATASTEEL_PUT",
+          "NSE:AXISBANK_CALL",
+          "NSE:AXISBANK_PUT",
+      ]
+    elif market_category == "BONDS":
+      asset_options = [
+          "TVC:US10Y (US 10-Yr Treasury)",
+          "TVC:US02Y (US 2-Yr Treasury)",
+          "TVC:US30Y (US 30-Yr Treasury)",
+          "TVC:US05Y (US 5-Yr Treasury)",
+          "TVC:US01Y (US 1-Yr Treasury)",
+          "TVC:US03M (US 3-Month Bill)",
+          "TVC:US06M (US 6-Month Bill)",
+          "TVC:GB10Y (UK 10-Yr Gilt)",
+          "TVC:DE10Y (Germany 10-Yr Bund)",
+          "TVC:FR10Y (France 10-Yr OAT)",
+          "TVC:IT10Y (Italy 10-Yr BTP)",
+          "TVC:ES10Y (Spain 10-Yr Bono)",
+          "TVC:JP10Y (Japan 10-Yr JGB)",
+          "TVC:AU10Y (Australia 10-Yr Bond)",
+          "TVC:CA10Y (Canada 10-Yr Bond)",
+          "TVC:IN10Y (India 10-Yr Bond)",
+          "TVC:CN10Y (China 10-Yr Bond)",
+          "TVC:BR10Y (Brazil 10-Yr Bond)",
+          "TVC:MX10Y (Mexico 10-Yr Bond)",
+          "TVC:ZA10Y (South Africa 10-Yr)",
+          "TVC:KR10Y (South Korea 10-Yr)",
+          "TVC:RU10Y (Russia 10-Yr OFZ)",
+          "TVC:CH10Y (Switzerland 10-Yr)",
+          "TVC:SE10Y (Sweden 10-Yr Bond)",
+          "TVC:NO10Y (Norway 10-Yr Bond)",
+          "TVC:DK10Y (Denmark 10-Yr Bond)",
+          "TVC:NL10Y (Netherlands 10-Yr)",
+          "TVC:BE10Y (Belgium 10-Yr Bond)",
+          "TVC:AT10Y (Austria 10-Yr Bond)",
+          "TVC:FI10Y (Finland 10-Yr Bond)",
+          "TVC:PT10Y (Portugal 10-Yr Bond)",
+          "TVC:GR10Y (Greece 10-Yr Bond)",
+          "TVC:TR10Y (Turkey 10-Yr Bond)",
+          "TVC:ID10Y (Indonesia 10-Yr)",
+          "TVC:MY10Y (Malaysia 10-Yr)",
+          "TVC:SG10Y (Singapore 10-Yr)",
+          "TVC:HK10Y (Hong Kong 10-Yr)",
+          "TVC:NZ10Y (New Zealand 10-Yr)",
+          "TVC:PL10Y (Poland 10-Yr Bond)",
+          "TVC:CZ10Y (Czech 10-Yr Bond)",
+          "TVC:HU10Y (Hungary 10-Yr Bond)",
+          "TVC:RO10Y (Romania 10-Yr Bond)",
+          "TVC:IL10Y (Israel 10-Yr Bond)",
+          "TVC:AR10Y (Argentina 10-Yr Bond)",
+          "TVC:CO10Y (Colombia 10-Yr Bond)",
+          "TVC:CL10Y (Chile 10-Yr Bond)",
+          "TVC:PE10Y (Peru 10-Yr Bond)",
+          "TVC:PH10Y (Philippines 10-Yr)",
+          "TVC:TH10Y (Thailand 10-Yr Bond)",
+          "TVC:VN10Y (Vietnam 10-Yr Bond)",
+      ]
+    else:  # INTEREST RATES
+      asset_options = [
+          "ECONOMICS:USINTR (US Fed Funds Rate)",
+          "ECONOMICS:ININTR (RBI Repo Rate)",
+          "ECONOMICS:EUINTR (ECB Interest Rate)",
+          "ECONOMICS:GBINTR (Bank of England Rate)",
+          "ECONOMICS:JPINTR (Bank of Japan Rate)",
+          "ECONOMICS:CAINTR (Bank of Canada Rate)",
+          "ECONOMICS:AUINTR (RBA Cash Rate)",
+          "ECONOMICS:CHINTR (SNB Policy Rate)",
+          "ECONOMICS:CNINTR (PBOC Loan Prime Rate)",
+          "ECONOMICS:NZINTR (RBNZ Official Cash Rate)",
+          "ECONOMICS:BRINTR (Brazil Selic Rate)",
+          "ECONOMICS:RUINTR (Russia Key Rate)",
+          "ECONOMICS:ZAINTR (SARB Repo Rate)",
+          "ECONOMICS:MXINTR (Banxico Rate)",
+          "ECONOMICS:KRINTR (BOK Base Rate)",
+          "ECONOMICS:TRINTR (CBRT Repo Rate)",
+          "ECONOMICS:IDINTR (BI Rate)",
+          "ECONOMICS:MYINTR (BNM Overnight Rate)",
+          "ECONOMICS:THINTR (BOT Policy Rate)",
+          "ECONOMICS:PHINTR (BSP Reverse Repo)",
+          "ECONOMICS:SEINTR (Riksbank Repo Rate)",
+          "ECONOMICS:NOINTR (Norges Bank Policy)",
+          "ECONOMICS:DKINTR (Danmarks Nationalbank)",
+          "ECONOMICS:PLINTR (NBP Reference Rate)",
+          "ECONOMICS:CZINTR (CNB Two-Week Repo)",
+          "ECONOMICS:HUINTR (MNB Base Rate)",
+          "ECONOMICS:ROINTR (BNR Policy Rate)",
+          "ECONOMICS:CLINTR (BCCh Monetary Policy)",
+          "ECONOMICS:COINTR (BanRep Interest Rate)",
+          "ECONOMICS:PEINTR (BCRP Reference Rate)",
+          "ECONOMICS:SGINTR (MAS 3M SIBOR)",
+          "ECONOMICS:HKINTR (HKMA Base Rate)",
+          "ECONOMICS:TWINTR (CBC Discount Rate)",
+          "ECONOMICS:ARINTR (BCRA Leliq Rate)",
+          "ECONOMICS:ILINTR (BOI Interest Rate)",
+          "ECONOMICS:SAINTR (SAMA Repo Rate)",
+          "ECONOMICS:AEINTR (UAE Base Rate)",
+          "ECONOMICS:QAINTR (QCB Repo Rate)",
+          "ECONOMICS:EGINTR (CBE Deposit Rate)",
+          "ECONOMICS:PKINTR (SBP Policy Rate)",
+          "ECONOMICS:LKINTR (CBSL Standing Rate)",
+          "ECONOMICS:BDINTR (BB Repo Rate)",
+          "ECONOMICS:NGINTR (CBN Monetary Rate)",
+          "ECONOMICS:KEINTR (CBK Central Rate)",
+          "ECONOMICS:GHINTR (BOG Policy Rate)",
+          "ECONOMICS:UAINTR (NBU Discount Rate)",
+          "ECONOMICS:KAZINTR (NBK Base Rate)",
+          "ECONOMICS:VNZINTR (BCV Interest Rate)",
+          "ECONOMICS:HRINTR (CNB Base Rate)",
+          "ECONOMICS:RSINTR (NBS Repo Rate)",
       ]
 
     selected_asset = st.selectbox(
-        "Select Asset / Symbol", asset_options, key="asset_sel"
+        "Select Asset / Symbol (50+ Available)", asset_options, key="asset_sel"
     )
     tf = st.selectbox(
         "Timeframe", ["1m", "5m", "15m", "1h", "4h", "1D"], key="tf_sel"
@@ -820,9 +1262,9 @@ with tab_risk_calc:
   )
 
 with tab_chart:
-  st.markdown("### 📊 Advanced Ultra-Smooth Live Chart")
+  st.markdown("### 📊 Advanced Ultra-Smooth Live Chart & Real-Time Ticker")
   st.info(
-      "💡 Tip: Search any symbol directly inside the chart toolbar (e.g., RELIANCE, BTCUSDT, AAPL, EURUSD)."
+      "💡 Tip: Search any symbol directly inside the chart toolbar or panel below. Real-time milliseconds streaming widget active."
   )
 
   c_sym, c_tf = st.columns([2, 2])
@@ -849,15 +1291,33 @@ with tab_chart:
     )
     chart_tf = chart_tf_map[selected_tf_label]
 
+  # --- REAL-TIME MILLISECONDS STREAMING TICKER WIDGET (TRADINGVIEW MINI WIDGET / WSS EMBED) ---
+  clean_tv_sym = chart_symbol.replace(":", "___")
+  realtime_ticker_html = f"""
+    <div class="tradingview-widget-container" style="width:100%; height:80px; margin-bottom:15px;">
+      <div class="tradingview-widget-container__widget"></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-single-quote.js" async>
+      {{
+        "symbol": "{chart_symbol}",
+        "width": "100%",
+        "colorTheme": "dark",
+        "isTransparent": true,
+        "locale": "en"
+      }}
+      </script>
+    </div>
+    """
+  st.components.v1.html(realtime_ticker_html, height=90)
+
   tv_html = f"""
-    <div class="tradingview-widget-container" style="height:620px;width:100%;">
+    <div class="tradingview-widget-container" style="height:550px;width:100%;">
       <div id="tradingview_chart" style="height:100%;width:100%;"></div>
       <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
       <script type="text/javascript">
       new TradingView.widget(
       {{
         "width": "100%",
-        "height": "620",
+        "height": "550",
         "symbol": "{chart_symbol}",
         "interval": "{chart_tf}",
         "timezone": "Etc/UTC",
@@ -872,7 +1332,7 @@ with tab_chart:
       </script>
     </div>
     """
-  st.components.v1.html(tv_html, height=640)
+  st.components.v1.html(tv_html, height=570)
 
 with tab_signals:
   st.markdown(
@@ -1021,7 +1481,7 @@ with tab_plans:
             <p style="color: #848e9c; font-size: 11px;">Direct Pay</p>
             <hr style="border-color: #2b313a;">
             <p style="font-size: 12px;">✔️ Lifetime Access</p>
-            <p style="font-size: 12px;">✔️ 1-on-1 Pro Mentorship</p>
+            <p style="font-size: 1-on-1 Pro Mentorship</p>
         </div>
         """,
         unsafe_allow_html=True,
