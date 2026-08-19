@@ -1,6 +1,7 @@
 import datetime
 import sqlite3
 import streamlit as st
+import extra_streamlit_components as stx
 
 # 1. Page Configuration (Must be at the top)
 st.set_page_config(
@@ -10,22 +11,24 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 2. Custom CSS for Premium Colorful Dark Theme
+# Initialize Cookie Manager for persistent session across refreshes
+@st.cache_resource
+def get_cookie_manager():
+    return stx.CookieManager()
+
+cookie_manager = get_cookie_manager()
+
+# 2. Custom CSS for Premium Dark Theme
 st.markdown(
     """
     <style>
-    /* Global Deep Colorful Dark Theme */
     .stApp {
         background: radial-gradient(circle at top right, #131b2e, #090d16) !important;
         color: #ffffff !important;
     }
-    
-    /* Force all text, labels, and headers to be bright white */
     h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown {
         color: #ffffff !important;
     }
-    
-    /* Stylish Sidebar */
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #131b2e 0%, #090d16 100%) !important;
         border-right: 1px solid #1f293d;
@@ -34,15 +37,11 @@ st.markdown(
     [data-testid="stSidebar"] div, [data-testid="stSidebar"] span, [data-testid="stSidebar"] p {
         color: #e0e7ff !important;
     }
-    
-    /* Input Field Labels visibility */
     .stTextInput label, .stSelectbox label, .stNumberInput label, .stSlider label {
         color: #00f2fe !important;
         font-weight: 600 !important;
         font-size: 14px !important;
     }
-
-    /* Input Boxes Styling */
     .stTextInput>div>div>input, .stNumberInput>div>div>input {
         background-color: #131b2e !important;
         color: #ffffff !important;
@@ -50,20 +49,12 @@ st.markdown(
         border-radius: 10px;
         padding: 12px;
     }
-    .stTextInput>div>div>input:focus {
-        border-color: #00f2fe !important;
-        box-shadow: 0 0 12px rgba(0, 242, 254, 0.5);
-    }
-
-    /* Selectbox styling */
     .stSelectbox>div>div>div {
         background-color: #131b2e !important;
         color: #ffffff !important;
         border: 1px solid #3b82f6 !important;
         border-radius: 10px;
     }
-
-    /* Tabs styling */
     .stTabs [data-baseweb="tab-list"] {
         gap: 8px;
         background-color: transparent;
@@ -82,8 +73,6 @@ st.markdown(
         font-weight: 700 !important;
         border: none !important;
     }
-
-    /* Glowing Action Buttons */
     .stButton>button { 
         width: 100%; 
         border-radius: 10px; 
@@ -100,7 +89,6 @@ st.markdown(
         background: linear-gradient(135deg, #6366f1 0%, #00f2fe 100%); 
         box-shadow: 0 6px 20px rgba(99,102,241,0.5);
     }
-
     div.stMetric { 
         background: #131b2e; 
         padding: 15px; 
@@ -121,7 +109,7 @@ st.markdown(
 )
 
 
-# --- PERMANENT SQLITE DATABASE HELPER FUNCTIONS ---
+# --- SQLITE DATABASE SETUP ---
 def get_db_connection():
     return sqlite3.connect("users_database.db", check_same_thread=False)
 
@@ -170,13 +158,22 @@ def register_user(email, password, name):
         return False
 
 
-# --- SESSION STATE INITIALIZATION ---
+# --- BROWSER COOKIE PERSISTENCE CHECK ---
+cookie_email = cookie_manager.get(cookie="user_email")
+cookie_name = cookie_manager.get(cookie="user_name")
+
 if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+    if cookie_email and cookie_name:
+        st.session_state.logged_in = True
+        st.session_state.current_user_email = cookie_email
+        st.session_state.current_user_name = cookie_name
+    else:
+        st.session_state.logged_in = False
+
 if "current_user_email" not in st.session_state:
-    st.session_state.current_user_email = ""
+    st.session_state.current_user_email = cookie_email if cookie_email else ""
 if "current_user_name" not in st.session_state:
-    st.session_state.current_user_name = ""
+    st.session_state.current_user_name = cookie_name if cookie_name else ""
 if "user_tier" not in st.session_state:
     st.session_state.user_tier = "Free User"
 if "signals_used" not in st.session_state:
@@ -184,7 +181,6 @@ if "signals_used" not in st.session_state:
 if "last_reset" not in st.session_state:
     st.session_state.last_reset = datetime.date.today()
 
-# Auto-reset signal quota daily
 if st.session_state.last_reset != datetime.date.today():
     st.session_state.signals_used = 0
     st.session_state.last_reset = datetime.date.today()
@@ -210,8 +206,6 @@ def show_auth_screen():
 
         with auth_tab1:
             st.markdown("<h3 style='color: #ffffff; font-size: 18px; margin-top: 10px;'>Create New Account</h3>", unsafe_allow_html=True)
-            
-            # Encapsulated inside st.form to fix auto-refresh crashes
             with st.form("register_form", clear_on_submit=False):
                 reg_name = st.text_input("Full Name", placeholder="Enter your full name", key="reg_name_input")
                 reg_email = st.text_input("Email ID / Phone Number", placeholder="Enter email or phone", key="reg_email_input")
@@ -230,20 +224,20 @@ def show_auth_screen():
                     elif len(reg_pass) < 6:
                         st.warning("⚠️ Password must be at least 6 characters long.")
                     else:
-                        success = register_user(cleaned_reg_email, reg_pass, reg_name)
-                        if success:
-                            st.session_state.logged_in = True
-                            st.session_state.current_user_email = cleaned_reg_email
-                            st.session_state.current_user_name = reg_name.strip()
-                            st.success("🎉 Account Created & Logged In Successfully!")
-                            st.rerun()
-                        else:
-                            st.error("⚠️ This Email/Phone is already registered! Please go to Login tab.")
+                        register_user(cleaned_reg_email, reg_pass, reg_name)
+                        st.session_state.logged_in = True
+                        st.session_state.current_user_email = cleaned_reg_email
+                        st.session_state.current_user_name = reg_name.strip()
+                        
+                        # Save session to Browser Cookies for 30 days
+                        cookie_manager.set("user_email", cleaned_reg_email, key="set_reg_email", expires_at=datetime.datetime.now() + datetime.timedelta(days=30))
+                        cookie_manager.set("user_name", reg_name.strip(), key="set_reg_name", expires_at=datetime.datetime.now() + datetime.timedelta(days=30))
+                        
+                        st.success("🎉 Account Created & Logged In Successfully!")
+                        st.rerun()
 
         with auth_tab2:
             st.markdown("<h3 style='color: #ffffff; font-size: 18px; margin-top: 10px;'>Welcome Back</h3>", unsafe_allow_html=True)
-            
-            # Encapsulated inside st.form to preserve login state
             with st.form("login_form", clear_on_submit=False):
                 login_email = st.text_input("Email ID / Phone Number", placeholder="Enter registered email or phone", key="login_email_input")
                 login_pass = st.text_input("Password", type="password", placeholder="Enter your password", key="login_pass_input")
@@ -259,13 +253,17 @@ def show_auth_screen():
                         st.session_state.logged_in = True
                         st.session_state.current_user_email = cleaned_email
                         st.session_state.current_user_name = user_data[1]
+                        
+                        # Save session to Browser Cookies for 30 days
+                        cookie_manager.set("user_email", cleaned_email, key="set_log_email", expires_at=datetime.datetime.now() + datetime.timedelta(days=30))
+                        cookie_manager.set("user_name", user_data[1], key="set_log_name", expires_at=datetime.datetime.now() + datetime.timedelta(days=30))
+                        
                         st.success("🎉 Login Successful! Redirecting...")
                         st.rerun()
                     else:
                         st.error("⚠️ Invalid Email/Phone or Password! Please check or register first.")
 
 
-# Render Auth Screen if not logged in
 if not st.session_state.logged_in:
     show_auth_screen()
     st.stop()
@@ -280,6 +278,8 @@ with st.sidebar:
     st.markdown(f"🌟 Status: **{st.session_state.user_tier}**")
     st.markdown("---")
     if st.button("🚪 Logout", key="logout_btn"):
+        cookie_manager.delete("user_email", key="del_email")
+        cookie_manager.delete("user_name", key="del_name")
         st.session_state.logged_in = False
         st.session_state.current_user_email = ""
         st.session_state.current_user_name = ""
