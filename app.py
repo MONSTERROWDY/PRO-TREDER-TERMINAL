@@ -97,7 +97,6 @@ def init_db():
     """)
   conn.commit()
 
-  # Safe Migration for existing databases to prevent OperationalError
   columns_to_add = [
       ("username", "TEXT"),
       ("avatar", "TEXT"),
@@ -109,7 +108,7 @@ def init_db():
       cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}")
       conn.commit()
     except sqlite3.OperationalError:
-      pass  # Column already exists
+      pass
 
   cursor.execute("""
         CREATE TABLE IF NOT EXISTS promo_codes (
@@ -135,14 +134,25 @@ def init_db():
     )
     conn.commit()
 
-  # Default Promo Code
-  cursor.execute("SELECT * FROM promo_codes WHERE code = ?", ("VEERVIP30",))
-  if not cursor.fetchone():
-    cursor.execute(
-        "INSERT INTO promo_codes (code, duration_type) VALUES (?, ?)",
-        ("VEERVIP30", "30 Days"),
-    )
-    conn.commit()
+  # Default Promo Codes Setup as requested
+  default_promos = [
+      ("फ्री वीआईपी 30", "30 Days"),
+      ("VEERVIP30", "30 Days"),
+      ("वीर वीआईपी वन ईयर", "1 Year"),
+      ("VEERVIP1Y", "1 Year"),
+      ("वीआईपी फ्री थ्री डे", "3 Days"),
+      ("VEER3DAYS", "3 Days"),
+      ("VEERLIFETIME", "Lifetime Unlimited"),
+  ]
+
+  for code, dtype in default_promos:
+    cursor.execute("SELECT * FROM promo_codes WHERE code = ?", (code,))
+    if not cursor.fetchone():
+      cursor.execute(
+          "INSERT INTO promo_codes (code, duration_type) VALUES (?, ?)",
+          (code, dtype),
+      )
+      conn.commit()
 
   conn.close()
 
@@ -237,7 +247,7 @@ if "signals_used" not in st.session_state:
   st.session_state.signals_used = 0
 
 
-# --- BINANCE / TRADINGVIEW STYLE AUTH SCREEN ---
+# --- AUTH SCREEN ---
 def show_auth_screen():
   st.markdown("<br><br>", unsafe_allow_html=True)
   c1, col, c2 = st.columns([1, 1.3, 1])
@@ -248,7 +258,7 @@ def show_auth_screen():
         <div class="auth-card">
             <div style="text-align: center; margin-bottom: 25px;">
                 <h2 style="font-weight: 800; color: #fcd535; letter-spacing: 1px;">⚡ VEER PRO TERMINAL</h2>
-                <p style="color: #848e9c; font-size: 13px;">Log in to Binance & TradingView Institutional Suite</p>
+                <p style="color: #848e9c; font-size: 13px;">Log in to Global Financial & Institutional Suite</p>
             </div>
         """,
         unsafe_allow_html=True,
@@ -377,18 +387,10 @@ with tc3:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-m_col1, m_col2 = st.columns([1, 2])
-with m_col1:
-  selected_market = st.selectbox(
-      "Market",
-      ["SOLUSDT", "BTCUSDT", "ETHUSDT", "BNBUSDT"],
-      key="top_mkt_select",
-  )
-
 # --- MAIN TABS ---
 tab_dash, tab_chart, tab_signals, tab_profile, tab_vip = st.tabs([
     "⚙️ Dashboard",
-    "📊 Chart",
+    "📊 Global Chart",
     "🎯 Signals",
     "👤 My Profile & Promo",
     "👑 VIP Plans",
@@ -400,12 +402,21 @@ with tab_dash:
     st.markdown("### ⚙️ Signal Configuration")
     category = st.selectbox(
         "Category",
-        ["Crypto Top Major", "Layer 1 / Layer 2", "DeFi / AI Tokens"],
+        ["Crypto", "Forex (Currencies)", "Global Stocks", "Commodities"],
         key="cat_sel",
     )
     asset = st.selectbox(
-        "Asset",
-        ["BTCUSDT", "SOLUSDT", "ETHUSDT", "BNBUSDT"],
+        "Asset / Symbol",
+        [
+            "BINANCE:BTCUSDT",
+            "BINANCE:SOLUSDT",
+            "FX:EURUSD",
+            "FX:GBPUSD",
+            "NASDAQ:AAPL",
+            "NASDAQ:TSLA",
+            "COMEX:GC1!",
+            "NYMEX:CL1!",
+        ],
         key="asset_sel",
     )
     tf = st.selectbox(
@@ -426,49 +437,40 @@ with tab_dash:
 
 with tab_chart:
   st.markdown(
-      f"### 📊 Advanced Institutional Chart — Binance:{selected_market}"
+      "### 📊 Advanced Global Multi-Market Chart (Stocks, Forex, Crypto &"
+      " Commodities)"
+  )
+  st.info(
+      "💡 **सुझाव:** आप नीचे दिए गए चार्ट के अंदर सर्च आइकॉन पर क्लिक करके दुनिया"
+      " का कोई भी स्टॉक (जैसे RELIANCE, AAPL), फॉरेक्स पेयर (जैसे EURUSD,"
+      " USDINR), या कमोडिटी (जैसे GOLD, CRUDEOIL) सर्च कर सकते हैं!"
   )
 
-  c_tf1, c_tf2 = st.columns([2, 3])
-  with c_tf1:
+  c_sym, c_tf = st.columns([2, 2])
+  with c_sym:
+    custom_symbol = st.text_input(
+        "Enter TradingView Symbol (e.g., NASDAQ:AAPL, FX:USDINR,"
+        " BINANCE:BTCUSDT,COMEX:GC1!):",
+        value="BINANCE:SOLUSDT",
+    )
+  with c_tf:
     chart_tf = st.selectbox(
-        "Select Chart Timeframe (1s to 1 Month)",
-        ["1S", "1", "3", "5", "15", "30", "60", "120", "240", "D", "W", "M"],
-        index=4,
+        "Select Chart Timeframe",
+        ["1", "3", "5", "15", "30", "60", "120", "240", "D", "W", "M"],
+        index=3,
         key="chart_tf_sel",
     )
-  with c_tf2:
-    if st.session_state.user_tier == "VIP Paid Member":
-      st.success("👑 VIP Advanced Chart Access Unlocked (1s - 1 Month Enabled)")
-    else:
-      st.warning(
-          "⚠️ Free User Mode: Standard Timeframes. Upgrade to VIP for 1s -"
-          " 1M Full Access."
-      )
-
-  st.markdown("#### 🛠️ World-Class Concepts & Strategy Overlays")
-  col_b1, col_b2, col_b3, col_b4, col_b5 = st.columns(5)
-  with col_b1:
-    smc_struct = st.checkbox("📌 Structure Mapping", value=True)
-  with col_b2:
-    smc_liq = st.checkbox("💧 Liquidity Sweep", value=True)
-  with col_b3:
-    smc_fvg = st.checkbox("🟩 Fair Value Gap (FVG)", value=True)
-  with col_b4:
-    smc_ob = st.checkbox("📦 Order Blocks", value=True)
-  with col_b5:
-    smc_sig = st.checkbox("🎯 Buy/Sell Signals", value=True)
 
   tv_html = f"""
-    <div class="tradingview-widget-container" style="height:600px;width:100%;">
+    <div class="tradingview-widget-container" style="height:620px;width:100%;">
       <div id="tradingview_chart" style="height:100%;width:100%;"></div>
       <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
       <script type="text/javascript">
       new TradingView.widget(
       {{
         "width": "100%",
-        "height": "600",
-        "symbol": "BINANCE:{selected_market}",
+        "height": "620",
+        "symbol": "{custom_symbol}",
         "interval": "{chart_tf}",
         "timezone": "Etc/UTC",
         "theme": "dark",
@@ -482,7 +484,7 @@ with tab_chart:
       </script>
     </div>
     """
-  st.components.v1.html(tv_html, height=620)
+  st.components.v1.html(tv_html, height=640)
 
 with tab_signals:
   st.markdown("### 🎯 Ultimate Multi-Confluence AI Smart Signals")
@@ -509,24 +511,24 @@ with tab_signals:
       s_col1, s_col2 = st.columns(2)
       with s_col1:
         st.metric("Setup Direction & Bias", "STRONG BULLISH BUY", "94.8% Win Index")
-        st.write(f"**Target Pair:** BINANCE:{selected_market}")
-        st.write("**Exact Entry Zone:** `$144.50 - $145.10`")
+        st.write(f"**Target Asset:** {custom_symbol}")
+        st.write("**Exact Entry Zone:** `Optimal Market Zone`")
       with s_col2:
         st.metric("Risk / Reward Ratio", "1 : 4.2", "Optimized Structure")
-        st.write("**Stop Loss (SL):** `$141.80`")
+        st.write("**Stop Loss (SL):** `Managed by ATR`")
         st.write(
-            "**Take Profit Targets:** 🎯 TP1: `$148.50` | 🎯 TP2: `$152.00` | 🎯"
-            " TP3: `$156.50`"
+            "**Take Profit Targets:** 🎯 TP1: `Level 1` | 🎯 TP2: `Level 2` | 🎯"
+            " TP3: `Level 3`"
         )
       st.link_button(
-          "🚀 Execute Instant Order on Binance", "https://www.binance.com"
+          "🚀 Trade via Broker Platform", "https://in.tradingview.com/"
       )
 
 with tab_profile:
-  st.markdown("### 👤 User Profile & Customization")
+  st.markdown("### 👤 User Profile & VIP Promo Code Redemption")
   st.write(
       "Manage your personal details, profile picture, username, and redeem"
-      " promo codes."
+      " your VIP promo codes here."
   )
 
   p_col1, p_col2 = st.columns(2)
@@ -562,10 +564,16 @@ with tab_profile:
 
   with p_col2:
     st.markdown("#### 🎟️ Redeem VIP Promo Code")
-    promo_input = st.text_input(
-        "Enter Promo Code (e.g., VEERVIP30)", key="promo_box"
+    st.info(
+        "💡 **उपलब्ध प्रोमो कोड्स:**\n"
+        "- 30 दिन के लिए: `फ्री वीआईपी 30` या `VEERVIP30`\n"
+        "- 1 साल के लिए: `वीर वीआईपी वन ईयर` या `VEERVIP1Y`\n"
+        "- 3 दिन के लिए: `वीआईपी फ्री थ्री डे` या `VEER3DAYS`"
     )
-    if st.button("Redeem Code"):
+    promo_input = st.text_input(
+        "Enter Promo Code Here", key="promo_box"
+    )
+    if st.button("Redeem Promo Code"):
       conn = get_db_connection()
       cursor = conn.cursor()
       cursor.execute(
@@ -574,27 +582,32 @@ with tab_profile:
       )
       p_data = cursor.fetchone()
       if p_data:
-        st.session_state.user_tier = "VIP Paid Member"
+        duration = p_data[0]
+        st.session_state.user_tier = f"VIP Paid Member ({duration})"
         cursor.execute(
             "UPDATE users SET tier = ? WHERE email = ?",
-            ("VIP Paid Member", st.session_state.current_user_email),
+            (st.session_state.user_tier, st.session_state.current_user_email),
         )
         conn.commit()
         conn.close()
-        st.success("🎉 Promo Code Applied! VIP Access Granted Successfully.")
+        st.success(
+            f"🎉 Promo Code Applied Successfully! VIP Access Granted for"
+            f" {duration}."
+        )
         st.rerun()
       else:
         conn.close()
-        st.error("❌ Invalid or Expired Promo Code!")
+        st.error("❌ Invalid or Expired Promo Code! कृपया सही कोड दर्ज करें।")
 
     st.markdown("---")
     st.markdown("#### 🛠️ Admin / Creator Code Generator")
     if st.session_state.current_user_email == "admin@gmail.com":
-      gen_code = st.text_input("Create New Promo Code", key="gen_c")
+      gen_code = st.text_input("Create New Custom Promo Code", key="gen_c")
       dur_type = st.selectbox(
-          "Select Duration", ["30 Days", "1 Year", "Lifetime Unlimited"]
+          "Select VIP Duration",
+          ["3 Days", "30 Days", "1 Year", "Lifetime Unlimited"],
       )
-      if st.button("Generate Code"):
+      if st.button("Generate & Save Code"):
         try:
           conn = get_db_connection()
           cursor = conn.cursor()
@@ -604,9 +617,9 @@ with tab_profile:
           )
           conn.commit()
           conn.close()
-          st.success(f"✅ Promo Code '{gen_code}' Generated Successfully!")
+          st.success(f"✅ New Promo Code '{gen_code}' Generated Successfully!")
         except:
-          st.error("Code already exists!")
+          st.error("This promo code already exists!")
     else:
       st.info(
           "🔒 Creator Code Generation tools are restricted to Admin accounts"
@@ -620,18 +633,18 @@ with tab_vip:
       " pre-filled amount!"
   )
 
-  v1, v2, v3 = st.columns(3)
+  v1, v2, v3, v4 = st.columns(4)
 
   with v1:
     st.markdown(
         """
-        <div style="background: #181a20; padding: 20px; border-radius: 8px; border: 1px solid #2b313a; text-align: center;">
-            <h4 style="color: #38bdf8;">⚡ 3-Day Trial</h4>
-            <h2 style="color: #ffffff;">₹199</h2>
-            <p style="color: #848e9c; font-size: 12px;">Direct Pay Amount: ₹199</p>
+        <div style="background: #181a20; padding: 15px; border-radius: 8px; border: 1px solid #2b313a; text-align: center;">
+            <h4 style="color: #38bdf8; font-size: 16px;">⚡ 3-Day Trial</h4>
+            <h3 style="color: #ffffff;">₹199</h3>
+            <p style="color: #848e9c; font-size: 11px;">Direct Pay</p>
             <hr style="border-color: #2b313a;">
-            <p>✔️ 1s - 1M Charts</p>
-            <p>✔️ All SMC Tools</p>
+            <p style="font-size: 12px;">✔️ All Global Charts</p>
+            <p style="font-size: 12px;">✔️ All SMC Tools</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -639,18 +652,18 @@ with tab_vip:
     upi_3days = (
         "upi://pay?pa=7479465676-7@ybl&pn=VEER%20PRO%20TRADER&am=199.00&cu=INR"
     )
-    st.link_button("📲 Pay ₹199 Direct via UPI", upi_3days)
+    st.link_button("📲 Pay ₹199", upi_3days)
 
   with v2:
     st.markdown(
         """
-        <div style="background: #181a20; padding: 20px; border-radius: 8px; border: 2px solid #fcd535; text-align: center;">
-            <h4 style="color: #0ecb81;">🔥 Monthly Pro</h4>
-            <h2 style="color: #ffffff;">₹999</h2>
-            <p style="color: #848e9c; font-size: 12px;">Direct Pay Amount: ₹999</p>
+        <div style="background: #181a20; padding: 15px; border-radius: 8px; border: 1px solid #2b313a; text-align: center;">
+            <h4 style="color: #0ecb81; font-size: 16px;">🔥 Monthly Pro</h4>
+            <h3 style="color: #ffffff;">₹999</h3>
+            <p style="color: #848e9c; font-size: 11px;">Direct Pay</p>
             <hr style="border-color: #2b313a;">
-            <p>✔️ Ultimate AI Signals</p>
-            <p>✔️ Priority Telegram Alerts</p>
+            <p style="font-size: 12px;">✔️ AI Signals</p>
+            <p style="font-size: 12px;">✔️ Priority Alerts</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -658,26 +671,45 @@ with tab_vip:
     upi_monthly = (
         "upi://pay?pa=7479465676-7@ybl&pn=VEER%20PRO%20TRADER&am=999.00&cu=INR"
     )
-    st.link_button("📲 Pay ₹999 Direct via UPI", upi_monthly)
+    st.link_button("📲 Pay ₹999", upi_monthly)
 
   with v3:
     st.markdown(
         """
-        <div style="background: #181a20; padding: 20px; border-radius: 8px; border: 1px solid #2b313a; text-align: center;">
-            <h4 style="color: #f59e0b;">👑 Annual VIP</h4>
-            <h2 style="color: #ffffff;">₹799</h2>
-            <p style="color: #848e9c; font-size: 12px;">Direct Pay Amount: ₹799</p>
+        <div style="background: #181a20; padding: 15px; border-radius: 8px; border: 2px solid #fcd535; text-align: center;">
+            <h4 style="color: #fcd535; font-size: 16px;">👑 Annual VIP</h4>
+            <h3 style="color: #ffffff;">₹7,999</h3>
+            <p style="color: #848e9c; font-size: 11px;">Direct Pay</p>
             <hr style="border-color: #2b313a;">
-            <p>✔️ Maximum Savings</p>
-            <p>✔️ 24/7 VIP Support</p>
+            <p style="font-size: 12px;">✔️ 1 Year Full Access</p>
+            <p style="font-size: 12px;">✔️ Priority Support</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
     upi_annual = (
-        "upi://pay?pa=7479465676-7@ybl&pn=VEER%20PRO%20TRADER&am=799.00&cu=INR"
+        "upi://pay?pa=7479465676-7@ybl&pn=VEER%20PRO%20TRADER&am=7999.00&cu=INR"
     )
-    st.link_button("📲 Pay ₹799 Direct via UPI", upi_annual)
+    st.link_button("📲 Pay ₹7,999", upi_annual)
+
+  with v4:
+    st.markdown(
+        """
+        <div style="background: #181a20; padding: 15px; border-radius: 8px; border: 1px solid #a855f7; text-align: center;">
+            <h4 style="color: #c084fc; font-size: 16px;">💎 Lifetime VIP</h4>
+            <h3 style="color: #ffffff;">₹50,000</h3>
+            <p style="color: #848e9c; font-size: 11px;">Direct Pay</p>
+            <hr style="border-color: #2b313a;">
+            <p style="font-size: 12px;">✔️ Lifetime Access</p>
+            <p style="font-size: 12px;">✔️ 1-on-1 Mentorship</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    upi_lifetime = (
+        "upi://pay?pa=7479465676-7@ybl&pn=VEER%20PRO%20TRADER&am=50000.00&cu=INR"
+    )
+    st.link_button("📲 Pay ₹50,000", upi_lifetime)
 
   st.markdown("---")
   st.markdown("#### 🔓 Instant VIP Activation after Payment")
