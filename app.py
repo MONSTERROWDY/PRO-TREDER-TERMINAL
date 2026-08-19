@@ -9,76 +9,94 @@ st.set_page_config(
     layout="wide",
 )
 
-# Custom CSS for Ultra-Optimized, Premium & Stunning Dark UI
+# Custom CSS for Ultimate Dark Mode & Crystal Clear UI
 st.markdown(
     """
     <style>
+    /* Global Deep Dark Theme */
     .stApp {
-        background: radial-gradient(circle at center, #1b2230 0%, #0d1117 100%);
-        color: #f0f6fc;
+        background: #090d16;
+        color: #ffffff;
     }
     
-    /* Modern Glassmorphic Container for Form Fields */
-    .auth-box {
-        background: rgba(22, 27, 34, 0.85);
-        padding: 30px;
-        border-radius: 20px;
-        border: 1px solid rgba(48, 54, 61, 0.8);
-        box-shadow: 0 16px 32px rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(12px);
+    /* Force all text, labels, and headers to be bright white or high-contrast */
+    h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown {
+        color: #ffffff !important;
+    }
+    
+    /* Input Field Labels visibility fix */
+    .stTextInput label {
+        color: #00f2fe !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
     }
 
-    /* Premium Glowing Button */
+    /* Input Boxes Styling */
+    .stTextInput>div>div>input {
+        background-color: #131b2e !important;
+        color: #ffffff !important;
+        border: 1px solid #1f293d !important;
+        border-radius: 10px;
+        padding: 12px;
+    }
+    .stTextInput>div>div>input:focus {
+        border-color: #00f2fe !important;
+        box-shadow: 0 0 10px rgba(0, 242, 254, 0.4);
+    }
+
+    /* Tabs styling for crystal clear visibility */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+        background-color: transparent;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: #131b2e !important;
+        border-radius: 8px !important;
+        color: #a0aec0 !important;
+        font-weight: 600;
+        padding: 10px 20px;
+        border: 1px solid #1f293d;
+    }
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%) !important;
+        color: #090d16 !important;
+        font-weight: 700 !important;
+    }
+
+    /* Glowing Action Button */
     .stButton>button { 
         width: 100%; 
-        border-radius: 12px; 
+        border-radius: 10px; 
         font-weight: 700; 
-        height: 50px; 
-        background: linear-gradient(135deg, #00f2fe 0%, #4facfe 50%, #667eea 100%); 
-        color: #0d1117; 
+        height: 48px; 
+        background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%); 
+        color: #090d16; 
         border: none; 
         font-size: 16px; 
-        letter-spacing: 0.5px;
-        box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
-        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0,242,254,0.3);
+        transition: 0.3s ease;
     }
     .stButton>button:hover { 
         background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); 
-        color: #000;
-        box-shadow: 0 8px 25px rgba(0, 242, 254, 0.6);
-        transform: translateY(-2px);
-    }
-
-    /* Styling Inputs for Better Readability */
-    .stTextInput>div>div>input {
-        background-color: #0d1117;
-        color: #f0f6fc;
-        border: 1px solid #30363d;
-        border-radius: 10px;
-        padding: 10px;
-    }
-    .stTextInput>div>div>input:focus {
-        border-color: #4facfe;
-        box-shadow: 0 0 10px rgba(79, 172, 254, 0.3);
+        color: #000000;
+        box-shadow: 0 6px 20px rgba(0,242,254,0.5);
     }
 
     div.stMetric { 
-        background: rgba(22, 27, 34, 0.9); 
+        background: #131b2e; 
         padding: 15px; 
-        border-radius: 14px; 
-        border: 1px solid #30363d; 
-        box-shadow: 0 8px 16px rgba(0,0,0,0.3); 
+        border-radius: 12px; 
+        border: 1px solid #1f293d; 
     }
     .signal-card { 
-        background: linear-gradient(135deg, #161b22 0%, #21262d 100%); 
-        padding: 22px; 
-        border-radius: 16px; 
-        border-left: 6px solid #4facfe; 
-        border-top: 1px solid #30363d; 
-        border-right: 1px solid #30363d; 
-        border-bottom: 1px solid #30363d; 
+        background: #131b2e; 
+        padding: 20px; 
+        border-radius: 14px; 
+        border-left: 6px solid #00f2fe; 
+        border-top: 1px solid #1f293d; 
+        border-right: 1px solid #1f293d; 
+        border-bottom: 1px solid #1f293d; 
         margin-top: 15px; 
-        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
     </style>
 """,
@@ -156,7 +174,7 @@ if st.session_state.last_reset != datetime.date.today():
   st.session_state.last_reset = datetime.date.today()
 
 
-# --- STUNNING AUTHENTICATION SCREEN ---
+# --- AUTHENTICATION SCREEN ---
 def show_auth_screen():
   st.markdown("<br>", unsafe_allow_html=True)
   col1, col2, col3 = st.columns([1, 1.4, 1])
@@ -165,18 +183,22 @@ def show_auth_screen():
     st.markdown(
         """
         <div style="text-align: center; margin-bottom: 25px;">
-            <h1 style="font-size: 28px; font-weight: 800; color: #f0f6fc; margin-bottom: 5px;">🔐 VEER PRO TERMINAL</h1>
-            <p style="color: #8b949e; font-size: 14px; letter-spacing: 1px;">Institutional Grade Trading Platform</p>
+            <h2 style="font-size: 26px; font-weight: 800; color: #ffffff; margin-bottom: 5px;">🔐 VEER PRO TERMINAL</h2>
+            <p style="color: #a0aec0; font-size: 13px; letter-spacing: 1px;">Institutional Grade Trading Platform</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # Register First, Login Second (As requested earlier)
+    # Register First, Login Second
     auth_tab1, auth_tab2 = st.tabs(["📝 Register", "🔑 Login"])
 
     with auth_tab1:
-      st.markdown("### Create New Account")
+      st.markdown(
+          "<h3 style='color: #ffffff; font-size: 18px; margin-top: 10px;'>Create"
+          " New Account</h3>",
+          unsafe_allow_html=True,
+      )
       reg_name = st.text_input(
           "Full Name",
           placeholder="Enter your full name",
@@ -224,7 +246,11 @@ def show_auth_screen():
             )
 
     with auth_tab2:
-      st.markdown("### Welcome Back")
+      st.markdown(
+          "<h3 style='color: #ffffff; font-size: 18px; margin-top:"
+          " 10px;'>Welcome Back</h3>",
+          unsafe_allow_html=True,
+      )
       login_email = st.text_input(
           "Email ID / Phone Number",
           placeholder="Enter registered email or phone",
@@ -342,8 +368,8 @@ with tab1:
         st.markdown(
             """
             <div class="signal-card">
-                <h3 style='color: #4facfe; margin-top: 0;'>🔥 STRONG BUY SETUP (Bullish)</h3>
-                <hr style='border-color: #30363d; margin: 5px 0 15px 0;'>
+                <h3 style='color: #00f2fe; margin-top: 0;'>🔥 STRONG BUY SETUP (Bullish)</h3>
+                <hr style='border-color: #1f293d; margin: 5px 0 15px 0;'>
             """,
             unsafe_allow_html=True,
         )
@@ -486,7 +512,7 @@ with tab4:
 
 st.markdown("---")
 st.markdown(
-    "<p style='text-align: center; color: #8b949e; font-size: 11px;'>"
+    "<p style='text-align: center; color: #a0aec0; font-size: 11px;'>"
     "<b>Disclaimer:</b> VEER PRO TRADING TERMINAL is built for educational &"
     " analytical research only. Crypto trading involves high market risk."
     "</p>",
