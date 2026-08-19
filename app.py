@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# --- BROWSER LOCALSTORAGE JAVASCRIPT BRIDGE (REFRESH FIX) ---
+# --- BROWSER LOCALSTORAGE JAVASCRIPT BRIDGE ---
 def set_local_storage(key, value):
     js_code = f"""
     <script>
@@ -54,11 +54,6 @@ st.markdown(
 
     h1, h2, h3, h4, h5, h6, p, span, label, div {
         color: var(--text-main) !important;
-    }
-
-    /* Cards */
-    div[data-testid="stVerticalBlock"] > div.element-container {
-        border-radius: 12px;
     }
 
     /* Inputs */
@@ -122,27 +117,39 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- SQLITE DATABASE SETUP WITH VIP EXPIRY SUPPORT ---
+# --- SAFE SQLITE DATABASE SETUP WITH AUTO-MIGRATION ---
 def init_db():
     conn = sqlite3.connect("users_database.db", check_same_thread=False)
     cursor = conn.cursor()
+    
+    # 1. Create table if not exists
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             email TEXT PRIMARY KEY,
             password TEXT NOT NULL,
-            name TEXT NOT NULL,
-            tier TEXT DEFAULT 'Free User',
-            vip_expiry TEXT DEFAULT ''
+            name TEXT NOT NULL
         )
     """)
     conn.commit()
+
+    # 2. Automatically check and add missing columns for existing databases
+    cursor.execute("PRAGMA table_info(users);")
+    columns = [col[1] for col in cursor.fetchall()]
+
+    if "tier" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN tier TEXT DEFAULT 'Free User'")
+    if "vip_expiry" not in columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN vip_expiry TEXT DEFAULT ''")
     
-    # Check default admin
+    conn.commit()
+
+    # 3. Check default admin
     cursor.execute("SELECT * FROM users WHERE email = ?", ("admin@gmail.com",))
     if not cursor.fetchone():
         cursor.execute("INSERT INTO users (email, password, name, tier, vip_expiry) VALUES (?, ?, ?, ?, ?)", 
                        ("admin@gmail.com", "password123", "Admin Trader", "Free User", ""))
         conn.commit()
+        
     conn.close()
 
 init_db()
@@ -150,8 +157,11 @@ init_db()
 def get_user(email):
     conn = sqlite3.connect("users_database.db", check_same_thread=False)
     cursor = conn.cursor()
-    cursor.execute("SELECT password, name, tier, vip_expiry FROM users WHERE email = ?", (email.strip(),))
-    res = cursor.fetchone()
+    try:
+        cursor.execute("SELECT password, name, tier, vip_expiry FROM users WHERE email = ?", (email.strip(),))
+        res = cursor.fetchone()
+    except sqlite3.OperationalError:
+        res = None
     conn.close()
     return res
 
@@ -185,15 +195,19 @@ if "session_user" in st.query_params:
         st.session_state.current_user_email = saved_email
         st.session_state.current_user_name = user_info[1]
         
-        # Check VIP Expiry Status from DB
-        tier, expiry_str = user_info[2], user_info[3]
+        tier = user_info[2] if len(user_info) > 2 and user_info[2] else "Free User"
+        expiry_str = user_info[3] if len(user_info) > 3 and user_info[3] else ""
+        
         if tier == "VIP Paid Member" and expiry_str:
-            expiry_dt = datetime.datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
-            if datetime.datetime.now() < expiry_dt:
-                st.session_state.user_tier = "VIP Paid Member"
-                st.session_state.vip_expiry = expiry_str
-            else:
-                # Expired VIP Access
+            try:
+                expiry_dt = datetime.datetime.strptime(expiry_str, "%Y-%m-%d %H:%M:%S")
+                if datetime.datetime.now() < expiry_dt:
+                    st.session_state.user_tier = "VIP Paid Member"
+                    st.session_state.vip_expiry = expiry_str
+                else:
+                    st.session_state.user_tier = "Free User"
+                    st.session_state.vip_expiry = ""
+            except ValueError:
                 st.session_state.user_tier = "Free User"
                 st.session_state.vip_expiry = ""
         else:
@@ -270,8 +284,8 @@ def show_auth_screen():
                     st.session_state.logged_in = True
                     st.session_state.current_user_email = cleaned_email
                     st.session_state.current_user_name = user_data[1]
-                    st.session_state.user_tier = user_data[2]
-                    st.session_state.vip_expiry = user_data[3]
+                    st.session_state.user_tier = user_data[2] if len(user_data) > 2 and user_data[2] else "Free User"
+                    st.session_state.vip_expiry = user_data[3] if len(user_data) > 3 and user_data[3] else ""
                     st.query_params["session_user"] = cleaned_email
                     set_local_storage("veer_user_session", cleaned_email)
                     st.success("🎉 Login Successful!")
@@ -294,7 +308,7 @@ if not st.session_state.logged_in:
     show_auth_screen()
     st.stop()
 
-# --- OPTIMIZED SIDEBAR (WITH PERMANENT 30-DAY PROMO ACTIVATION) ---
+# --- OPTIMIZED SIDEBAR ---
 with st.sidebar:
     st.markdown("### 👤 User Profile")
     st.markdown(f"👋 **{st.session_state.current_user_name}**")
@@ -351,7 +365,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Auto-Refresh Script for 10-Second Price Updates
+# Auto-Refresh Script
 components.html(
     """
     <script>
@@ -401,11 +415,10 @@ with tab1:
                 if st.session_state.user_tier == "Free User":
                     st.session_state.signals_used += 1
 
-                # High Precision AI Signal Calculation Logic
                 entry_p = base_btc if "BTC" in asset else 3540.0
-                sl_p = entry_p * 0.994  # 0.6% Stop Loss
-                tp1_p = entry_p * 1.008  # 1.2% Target 1 (1:2 R:R)
-                tp2_p = entry_p * 1.018  # 1.8% Target 2 (1:3 R:R)
+                sl_p = entry_p * 0.994
+                tp1_p = entry_p * 1.008
+                tp2_p = entry_p * 1.018
 
                 st.markdown(
                     f"""
@@ -457,11 +470,10 @@ with tab3:
     m2.metric("Win Rate", "91.2%", "+3.4%")
     m3.metric("Avg R:R Ratio", "1:2.8", "Optimal")
 
-# --- TRANSPARENT SUBSCRIPTION PLANS WITH UTR ACTIVATION ---
+# --- SUBSCRIPTION PLANS WITH UTR ACTIVATION ---
 with tab4:
     st.markdown("### 💎 VIP Pro Plans & Pricing")
     
-    # 3 Subscription Tiers Cards
     p1, p2, p3 = st.columns(3)
     with p1:
         st.markdown(
@@ -520,7 +532,6 @@ with tab4:
         if st.button("🔓 Verify Payment & Activate VIP", key="verify_utr_btn"):
             cleaned_utr = utr_input.strip()
             if len(cleaned_utr) >= 10:
-                # Set duration based on selected plan
                 days_to_add = 30
                 if "199" in selected_plan:
                     days_to_add = 7
