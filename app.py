@@ -29,6 +29,10 @@ st.markdown("""
     .badge-vip { background: linear-gradient(135deg, #ffb703, #fb8500); color: #000; font-weight: 800; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; }
     .badge-std { background-color: #1e293b; color: #94a3b8; font-weight: 600; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; border: 1px solid #334155; }
     
+    .profile-card {
+        display: flex; align-items: center; gap: 12px; background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #1e293b;
+    }
+    
     div.stButton > button {
         width: 100%;
         background-color: #2563eb; color: #ffffff; border-radius: 8px;
@@ -44,8 +48,14 @@ st.markdown("""
 # ==========================================
 if 'is_vip' not in st.session_state:
     st.session_state['is_vip'] = False
+if 'vip_expiry' not in st.session_state:
+    st.session_state['vip_expiry'] = None
 if 'user_name' not in st.session_state:
-    st.session_state['user_name'] = "वीर प्रो ट्रेडर"
+    st.session_state['user_name'] = "Veer Pro Trader"
+if 'username' not in st.session_state:
+    st.session_state['username'] = "veer_trader"
+if 'user_avatar' not in st.session_state:
+    st.session_state['user_avatar'] = None
 if 'balance' not in st.session_state:
     st.session_state['balance'] = 10000.00
 if 'btc_price' not in st.session_state:
@@ -59,7 +69,6 @@ if 'active_signals' not in st.session_state:
     st.session_state['active_signals'] = [
         {"Symbol": "BTC/USDT", "Type": "BUY", "Entry": 68417.51, "SL": 67049.16, "TP": 70470.04, "Time": "14:19:55", "Status": "Active"},
         {"Symbol": "SOL/USDT", "Type": "BUY", "Entry": 143.50, "SL": 140.10, "TP": 148.20, "Time": "18:17:45", "Status": "Active"},
-        {"Symbol": "BTC/USDT", "Type": "BUY", "Entry": 68400.00, "SL": 67680.00, "TP": 69250.00, "Time": "18:16:20", "Status": "Active"},
         {"Symbol": "ETH/USDT", "Type": "SELL", "Entry": 3540.00, "SL": 3580.00, "TP": 3475.00, "Time": "18:15:10", "Status": "Active"}
     ]
 
@@ -71,50 +80,76 @@ ALL_PAIRS_DATA = {
 
 VALID_PROMO_CODES = ["FREEVIP", "VEERPRO100", "VIP2026"]
 
+# Helper to check VIP Expiry Status
+if st.session_state['is_vip'] and st.session_state['vip_expiry']:
+    if datetime.date.today() > st.session_state['vip_expiry']:
+        st.session_state['is_vip'] = False
+        st.session_state['vip_expiry'] = None
+
 # ==========================================
 # 3. SIDEBAR PANEL
 # ==========================================
 with st.sidebar:
-    st.title("⚙️ कंट्रोल पैनल")
+    st.title("⚙️ Control Panel")
     
-    st.markdown("### 👤 यूज़र प्रोफाइल")
-    user_name_input = st.text_input("ट्रेडर का नाम", value=st.session_state['user_name'])
-    st.session_state['user_name'] = user_name_input
+    # User Profile Customization
+    st.markdown("### 👤 User Profile")
+    
+    # Avatar Display & Uploader
+    if st.session_state['user_avatar'] is not None:
+        st.image(st.session_state['user_avatar'], width=80)
+    uploaded_file = st.file_uploader("Upload Profile Picture (DP)", type=["jpg", "png", "jpeg"])
+    if uploaded_file is not None:
+        st.session_state['user_avatar'] = uploaded_file
 
+    u_name = st.text_input("Full Name", value=st.session_state['user_name'])
+    st.session_state['user_name'] = u_name
+
+    u_handle = st.text_input("Username", value=st.session_state['username'])
+    st.session_state['username'] = u_handle if u_handle.startswith("@") else f"@{u_handle}"
+
+    # VIP Promo Code System (30 Days Validity)
     st.markdown("---")
-    st.markdown("### 🎟️ VIP प्रोमो कोड")
-    promo = st.text_input("प्रोमो कोड दर्ज करें", placeholder="उदा. FREEVIP", key="sidebar_promo")
-    if st.button("प्रोमो कोड लागू करें", key="btn_promo"):
+    st.markdown("### 🎟️ VIP Promo Code")
+    promo = st.text_input("Enter Promo Code", placeholder="e.g. FREEVIP", key="sidebar_promo")
+    if st.button("Apply Promo Code", key="btn_promo"):
         if promo.strip().upper() in VALID_PROMO_CODES:
             st.session_state['is_vip'] = True
-            st.success("🎉 VIP एक्सेस अनलॉक हो गया!")
+            st.session_state['vip_expiry'] = datetime.date.today() + datetime.timedelta(days=30)
+            st.success("🎉 VIP Membership activated for 30 Days!")
         else:
-            st.error("❌ अमान्य प्रोमो कोड!")
+            st.error("❌ Invalid Promo Code!")
 
+    if st.session_state['is_vip'] and st.session_state['vip_expiry']:
+        days_left = (st.session_state['vip_expiry'] - datetime.date.today()).days
+        st.caption(f"⏳ **VIP Status**: Active ({days_left} Days Remaining)")
+
+    # Markets & Pair Selector
     st.markdown("---")
-    st.markdown("### 📊 मार्केट्स & पेयर्स")
-    selected_cat = st.selectbox("कैटेगिरी", list(ALL_PAIRS_DATA.keys()))
-    selected_pair = st.selectbox("ट्रेडिंग पेयर चुनें", ALL_PAIRS_DATA[selected_cat])
+    st.markdown("### 📊 Markets & Pairs")
+    selected_cat = st.selectbox("Category", list(ALL_PAIRS_DATA.keys()))
+    selected_pair = st.selectbox("Select Trading Pair", ALL_PAIRS_DATA[selected_cat])
 
 # ==========================================
 # 4. TOP HEADER & REAL-TIME LIVE TICKER
 # ==========================================
-vip_badge_html = '<span class="badge-vip">👑 VIP UNLOCKED</span>' if st.session_state['is_vip'] else '<span class="badge-std">STANDARD</span>'
+vip_badge_html = f'<span class="badge-vip">👑 VIP ({ (st.session_state["vip_expiry"] - datetime.date.today()).days if st.session_state["vip_expiry"] else 30 }D)</span>' if st.session_state['is_vip'] else '<span class="badge-std">STANDARD</span>'
+
+col_h1, col_h2 = st.columns([2, 1])
 
 st.markdown(f"""
 <div class="header-box">
     <div class="header-title">⚡ Veer Pro <span style="font-size: 0.8rem; color: #94a3b8;">Terminal</span></div>
-    <div>
-        <span style="font-weight: 600; margin-right: 8px;">{st.session_state['user_name']}</span>
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-weight: 600; color: #ffffff;">{st.session_state['user_name']} ({st.session_state['username']})</span>
         {vip_badge_html}
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# 🔴 LIVE UPDATING TICKER FRAGMENT (Refreshes every 1 Sec)
+# 🔴 LIVE UPDATING TICKER FRAGMENT (1 Sec Refresh)
 @st.fragment(run_every=1)
 def live_top_ticker():
-    # Small live price fluctuation simulation
     st.session_state['btc_price'] += random.uniform(-2.5, 2.5)
     st.session_state['sol_price'] += random.uniform(-0.15, 0.15)
     st.session_state['eth_price'] += random.uniform(-0.8, 0.8)
@@ -129,7 +164,7 @@ live_top_ticker()
 st.markdown("---")
 
 # ==========================================
-# 5. DASHBOARD & TABS
+# 5. DASHBOARD & MAIN NAVIGATION TABS
 # ==========================================
 tab_dashboard, tab_chart, tab_signals, tab_accuracy, tab_vip = st.tabs([
     "🎛️ Dashboard", 
@@ -172,7 +207,7 @@ with tab_dashboard:
             "Status": "Active"
         }
         st.session_state['active_signals'].insert(0, new_signal)
-        st.success(f"सफलतापूर्वक नया सिग्नल जनरेट हुआ: BUY {selected_asset} @ {curr:.2f}")
+        st.success(f"Signal Generated Successfully: BUY {selected_asset} @ {curr:.2f}")
 
     # Stat Indicators
     m1, m2, m3, m4, m5 = st.columns(5)
@@ -218,9 +253,9 @@ with tab_accuracy:
 
 # ---------------- VIP FEATURES TAB ----------------
 with tab_vip:
-    st.subheader("⭐ VIP Access")
+    st.subheader("⭐ VIP Access Management")
     if st.session_state['is_vip']:
         st.balloons()
-        st.success("🎉 VIP स्टेटस सक्रिय है!")
+        st.success(f"🎉 VIP Access Active! Expiry Date: {st.session_state['vip_expiry']}")
     else:
-        st.info("👈 VIP मुफ़्त में अनलॉक करने के लिए साइडबार में प्रोमो कोड `FREEVIP` दर्ज करें।")
+        st.info("👈 Enter promo code `FREEVIP` in the sidebar for 30 Days Free Access.")
