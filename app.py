@@ -155,7 +155,7 @@ def register_user(email, password, name):
     except sqlite3.IntegrityError:
         return False
 
-# --- SESSION INITIALIZATION (WITH VIP LOGIC & REFRESH FIX) ---
+# --- SESSION INITIALIZATION ---
 if "session_user" in st.query_params:
     saved_email = st.query_params["session_user"]
     user_info = get_user(saved_email)
@@ -269,7 +269,6 @@ with st.sidebar:
         clear_local_storage()
         st.rerun()
 
-
 # --- TRADING VIEW PRO TERMINAL UI ---
 st.markdown(
     """
@@ -366,6 +365,7 @@ with tab3:
     m2.metric("Success Rate", "84.5%", "+2.1%")
     m3.metric("Avg R:R Ratio", "1:2.4", "Optimal")
 
+# --- PROMO CODE / VIP TAB IMPLEMENTATION ---
 with tab4:
     st.markdown("### 💎 VIP Pro Access (₹999 / Month)")
     col_p1, col_p2 = st.columns(2, gap="medium")
@@ -390,13 +390,22 @@ with tab4:
         st.image(qr_code_url, caption="Scan QR with any UPI App", width=180)
 
     with col_p2:
-        st.markdown("#### ⚡ Verify Transaction")
-        utr_input = st.text_input("Enter 12-digit UTR / UPI Ref No:", placeholder="e.g. 4152xxxxxxxx")
+        st.markdown("#### ⚡ Verify Transaction / Promo Code")
+        utr_input = st.text_input("Enter 12-digit UTR or Promo Code:", placeholder="e.g. FREEVIP2026 or UTR")
 
         if st.button("🔓 Verify & Activate VIP Access"):
-            if len(utr_input.strip()) >= 8:
+            cleaned_input = utr_input.strip().upper()
+            
+            # CUSTOME PROMO CODE SETTING
+            FREE_PROMO_CODE = "FREEVIP2026"
+
+            if cleaned_input == FREE_PROMO_CODE:
+                st.session_state.user_tier = "VIP Paid Member"
+                st.success("🎉 Special Promo Applied! Free VIP Access Activated.")
+                st.rerun()
+            elif len(cleaned_input) >= 8:
                 st.session_state.user_tier = "VIP Paid Member"
                 st.success("🎉 VIP Access Activated Successfully!")
                 st.rerun()
             else:
-                st.error("⚠️ Invalid UTR Number! Please enter a valid reference number.")
+                st.error("⚠️ Invalid UTR Number or Promo Code!")
