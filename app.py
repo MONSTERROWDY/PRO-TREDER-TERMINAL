@@ -4,7 +4,7 @@ import numpy as np
 import datetime
 import random
 import time
-import plotly.graph_objects as go
+import streamlit.components.v1 as components
 
 # ==========================================
 # 1. PAGE CONFIGURATION & STYLES
@@ -70,9 +70,9 @@ if 'active_signals' not in st.session_state:
     ]
 
 ALL_PAIRS_DATA = {
-    "Crypto Top Major": ["BTC/USDT", "SOL/USDT", "ETH/USDT", "BNB/USDT", "XRP/USDT"],
-    "Commodities & Forex": ["XAU/USD (Gold)", "EUR/USD", "GBP/USD"],
-    "Indices": ["NIFTY 50", "BANK NIFTY"]
+    "Crypto Top Major": ["BINANCE:BTCUSDT", "BINANCE:SOLUSDT", "BINANCE:ETHUSDT", "BINANCE:BNBUSDT", "BINANCE:XRPUSDT"],
+    "Commodities & Forex": ["OANDA:XAUUSD", "OANDA:EURUSD", "OANDA:GBPUSD"],
+    "Indices": ["NSE:NIFTY", "NSE:BANKNIFTY"]
 }
 
 VALID_PROMO_CODES = ["FREEVIP", "VEERPRO100", "VIP2026"]
@@ -182,19 +182,19 @@ with tab_dashboard:
     
     if st.button("⚡ GENERATE ACCURATE SIGNAL", use_container_width=True):
         now_time = datetime.datetime.now().strftime("%H:%M:%S")
-        curr = st.session_state['btc_price'] if "BTC" in selected_asset else (st.session_state['sol_price'] if "SOL" in selected_asset else 3500.0)
+        symbol_name = selected_asset.split(":")[-1]
         
         new_signal = {
-            "Symbol": selected_asset,
+            "Symbol": symbol_name,
             "Type": "BUY",
-            "Entry": round(curr, 2),
-            "SL": round(curr * 0.98, 2),
-            "TP": round(curr * 1.03, 2),
+            "Entry": round(st.session_state['btc_price'], 2),
+            "SL": round(st.session_state['btc_price'] * 0.98, 2),
+            "TP": round(st.session_state['btc_price'] * 1.03, 2),
             "Time": now_time,
             "Status": "Active"
         }
         st.session_state['active_signals'].insert(0, new_signal)
-        st.success(f"Signal Generated Successfully: BUY {selected_asset} @ {curr:.2f}")
+        st.success(f"Signal Generated Successfully: BUY {symbol_name}")
 
     m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric("Total Signals", len(st.session_state['active_signals']) + 125)
@@ -207,54 +207,42 @@ with tab_dashboard:
     sig_df = pd.DataFrame(st.session_state['active_signals'])
     st.dataframe(sig_df, use_container_width=True)
 
-# ---------------- LIVE CHART TAB (PLOTLY CANDLESTICK LOOK) ----------------
+# ---------------- LIVE CHART TAB (100% TRADINGVIEW REAL CHART EMBED) ----------------
 with tab_chart:
-    st.subheader(f"{selected_pair} Pro TradingView Chart")
+    st.subheader(f"{selected_pair} TradingView Terminal")
     
-    tf_selected = st.radio(
-        "Select Timeframe:", 
-        ["1s", "1m", "5m", "15m", "1H", "4H", "1D", "1W", "1Y"], 
-        index=1, 
-        horizontal=True
-    )
+    # Extract clean symbol for TradingView Embed
+    tv_symbol = selected_pair
     
-    @st.fragment(run_every=2)
-    def render_plotly_candlestick():
-        base_p = st.session_state['btc_price'] if "BTC" in selected_pair else (st.session_state['sol_price'] if "SOL" in selected_pair else 3500.0)
-        
-        N = 30
-        now = datetime.datetime.now()
-        times = [(now - datetime.timedelta(minutes=i)).strftime("%H:%M") for i in range(N)][::-1]
-        
-        opens = base_p + np.cumsum(np.random.normal(0, base_p * 0.001, N))
-        closes = opens + np.random.normal(0, base_p * 0.001, N)
-        highs = np.maximum(opens, closes) + np.abs(np.random.normal(0, base_p * 0.0005, N))
-        lows = np.minimum(opens, closes) - np.abs(np.random.normal(0, base_p * 0.0005, N))
-        
-        fig = go.Figure(data=[go.Candlestick(
-            x=times,
-            open=opens,
-            high=highs,
-            low=lows,
-            close=closes,
-            increasing_line_color='#10b981', 
-            decreasing_line_color='#ef4444'
-        )])
-        
-        fig.update_layout(
-            template="plotly_dark",
-            paper_bgcolor="#0b0e14",
-            plot_bgcolor="#121824",
-            margin=dict(l=10, r=10, t=10, b=10),
-            height=420,
-            xaxis_rangeslider_visible=False,
-            yaxis=dict(autorange=True, fixedrange=False)
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-        st.info(f"🔴 **Live Price Tick**: ${closes[-1]:,.2f} | Timeframe: `{tf_selected}` | Real-Time Updating")
-
-    render_plotly_candlestick()
+    # Pure TradingView Widget HTML Injection
+    tradingview_html = f"""
+    <!-- TradingView Widget BEGIN -->
+    <div class="tradingview-widget-container" style="height:550px;width:100%;">
+      <div id="tradingview_chart" style="height:550px;width:100%;"></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+      <script type="text/javascript">
+      new TradingView.widget(
+      {{
+        "autosize": true,
+        "symbol": "{tv_symbol}",
+        "interval": "1",
+        "timezone": "Etc/UTC",
+        "theme": "dark",
+        "style": "1",
+        "locale": "en",
+        "toolbar_bg": "#121824",
+        "enable_publishing": false,
+        "hide_side_toolbar": false,
+        "allow_symbol_change": true,
+        "container_id": "tradingview_chart"
+      }}
+      );
+      </script>
+    </div>
+    <!-- TradingView Widget END -->
+    """
+    
+    components.html(tradingview_html, height=560)
 
 # ---------------- SIGNALS TAB ----------------
 with tab_signals:
