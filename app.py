@@ -2,118 +2,140 @@ import datetime
 import sqlite3
 import streamlit as st
 
-# Page Configuration
+# 1. Page Configuration
 st.set_page_config(
     page_title="VEER PRO TRADING TERMINAL",
-    page_icon="📈",
+    page_icon="🚀",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-# Custom CSS for Premium Colorful Dark Theme & Crystal Clear UI
+# 2. Advanced Responsive TradingView-Style UI (Mobile + PC Optimized)
 st.markdown(
     """
     <style>
-    /* Global Deep Colorful Dark Theme */
+    /* Dark Terminal Theme Variables */
+    :root {
+        --bg-dark: #090d16;
+        --panel-bg: #131924;
+        --border-color: #20293a;
+        --accent-blue: #3b82f6;
+        --green-up: #10b981;
+        --red-down: #ef4444;
+        --text-bright: #f3f4f6;
+    }
+
+    /* Global Dark Background Override */
     .stApp {
-        background: radial-gradient(circle at top right, #131b2e, #090d16) !important;
-        color: #ffffff !important;
+        background-color: var(--bg-dark) !important;
+        color: var(--text-bright) !important;
     }
-    
-    /* Force all text, labels, and headers to be bright white */
-    h1, h2, h3, h4, h5, h6, p, span, label, .stMarkdown {
-        color: #ffffff !important;
+
+    /* Force Clean Text Colors */
+    h1, h2, h3, h4, h5, h6, p, span, label, div {
+        color: var(--text-bright) !important;
     }
-    
-    /* Stylish Sidebar (User Profile) */
+
+    /* Sidebar Styling */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #131b2e 0%, #090d16 100%) !important;
-        border-right: 1px solid #1f293d;
-        color: #ffffff !important;
-    }
-    [data-testid="stSidebar"] div, [data-testid="stSidebar"] span, [data-testid="stSidebar"] p {
-        color: #e0e7ff !important;
-    }
-    
-    /* Input Field Labels visibility */
-    .stTextInput label, .stSelectbox label, .stNumberInput label, .stSlider label {
-        color: #00f2fe !important;
-        font-weight: 600 !important;
-        font-size: 14px !important;
+        background-color: var(--panel-bg) !important;
+        border-right: 1px solid var(--border-color) !important;
     }
 
-    /* Input Boxes Styling */
-    .stTextInput>div>div>input, .stNumberInput>div>div>input {
-        background-color: #131b2e !important;
-        color: #ffffff !important;
-        border: 1px solid #3b82f6 !important;
-        border-radius: 10px;
-        padding: 12px;
-    }
-    .stTextInput>div>div>input:focus {
-        border-color: #00f2fe !important;
-        box-shadow: 0 0 12px rgba(0, 242, 254, 0.5);
+    /* Card Panels Styling */
+    div[data-testid="stVerticalBlock"] > div.element-container {
+        border-radius: 12px;
     }
 
-    /* Selectbox styling */
-    .stSelectbox>div>div>div {
-        background-color: #131b2e !important;
+    /* Custom Responsive Input Elements */
+    .stTextInput input, .stSelectbox select, .stNumberInput input {
+        background-color: var(--panel-bg) !important;
         color: #ffffff !important;
-        border: 1px solid #3b82f6 !important;
-        border-radius: 10px;
-    }
-
-    /* Colorful Tabs styling */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background-color: transparent;
-    }
-    .stTabs [data-baseweb="tab"] {
-        background-color: #131b2e !important;
+        border: 1px solid var(--border-color) !important;
         border-radius: 8px !important;
-        color: #94a3b8 !important;
-        font-weight: 600;
-        padding: 10px 18px;
-        border: 1px solid #1f293d;
+        min-height: 48px !important; /* Mobile Touch Friendly */
+        font-size: 15px !important;
     }
-    .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #00f2fe 0%, #6366f1 100%) !important;
-        color: #ffffff !important;
-        font-weight: 700 !important;
+
+    .stTextInput input:focus, .stSelectbox select:focus {
+        border-color: var(--accent-blue) !important;
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.4) !important;
+    }
+
+    /* Professional TradingView Tab Styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 6px;
+        background-color: var(--panel-bg);
+        padding: 6px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        background-color: transparent !important;
+        border-radius: 6px !important;
+        color: #9ca3af !important;
+        font-weight: 600 !important;
+        padding: 10px 16px !important;
+        min-height: 44px !important; /* Mobile Touch Optimized */
         border: none !important;
     }
 
-    /* Glowing Action Buttons */
-    .stButton>button { 
-        width: 100%; 
-        border-radius: 10px; 
-        font-weight: 700; 
-        height: 48px; 
-        background: linear-gradient(135deg, #00f2fe 0%, #6366f1 100%); 
-        color: #ffffff; 
-        border: none; 
-        font-size: 16px; 
-        box-shadow: 0 4px 15px rgba(0,242,254,0.3);
-        transition: 0.3s ease;
-    }
-    .stButton>button:hover { 
-        background: linear-gradient(135deg, #6366f1 0%, #00f2fe 100%); 
-        box-shadow: 0 6px 20px rgba(99,102,241,0.5);
+    .stTabs [aria-selected="true"] {
+        background-color: var(--accent-blue) !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
     }
 
-    div.stMetric { 
-        background: #131b2e; 
-        padding: 15px; 
-        border-radius: 12px; 
-        border: 1px solid #3b82f6; 
+    /* High Density Glow Action Buttons */
+    .stButton>button { 
+        width: 100%; 
+        border-radius: 8px; 
+        font-weight: 700; 
+        min-height: 48px; /* Touch-optimized */
+        background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); 
+        color: #ffffff !important; 
+        border: none; 
+        font-size: 15px; 
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        transition: all 0.2s ease-in-out;
     }
+
+    .stButton>button:hover { 
+        background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%); 
+        box-shadow: 0 6px 18px rgba(59, 130, 246, 0.5);
+    }
+
+    /* Metric Container */
+    div.stMetric { 
+        background: var(--panel-bg); 
+        padding: 14px; 
+        border-radius: 10px; 
+        border: 1px solid var(--border-color); 
+    }
+
+    /* Signal Container Styling */
     .signal-card { 
-        background: #131b2e; 
-        padding: 20px; 
-        border-radius: 14px; 
-        border-left: 6px solid #00f2fe; 
-        border: 1px solid #3b82f6;
-        margin-top: 15px; 
+        background: var(--panel-bg); 
+        padding: 16px; 
+        border-radius: 12px; 
+        border-left: 5px solid var(--green-up); 
+        border-top: 1px solid var(--border-color);
+        border-right: 1px solid var(--border-color);
+        border-bottom: 1px solid var(--border-color);
+        margin-top: 10px; 
+    }
+
+    /* Mobile Floating Bar for Touch Compatibility */
+    @media (max-width: 768px) {
+        .stApp {
+            padding-bottom: 20px;
+        }
+        div.block-container {
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
+            padding-top: 1rem !important;
+        }
     }
     </style>
 """,
@@ -194,14 +216,14 @@ if st.session_state.last_reset != datetime.date.today():
 # --- AUTHENTICATION SCREEN ---
 def show_auth_screen():
   st.markdown("<br>", unsafe_allow_html=True)
-  col1, col2, col3 = st.columns([1, 1.4, 1])
+  col1, col2, col3 = st.columns([1, 1.5, 1])
 
   with col2:
     st.markdown(
         """
-        <div style="text-align: center; margin-bottom: 25px;">
-            <h2 style="font-size: 26px; font-weight: 800; color: #ffffff; margin-bottom: 5px;">🔐 VEER PRO TERMINAL</h2>
-            <p style="color: #00f2fe; font-size: 13px; letter-spacing: 1px;">Institutional Grade Trading Platform</p>
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h2 style="font-size: 24px; font-weight: 800; color: #ffffff; margin-bottom: 4px;">🚀 VEER PRO TERMINAL</h2>
+            <p style="color: #3b82f6; font-size: 13px; font-weight: 500;">Institutional Grade Trading Platform</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -211,8 +233,8 @@ def show_auth_screen():
 
     with auth_tab1:
       st.markdown(
-          "<h3 style='color: #ffffff; font-size: 18px; margin-top: 10px;'>Create"
-          " New Account</h3>",
+          "<h4 style='color: #ffffff; font-size: 16px; margin-top: 10px;'>Create"
+          " New Account</h4>",
           unsafe_allow_html=True,
       )
       reg_name = st.text_input(
@@ -256,15 +278,12 @@ def show_auth_screen():
             st.success("🎉 Account Created & Logged In Successfully!")
             st.rerun()
           else:
-            st.error(
-                "⚠️ This Email/Phone is already registered! Please go to Login"
-                " tab."
-            )
+            st.error("⚠️ This Email/Phone is already registered!")
 
     with auth_tab2:
       st.markdown(
-          "<h3 style='color: #ffffff; font-size: 18px; margin-top:"
-          " 10px;'>Welcome Back</h3>",
+          "<h4 style='color: #ffffff; font-size: 16px; margin-top:"
+          " 10px;'>Welcome Back</h4>",
           unsafe_allow_html=True,
       )
       login_email = st.text_input(
@@ -288,13 +307,10 @@ def show_auth_screen():
           st.session_state.logged_in = True
           st.session_state.current_user_email = cleaned_email
           st.session_state.current_user_name = user_data[1]
-          st.success("🎉 Login Successful! Redirecting...")
+          st.success("🎉 Login Successful!")
           st.rerun()
         else:
-          st.error(
-              "⚠️ Invalid Email/Phone or Password! Please check or register"
-              " first."
-          )
+          st.error("⚠️ Invalid Email/Phone or Password!")
 
 
 if not st.session_state.logged_in:
@@ -318,38 +334,45 @@ with st.sidebar:
     st.rerun()
 
 
-# --- MAIN TRADING TERMINAL ---
-st.title("🚀 VEER PRO TRADING TERMINAL")
+# --- MAIN TRADING TERMINAL (PRO DASHBOARD) ---
+# Ticker Bar
 st.markdown(
-    "<p style='color: #00f2fe;'><b>Institutional Grade Live Market, Interactive"
-    " Charts & AI Smart Signals</b></p>",
+    """
+    <div style="background: #131924; padding: 10px 14px; border-radius: 8px; border: 1px solid #20293a; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 13px;">
+        <div><b>🚀 VEER PRO</b></div>
+        <div><span style="color: #9ca3af;">BTCUSDT</span> <span style="color: #ef4444; font-weight:700;">$68,420.00 (-1.59%)</span></div>
+        <div style="color: #10b981; font-weight:600;">ETHUSDT +2.14%</div>
+    </div>
+""",
     unsafe_allow_html=True,
 )
-st.markdown("---")
 
 tab1, tab2, tab3, tab4 = st.tabs(
-    ["⚡ Pro Terminal", "📊 Live Chart", "🏆 Accuracy", "💎 VIP Plan"]
+    ["⚡ Terminal Dashboard", "📊 Live Chart", "🏆 Accuracy", "💎 VIP Plan"]
 )
 
 with tab1:
-  col1, col2 = st.columns([1, 1], gap="medium")
+  col_main, col_side = st.columns([2.2, 1], gap="medium")
 
-  with col1:
-    st.markdown("### ⚙️ Configuration")
-    market_category = st.selectbox(
-        "Market Category", ["TIER 1 (Main Assets)", "TIER 2 (Altcoins)"]
-    )
-    asset = st.selectbox(
-        "Select Asset", ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"]
-    )
-    timeframe = st.selectbox("Timeframe", ["1m", "5m", "15m", "1h", "4h"])
+  with col_main:
+    st.markdown("### ⚙️ Signal Controls & Configuration")
+    m_cat, m_asset, m_tf = st.columns(3)
+    with m_cat:
+      market_category = st.selectbox(
+          "Category", ["TIER 1 (Main Assets)", "TIER 2 (Altcoins)"]
+      )
+    with m_asset:
+      asset = st.selectbox(
+          "Select Asset", ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"]
+      )
+    with m_tf:
+      timeframe = st.selectbox("Timeframe", ["1m", "5m", "15m", "1h", "4h", "1d"])
 
-    st.markdown("### 🛡️ Risk Management")
+    st.markdown("### 🛡️ Risk Management Matrix")
     account_balance = st.number_input(
         "Account Balance ($)", value=10000.0, step=500.0
     )
     risk_pct = st.slider("Risk Per Trade (%)", 0.1, 5.0, 1.0)
-    atr_multiplier = st.slider("ATR SL Multiplier", 1.0, 3.0, 1.5)
 
     risk_capital = account_balance * (risk_pct / 100)
     st.info(
@@ -357,82 +380,57 @@ with tab1:
         " Protection: Active"
     )
 
-  with col2:
-    st.markdown("### 🤖 AI Smart Signal Hub")
+  with col_side:
+    st.markdown("### 🤖 AI Smart Signals")
 
     can_generate = True
     if st.session_state.user_tier == "Free User":
       remaining_signals = 2 - st.session_state.signals_used
-      st.markdown(
-          f"📢 Free Plan Quota: **{remaining_signals}/2** signals remaining"
-          " today."
-      )
+      st.caption(f"Free Limit: **{remaining_signals}/2** remaining today.")
       if remaining_signals <= 0:
         can_generate = False
     else:
-      st.markdown(
-          "👑 VIP Status Active: **Unlimited Signals** available for you."
-      )
+      st.caption("👑 VIP Status: **Unlimited Access**")
 
-    if st.button("✨ GENERATE SMART AI SIGNAL"):
+    if st.button("✨ GENERATE AI SIGNAL"):
       if not can_generate:
-        st.error(
-            "⚠️ Daily free limit of 2 signals reached! Go to 'VIP Plan' tab to"
-            " upgrade for unlimited access."
-        )
+        st.error("⚠️ Free limit reached! Upgrade to VIP Plan.")
       else:
         if st.session_state.user_tier == "Free User":
           st.session_state.signals_used += 1
 
         st.markdown(
-            """
-            <div class="signal-card">
-                <h3 style='color: #00f2fe; margin-top: 0;'>🔥 STRONG BUY SETUP (Bullish)</h3>
-                <hr style='border-color: #3b82f6; margin: 5px 0 15px 0;'>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        sc1, sc2 = st.columns(2)
-        sc1.metric("Live Market Price", "$64,741.37", "+1.4%")
-        sc2.metric("Profit / Risk Ratio", "1 : 2.5", "Optimal")
-
-        st.markdown(
             f"""
-                <p><b>🎯 Target Asset:</b> BINANCE:{asset} ({timeframe})</p>
-                <p><b>📍 Optimal Entry Zone (OB/FVG):</b> ~$64,611.89</p>
-                <p><b>🛑 Smart Stop Loss (SL):</b> ~$64,352.92</p>
-                <p><b>🎯 Target 1 (TP1):</b> ~$65,065.08</p>
-                <p><b>🎯 Target 2 (TP2):</b> ~$65,518.27</p>
+            <div class="signal-card">
+                <h4 style='color: #10b981; margin: 0;'>🔥 STRONG BUY SETUP</h4>
+                <p style='font-size:12px; color:#9ca3af; margin-bottom:10px;'>Pair: BINANCE:{asset} ({timeframe})</p>
+                <p><b>📍 Entry:</b> ~$64,611.89</p>
+                <p><b>🛑 Stop Loss:</b> ~$64,352.92</p>
+                <p><b>🎯 Target 1:</b> ~$65,065.08</p>
+                <p><b>🎯 Target 2:</b> ~$65,518.27</p>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.link_button(
-            "🚀 Execute Trade on Partner Exchange (Affiliate)",
-            "https://www.binance.com",
-        )
-
 with tab2:
-  st.markdown(f"### 📈 Live Interactive Chart — {asset}")
+  st.markdown(f"### 📈 Interactive Pro Chart — {asset}")
   tradingview_html = f"""
-    <div class="tradingview-widget-container" style="height:500px;width:100%;">
+    <div class="tradingview-widget-container" style="height:520px;width:100%;">
       <div id="tradingview_widget" style="height:100%;width:100%;"></div>
       <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
       <script type="text/javascript">
       new TradingView.widget(
       {{
         "width": "100%",
-        "height": "500",
+        "height": "520",
         "symbol": "BINANCE:{asset}",
         "interval": "D",
         "timezone": "Etc/UTC",
         "theme": "dark",
         "style": "1",
         "locale": "en",
-        "toolbar_bg": "#f1f3f6",
+        "toolbar_bg": "#131924",
         "enable_publishing": false,
         "allow_symbol_change": true,
         "container_id": "tradingview_widget"
@@ -440,11 +438,10 @@ with tab2:
       </script>
     </div>
     """
-  st.components.v1.html(tradingview_html, height=520)
+  st.components.v1.html(tradingview_html, height=540)
 
 with tab3:
   st.markdown("### 🏆 Performance & Accuracy Metrics")
-  st.markdown("Verified past 7-day algorithmic execution results:")
 
   m1, m2, m3 = st.columns(3)
   m1.metric("7-Day Signals", "142", "+12 today")
@@ -452,7 +449,7 @@ with tab3:
   m3.metric("Avg R:R Ratio", "1:2.4", "Optimal")
 
   st.markdown("---")
-  st.markdown("#### 📋 Recent Executed Calls")
+  st.markdown("#### 📋 Executed Signals History")
   st.dataframe(
       {
           "Timestamp": [
@@ -468,72 +465,45 @@ with tab3:
   )
 
 with tab4:
-  st.markdown("### 💎 Upgrade to VIP Pro Access (₹999 / Month)")
-
+  st.markdown("### 💎 VIP Pro Access (₹999 / Month)")
   col_p1, col_p2 = st.columns(2, gap="medium")
 
   with col_p1:
     st.markdown(
         """
-        #### 👑 VIP Benefits
         - **Unlimited** Smart AI Signals
-        - Advanced Multi-Asset Scanners
-        - Priority Alerts & Zero Ads
+        - Multi-Asset Technical Scanners
+        - Instant VIP Telegram Notifications
         """
     )
-    st.markdown("---")
-    st.markdown("### 📱 Option 1: Direct Pay via UPI App")
-    st.markdown(
-        "Click below to pay securely through PhonePe, Google Pay, or Paytm:"
-    )
-
     upi_intent_url = (
         "upi://pay?pa=7479465676-7@ybl&pn=VEER%20PRO%20TRADER&am=999.00&cu=INR"
     )
     st.link_button("📲 Pay ₹999 via UPI App (GPay/PhonePe)", upi_intent_url)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### 📷 Option 2: Scan QR Code")
     qr_code_url = (
         "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data="
         + upi_intent_url
     )
-    st.image(
-        qr_code_url,
-        caption="Scan this QR code with any UPI App to Pay ₹999",
-        width=180,
-    )
+    st.image(qr_code_url, caption="Scan QR with any UPI App", width=180)
 
   with col_p2:
-    st.markdown("#### ⚡ Step 3: Verify & Unlock")
-    st.markdown(
-        "Payment karne ke baad jo **12-digit UTR / Reference Number** milega,"
-        " use yahan dalein:"
-    )
-
+    st.markdown("#### ⚡ Verify Transaction")
     utr_input = st.text_input(
-        "Enter 12-digit UTR / UPI Reference Number:",
-        placeholder="e.g. 4152xxxxxxxx",
+        "Enter 12-digit UTR / UPI Ref No:", placeholder="e.g. 4152xxxxxxxx"
     )
 
     if st.button("🔓 Verify & Activate VIP Access"):
       if len(utr_input.strip()) >= 8:
         st.session_state.user_tier = "VIP Paid Member"
-        st.success(
-            "🎉 Congratulations! VIP Access Activated Successfully. Enjoy"
-            " Unlimited Signals!"
-        )
+        st.success("🎉 VIP Access Activated Successfully!")
         st.rerun()
       else:
-        st.error(
-            "⚠️ Kripya sahi UTR / Transaction ID दर्ज करें (कम से कम 8 अंक)।"
-        )
+        st.error("⚠️ Invalid UTR Number!")
 
 st.markdown("---")
 st.markdown(
-    "<p style='text-align: center; color: #94a3b8; font-size: 11px;'>"
-    "<b>Disclaimer:</b> VEER PRO TRADING TERMINAL is built for educational &"
-    " analytical research only. Crypto trading involves high market risk."
-    "</p>",
+    "<p style='text-align: center; color: #9ca3af; font-size: 11px;'>VEER PRO"
+    " TRADING TERMINAL — Educational Research & Analytics Platform</p>",
     unsafe_allow_html=True,
 )
