@@ -24,7 +24,7 @@ st.markdown(
 st.title("🚀 VEER PRO TRADING TERMINAL")
 st.markdown(
     "**Live Market, TradingView Charts, AI Buy/Sell Signals & Full Risk"
-    " Management**[span_1](start_span)[span_1](end_span)"
+    " Management**"
 )
 st.markdown("---")
 
@@ -58,36 +58,35 @@ with tab1:
   with col1:
     st.subheader("⚙️ Market & Risk Settings")
     market_category = st.selectbox(
-        "Market Category[span_2](start_span)[span_2](end_span)", ["TIER 1 (Main Assets)", "TIER 2 (Altcoins)"]
+        "Market Category", ["TIER 1 (Main Assets)", "TIER 2 (Altcoins)"]
     )
     asset = st.selectbox(
-        "Coin / Asset Chunein[span_3](start_span)[span_3](end_span)",
+        "Coin / Asset Chunein",
         ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"],
     )
     timeframe = st.selectbox(
-        "Timeframe (Samay)[span_4](start_span)[span_4](end_span)", ["1m", "5m", "15m", "1h", "4h"]
+        "Timeframe (Samay)", ["1m", "5m", "15m", "1h", "4h"]
     )
 
     st.markdown("---")
-    st.markdown("**Risk Management & Position Sizing**[span_5](start_span)[span_5](end_span)")
+    st.markdown("**Risk Management & Position Sizing**")
     account_balance = st.number_input(
-        "Account Balance ($)[span_6](start_span)[span_6](end_span)", value=10000.0
+        "Account Balance ($)", value=10000.0
     )
-    risk_pct = st.slider("Risk % Per Trade[span_7](start_span)[span_7](end_span)", 0.1, 5.0, 1.0)
-    atr_multiplier = st.slider("ATR Stop Loss Multiplier[span_8](start_span)[span_8](end_span)", 1.0, 3.0, 1.5)
+    risk_pct = st.slider("Risk % Per Trade", 0.1, 5.0, 1.0)
+    atr_multiplier = st.slider("ATR Stop Loss Multiplier", 1.0, 3.0, 1.5)
     max_daily_loss = st.number_input(
-        "Max Daily Loss Limit ($)[span_9](start_span)[span_9](end_span)", value=500.0
+        "Max Daily Loss Limit ($)", value=500.0
     )
 
     risk_capital = account_balance * (risk_pct / 100)
     st.info(
         f"Live Risk Report: Risk Capital: ${risk_capital:.2f} | ATR Stop Loss"
-        " Active | TP1 Target: $"
-        f"{(risk_capital*2):.2f} | Daily Guard: Protected[span_10](start_span)[span_10](end_span)"
+        f" Active | TP1 Target: ${(risk_capital*2):.2f} | Daily Guard: Protected"
     )
 
   with col2:
-    st.subheader("🤖 AI Signal & Easy Entry Panel[span_11](start_span)[span_11](end_span)")
+    st.subheader("🤖 AI Signal & Easy Entry Panel")
 
     # Check limits for Free Users
     can_generate = True
@@ -100,7 +99,7 @@ with tab1:
       if remaining_signals <= 0:
         can_generate = False
 
-    if st.button("AI SIGNAL DEKHO (GENERATE)[span_12](start_span)[span_12](end_span)"):
+    if st.button("AI SIGNAL DEKHO (GENERATE)"):
       if not can_generate:
         st.error(
             "⚠️ Aapka aaj ka free limit (5 signals) khatam ho gaya hai!"
@@ -110,18 +109,17 @@ with tab1:
         if user_tier == "Free User":
           st.session_state.signals_used += 1
 
-        # Displaying mock AI output based on user layout design
-        st.success(
-            "🔥 **STRONG BUY SIGNAL (खरीदने का सही मौका)**[span_13](start_span)[span_13](end_span)"
-        )
+        # Displaying AI output
+        st.success("🔥 **STRONG BUY SIGNAL (खरीदने का सही मौका)**")
         st.markdown(
-            f"- **Selected Asset:** BINANCE:{asset} | Timeframe: {timeframe}"
-            [span_14](start_span)"[span_14](end_span)\n- **Live Rate:** $64,741.37[span_15](start_span)[span_15](end_span)\n- **Market ka"
-            " Haal:** Market Upar Jane ki Taiyari Mein Hai (Bullish)\n- **Kahan Entry Lein (OB/FVG):** ~$64,611.89[span_16](start_span)[span_16](end_span)\n-"
-            " **Risk Bachane ke liye Stop Loss (SL):** ~$64,352.92[span_17](start_span)[span_17](end_span)\n-"
-            " **Pehla Target (TP1):** ~$65,065.08[span_18](start_span)[span_18](end_span)\n- **Dusra Target"
-            " (TP2):** ~$65,518.27[span_19](start_span)[span_19](end_span)\n- **Profit/Risk Ratio:** 1: 2.5"
-            " (Best)[span_20](start_span)[span_20](end_span)"
+            f"- **Selected Asset:** BINANCE:{asset} | Timeframe: {timeframe}\n"
+            "- **Live Rate:** $64,741.37\n"
+            "- **Market ka Haal:** Market Upar Jane ki Taiyari Mein Hai (Bullish)\n"
+            "- **Kahan Entry Lein (OB/FVG):** ~$64,611.89\n"
+            "- **Risk Bachane ke liye Stop Loss (SL):** ~$64,352.92\n"
+            "- **Pehla Target (TP1):** ~$65,065.08\n"
+            "- **Dusra Target (TP2):** ~$65,518.27\n"
+            "- **Profit/Risk Ratio:** 1: 2.5 (Best)"
         )
 
         # Broker Affiliate Integration Button
@@ -134,7 +132,6 @@ with tab1:
 
 with tab2:
   st.subheader(f"📈 Live TradingView Chart for {asset}")
-  # Embedding TradingView Advanced Real-time Widget via HTML iframe
   tradingview_html = f"""
     <div class="tradingview-widget-container" style="height:500px;width:100%">
       <iframe scrolling="no" allowtransparency="true" frameborder="0" src="https://s.tradingview.com/embed-widget/advanced-chart/?locale=en#%7B%22autosize%22%3Atrue%2C%22symbol%22%3A%22BINANCE%3A{asset}%22%2C%22interval%22%3A%22{timeframe}%22%2C%22theme%22%3A%22dark%22%2C%22style%22%3A%221%22%2C%22locale%22%3A%22en%22%2C%22toolbar_bg%22%3A%22%23f1f3f6%22%2C%22enable_publishing%22%3Afalse%2C%22hide_top_toolbar%22%3Afalse%2C%22save_image%22%3Afalse%2C%22container_id%22%3A%22tradingview_widget%22%7D" style="box-sizing: border-box; height: 100%; width: 100%;"></iframe>
@@ -186,8 +183,8 @@ with tab4:
   with col_y:
     st.markdown("### 👑 VIP Paid Tier (₹999/month)")
     st.markdown(
-        "- **Unlimited** AI Signals[span_21](start_span)[span_21](end_span)\n- Advanced Multi-Asset Scanner"
-        [span_22](start_span)"[span_22](end_span)\n- Priority Telegram Alerts\n- Zero Ads"
+        "- **Unlimited** AI Signals\n- Advanced Multi-Asset Scanner\n- Priority"
+        " Telegram Alerts\n- Zero Ads"
     )
     if st.button("Upgrade Now via UPI / Card"):
       st.success(
@@ -199,7 +196,7 @@ st.markdown("---")
 st.markdown(
     "<p style='text-align: center; color: gray; font-size: 12px;'>"
     "<b>Disclaimer:</b> VEER PRO TRADING TERMINAL is for educational and"
-    " analytical purposes only[span_23](start_span)[span_23](end_span). Trading cryptocurrencies and"
+    " analytical purposes only. Trading cryptocurrencies and"
     " derivatives involves substantial risk of loss and is not suitable for"
     " every investor. Do your own research before investing."
     "</p>",
