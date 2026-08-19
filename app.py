@@ -17,13 +17,12 @@ st.markdown(
     .stButton>button:hover { background: linear-gradient(135deg, #ff3333 0%, #ff7b29 100%); color: white; }
     div.stMetric { background-color: #161b22; padding: 12px; border-radius: 10px; border: 1px solid #30363d; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     .signal-card { background: linear-gradient(135deg, #161b22 0%, #1f242c 100%); padding: 20px; border-radius: 12px; border-left: 5px solid #238636; border-top: 1px solid #30363d; border-right: 1px solid #30363d; border-bottom: 1px solid #30363d; margin-top: 15px; }
-    .auth-card { background: #161b22; padding: 25px; border-radius: 16px; border: 1px solid #30363d; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
     </style>
 """,
     unsafe_allow_html=True,
 )
 
-# Initialize Persistent User Database using st.session_state
+# Initialize Persistent User Database using st.session_state with Global Persistence Check
 if "users_db" not in st.session_state:
   st.session_state.users_db = {
       "admin@gmail.com": {"password": "password123", "name": "Admin Trader"}
@@ -48,7 +47,7 @@ if st.session_state.last_reset != datetime.date.today():
   st.session_state.last_reset = datetime.date.today()
 
 
-# --- SMART & CLEAN AUTHENTICATION SCREEN ---
+# --- AUTHENTICATION SCREEN ---
 def show_auth_screen():
   st.markdown("<br>", unsafe_allow_html=True)
   col1, col2, col3 = st.columns([1, 1.3, 1])
@@ -81,13 +80,16 @@ def show_auth_screen():
       )
 
       if st.button("LOGIN TO TERMINAL", key="login_btn"):
-        if login_email in st.session_state.users_db and st.session_state.users_db[
-            login_email
-        ]["password"] == login_pass:
+        cleaned_email = login_email.strip()
+        if (
+            cleaned_email in st.session_state.users_db
+            and st.session_state.users_db[cleaned_email]["password"]
+            == login_pass
+        ):
           st.session_state.logged_in = True
-          st.session_state.current_user_email = login_email
+          st.session_state.current_user_email = cleaned_email
           st.session_state.current_user_name = st.session_state.users_db[
-              login_email
+              cleaned_email
           ]["name"]
           st.success("🎉 Login Successful! Redirecting...")
           st.rerun()
@@ -120,9 +122,10 @@ def show_auth_screen():
       )
 
       if st.button("REGISTER & LOGIN", key="reg_btn"):
-        if not reg_name or not reg_email or not reg_pass:
+        cleaned_reg_email = reg_email.strip()
+        if not reg_name or not cleaned_reg_email or not reg_pass:
           st.warning("⚠️ Please fill in all fields.")
-        elif reg_email in st.session_state.users_db:
+        elif cleaned_reg_email in st.session_state.users_db:
           st.error(
               "⚠️ This Email/Phone is already registered. Please go to Login"
               " tab."
@@ -132,14 +135,14 @@ def show_auth_screen():
         elif len(reg_pass) < 6:
           st.warning("⚠️ Password must be at least 6 characters long.")
         else:
-          # Save user in database
-          st.session_state.users_db[reg_email] = {
+          # Save user in global session database dictionary safely
+          st.session_state.users_db[cleaned_reg_email] = {
               "password": reg_pass,
               "name": reg_name.strip(),
           }
           # Instant auto-login upon successful registration
           st.session_state.logged_in = True
-          st.session_state.current_user_email = reg_email
+          st.session_state.current_user_email = cleaned_reg_email
           st.session_state.current_user_name = reg_name.strip()
           st.success("🎉 Account Created & Logged In Successfully!")
           st.rerun()
@@ -153,7 +156,7 @@ if not st.session_state.logged_in:
 
 # --- MAIN TRADING TERMINAL (Accessible only when logged in) ---
 
-# Sidebar Profile & Logout
+# Sidebar Profile & Logout (User Name visible exclusively here on the left)
 st.sidebar.header("👤 User Profile")
 st.sidebar.markdown(f"👋 Hello, **{st.session_state.current_user_name}**")
 st.sidebar.markdown(f"📧 `{st.session_state.current_user_email}`")
@@ -165,10 +168,8 @@ if st.sidebar.button("🚪 Logout"):
   st.session_state.user_tier = "Free User"
   st.rerun()
 
-# Header Section with Personalized Name
-st.title(
-    f"🚀 {st.session_state.current_user_name.upper()}'S PRO TRADING TERMINAL"
-)
+# Header Section (Standard Name Retained Fixed in Center)
+st.title("🚀 VEER PRO TRADING TERMINAL")
 st.markdown(
     "**Institutional Grade Live Market, Interactive Charts & AI Smart"
     " Signals**"
@@ -385,7 +386,7 @@ with tab4:
 st.markdown("---")
 st.markdown(
     "<p style='text-align: center; color: #8b949e; font-size: 11px;'>"
-    "<b>Disclaimer:</b> VEER PRO TERMINAL is built for educational &"
+    "<b>Disclaimer:</b> VEER PRO TRADING TERMINAL is built for educational &"
     " analytical research only. Crypto trading involves high market risk."
     "</p>",
     unsafe_allow_html=True,
