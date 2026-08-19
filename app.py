@@ -353,15 +353,23 @@ tab1, tab2, tab3, tab4 = st.tabs(["⚡ Terminal Dashboard", "📊 Live Chart", "
 
 ALL_TIMEFRAMES = ["1s", "5s", "10s", "30s", "1m", "5m", "15m", "1h", "4h", "1D", "1W", "1M", "1Y"]
 
+# --- FULL ASSET DICTIONARY RESTORED ---
+ASSET_CATEGORIES = {
+    "Crypto Top Major": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT", "DOGEUSDT", "AVAXUSDT", "DOTUSDT", "LINKUSDT", "LTCUSDT", "MATICUSDT", "NEARUSDT", "TRXUSDT", "SHIBUSDT"],
+    "Forex Currency Pairs": ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD", "EURGBP", "EURJPY", "GBPJPY"],
+    "Commodities & Indices": ["XAUUSD (GOLD)", "XAGUSD (SILVER)", "USOIL (CRUDE)", "SPX500", "NAS100", "US30"],
+    "Indian Market (NSE/BSE)": ["NIFTY50", "BANKNIFTY", "FINNIFTY", "RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "TATAMOTORS", "SBIN"]
+}
+
 with tab1:
     col_main, col_side = st.columns([2.2, 1], gap="medium")
     with col_main:
         st.markdown("### ⚙️ Signal Configuration")
         c1, c2, c3 = st.columns(3)
         with c1:
-            market_category = st.selectbox("Category", ["TIER 1 (Main Assets)", "TIER 2 (Altcoins)"])
+            market_category = st.selectbox("Category", list(ASSET_CATEGORIES.keys()))
         with c2:
-            asset = st.selectbox("Asset", ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"])
+            asset = st.selectbox("Asset", ASSET_CATEGORIES[market_category])
         with c3:
             timeframe_options = ALL_TIMEFRAMES if is_vip else ["1m", "5m", "15m", "1h", "4h", "1D"]
             timeframe = st.selectbox("Timeframe", timeframe_options)
@@ -391,7 +399,7 @@ with tab1:
                 if not is_vip:
                     st.session_state.signals_used += 1
 
-                entry_p = 68420.00 if "BTC" in asset else 3540.0
+                entry_p = 68420.00 if "BTC" in asset else (24500.00 if "NIFTY" in asset else (2500.00 if "XAU" in asset else 1.0850))
                 sl_p = entry_p * 0.994
                 tp1_p = entry_p * 1.008
                 tp2_p = entry_p * 1.018
@@ -403,7 +411,7 @@ with tab1:
                             <h4 style="color:#089981; margin:0;">🔥 INSTITUTIONAL BUY SETUP</h4>
                             <span style="background:#08998122; color:#089981; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:bold;">93.8% CONFIDENCE</span>
                         </div>
-                        <p style="font-size:12px; color:#787b86; margin-bottom:10px;">Pair: BINANCE:{asset} ({timeframe}) | Strategy: SMC + ICT Order Block Liquidity</p>
+                        <p style="font-size:12px; color:#787b86; margin-bottom:10px;">Asset: {asset} ({timeframe}) | Strategy: SMC + ICT Order Block Liquidity</p>
                         <p style="margin:4px 0;"><b>📍 Optimal Entry:</b> ~${entry_p:,.2f}</p>
                         <p style="margin:4px 0; color:#f23645;"><b>🛑 Stop Loss:</b> ~${sl_p:,.2f}</p>
                         <p style="margin:4px 0; color:#089981;"><b>🎯 Target 1 (TP1):</b> ~${tp1_p:,.2f}</p>
@@ -417,7 +425,8 @@ with tab1:
 with tab2:
     chart_col1, chart_col2 = st.columns([1, 2.5])
     with chart_col1:
-        selected_chart_asset = st.selectbox("Select Asset for Chart:", ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT"], key="chart_asset_select")
+        cat_select = st.selectbox("Market Category:", list(ASSET_CATEGORIES.keys()), key="chart_cat_select")
+        selected_chart_asset = st.selectbox("Select Asset for Chart:", ASSET_CATEGORIES[cat_select], key="chart_asset_select")
         
         if is_vip:
             chart_tf = st.selectbox("Chart Timeframe (1s to 1Y):", ALL_TIMEFRAMES, index=4, key="chart_tf_select")
@@ -427,9 +436,8 @@ with tab2:
             chart_mode = "Single Chart"
             st.info("🔒 *Seconds (1s-30s) and Macro Timeframes unlocked for VIP Members!*")
 
-    # --- ADVANCED INSTITUTIONAL SMC + ICT + PRICE ACTION CHART ENGINE ---
+    # --- ADVANCED INSTITUTIONAL SMC + ICT + PRICE ACTION CHART ENGINE (NO FLICKER / SMOOTH) ---
     def render_pro_smc_engine(symbol_name, timeframe_str="1m", height=540):
-        # Timeframe interval conversion
         interval_ms = 1000
         if "s" in timeframe_str:
             interval_ms = int(timeframe_str.replace("s", "")) * 1000
@@ -467,7 +475,7 @@ with tab2:
         <body>
             <div id="main-wrap">
                 <div class="top-bar">
-                    <div class="title">⚡ BINANCE:{symbol_name} ({timeframe_str}) — SMC/ICT VIP ENGINE</div>
+                    <div class="title">⚡ ASSET:{symbol_name} ({timeframe_str}) — SMC/ICT VIP ENGINE</div>
                     <div class="btn-group">
                         <button id="smcBtn" class="btn-ui btn-smc active" onclick="toggleSMC()">⚡ SMC Auto-Mapping: ON</button>
                         <button class="btn-ui" onclick="openFullWindow()">🔍 Open In New Tab</button>
@@ -480,7 +488,6 @@ with tab2:
             <script>
                 let smcEnabled = true;
 
-                // --- FIX FOR BLANK NEW TAB (Using Data URI / Window Open Blob Payload) ---
                 function openFullWindow() {{
                     let htmlData = document.documentElement.outerHTML;
                     let blob = new Blob([htmlData], {{ type: 'text/html' }});
@@ -498,10 +505,10 @@ with tab2:
                         btn.classList.remove('active');
                         btn.innerText = "❌ SMC Auto-Mapping: OFF";
                     }}
-                    chart.update();
+                    chart.update('none'); // Update without flickering
                 }}
 
-                // --- INSTITUTIONAL SMC + ICT + PRICE ACTION AUTO-MAPPING PLUGIN ---
+                // --- INSTITUTIONAL SMC + ICT AUTO-MAPPING PLUGIN ---
                 const smcInstitutionalEngine = {{
                     id: 'smcInstitutionalEngine',
                     afterDraw: (chart) => {{
@@ -518,36 +525,28 @@ with tab2:
                             let c1 = dataset[i-2];
                             let c3 = dataset[i];
 
-                            if (c1.h < c3.l) {{ // Bullish FVG
+                            if (c1.h < c3.l) {{ 
                                 let yTop = chart.scales.y.getPixelForValue(c3.l);
                                 let yBottom = chart.scales.y.getPixelForValue(c1.h);
                                 let xStart = meta.data[i-2].x;
-                                let xEnd = meta.data[i].x + 50;
+                                let xEnd = meta.data[i].x + 40;
 
-                                ctx.fillStyle = 'rgba(8, 153, 129, 0.20)';
+                                ctx.fillStyle = 'rgba(8, 153, 129, 0.18)';
                                 ctx.strokeStyle = '#089981';
                                 ctx.lineWidth = 1;
                                 ctx.fillRect(xStart, yTop, xEnd - xStart, yBottom - yTop);
                                 ctx.strokeRect(xStart, yTop, xEnd - xStart, yBottom - yTop);
-
-                                ctx.fillStyle = '#089981';
-                                ctx.font = '9px sans-serif';
-                                ctx.fillText('Bullish FVG', xStart + 4, yTop + 10);
-                            }} else if (c1.l > c3.h) {{ // Bearish FVG
+                            }} else if (c1.l > c3.h) {{ 
                                 let yTop = chart.scales.y.getPixelForValue(c1.l);
                                 let yBottom = chart.scales.y.getPixelForValue(c3.h);
                                 let xStart = meta.data[i-2].x;
-                                let xEnd = meta.data[i].x + 50;
+                                let xEnd = meta.data[i].x + 40;
 
-                                ctx.fillStyle = 'rgba(242, 54, 69, 0.20)';
+                                ctx.fillStyle = 'rgba(242, 54, 69, 0.18)';
                                 ctx.strokeStyle = '#f23645';
                                 ctx.lineWidth = 1;
                                 ctx.fillRect(xStart, yTop, xEnd - xStart, yBottom - yTop);
                                 ctx.strokeRect(xStart, yTop, xEnd - xStart, yBottom - yTop);
-
-                                ctx.fillStyle = '#f23645';
-                                ctx.font = '9px sans-serif';
-                                ctx.fillText('Bearish FVG', xStart + 4, yTop + 10);
                             }}
                         }}
 
@@ -562,60 +561,24 @@ with tab2:
                         if (maxIdx !== -1 && meta.data[maxIdx]) {{
                             let yRes = chart.scales.y.getPixelForValue(maxHigh);
                             ctx.strokeStyle = '#f23645';
-                            ctx.setLineDash([5, 3]);
+                            ctx.setLineDash([4, 4]);
                             ctx.beginPath();
                             ctx.moveTo(meta.data[0].x, yRes);
-                            ctx.lineTo(meta.data[dataset.length-1].x + 30, yRes);
+                            ctx.lineTo(meta.data[dataset.length-1].x + 20, yRes);
                             ctx.stroke();
-
-                            ctx.fillStyle = '#f23645';
-                            ctx.font = 'bold 10px sans-serif';
-                            ctx.fillText('🔴 Institutional Resistance Zone', meta.data[0].x + 10, yRes - 4);
                         }}
 
                         if (minIdx !== -1 && meta.data[minIdx]) {{
                             let ySup = chart.scales.y.getPixelForValue(minLow);
                             ctx.strokeStyle = '#089981';
-                            ctx.setLineDash([5, 3]);
+                            ctx.setLineDash([4, 4]);
                             ctx.beginPath();
                             ctx.moveTo(meta.data[0].x, ySup);
-                            ctx.lineTo(meta.data[dataset.length-1].x + 30, ySup);
+                            ctx.lineTo(meta.data[dataset.length-1].x + 20, ySup);
                             ctx.stroke();
-
-                            ctx.fillStyle = '#089981';
-                            ctx.font = 'bold 10px sans-serif';
-                            ctx.fillText('🟢 Institutional Support Zone', meta.data[0].x + 10, ySup + 12);
                         }}
 
-                        // 3. BOS (Break of Structure) & CHoCH & ORDER BLOCK
-                        if (dataset.length > 8) {{
-                            let bosCandleIdx = dataset.length - 4;
-                            let yBOS = chart.scales.y.getPixelForValue(dataset[bosCandleIdx].h);
-                            let xBOS = meta.data[bosCandleIdx].x;
-
-                            ctx.setLineDash([]);
-                            ctx.strokeStyle = '#00f2fe';
-                            ctx.lineWidth = 1.5;
-                            ctx.beginPath();
-                            ctx.moveTo(xBOS, yBOS);
-                            ctx.lineTo(meta.data[dataset.length-1].x + 20, yBOS);
-                            ctx.stroke();
-
-                            ctx.fillStyle = '#00f2fe';
-                            ctx.font = 'bold 10px sans-serif';
-                            ctx.fillText('⚡ BOS (Break of Structure)', xBOS + 5, yBOS - 4);
-
-                            // ORDER BLOCK ZONE (Demand OB)
-                            let obYTop = chart.scales.y.getPixelForValue(minLow * 1.002);
-                            let obYBottom = chart.scales.y.getPixelForValue(minLow);
-                            ctx.fillStyle = 'rgba(41, 98, 255, 0.35)';
-                            ctx.fillRect(meta.data[minIdx].x, obYTop, 120, obYBottom - obYTop);
-                            ctx.fillStyle = '#2962ff';
-                            ctx.font = 'bold 9px sans-serif';
-                            ctx.fillText('📦 BULLISH ORDER BLOCK', meta.data[minIdx].x + 4, obYTop + 10);
-                        }}
-
-                        // 4. ACCURATE BUY / SELL SIGNALS MARKERS
+                        // 3. ACCURATE BUY / SELL SIGNALS MARKERS
                         let lastIdx = dataset.length - 2;
                         if (meta.data[lastIdx]) {{
                             let xSig = meta.data[lastIdx].x;
@@ -625,22 +588,22 @@ with tab2:
                                 let ySig = chart.scales.y.getPixelForValue(dataset[lastIdx].l);
                                 ctx.fillStyle = '#089981';
                                 ctx.beginPath();
-                                ctx.arc(xSig, ySig + 15, 6, 0, 2 * Math.PI);
+                                ctx.arc(xSig, ySig + 12, 5, 0, 2 * Math.PI);
                                 ctx.fill();
 
                                 ctx.fillStyle = '#ffffff';
-                                ctx.font = 'bold 11px sans-serif';
-                                ctx.fillText('🚀 BUY (LONG)', xSig - 30, ySig + 34);
+                                ctx.font = 'bold 10px sans-serif';
+                                ctx.fillText('🚀 BUY', xSig - 15, ySig + 28);
                             }} else {{
                                 let ySig = chart.scales.y.getPixelForValue(dataset[lastIdx].h);
                                 ctx.fillStyle = '#f23645';
                                 ctx.beginPath();
-                                ctx.arc(xSig, ySig - 15, 6, 0, 2 * Math.PI);
+                                ctx.arc(xSig, ySig - 12, 5, 0, 2 * Math.PI);
                                 ctx.fill();
 
                                 ctx.fillStyle = '#ffffff';
-                                ctx.font = 'bold 11px sans-serif';
-                                ctx.fillText('🔻 SELL (SHORT)', xSig - 32, ySig - 24);
+                                ctx.font = 'bold 10px sans-serif';
+                                ctx.fillText('🔻 SELL', xSig - 18, ySig - 20);
                             }}
                         }}
 
@@ -650,20 +613,24 @@ with tab2:
 
                 const ctx = document.getElementById('candleCanvas').getContext('2d');
                 let now = Date.now();
-                let initialPrice = '{symbol_name}'.includes('BTC') ? 68420.00 : 3540.00;
+                let basePrice = '{symbol_name}'.includes('BTC') ? 68420.00 : ('{symbol_name}'.includes('NIFTY') ? 24500.0 : ('{symbol_name}'.includes('XAU') ? 2500.0 : 1.085));
                 
                 let candleData = [];
                 for (let i = 24; i >= 0; i--) {{
                     let t = now - (i * {interval_ms});
-                    let open = initialPrice + (Math.random() - 0.49) * 8;
-                    let high = open + Math.random() * 10;
-                    let low = open - Math.random() * 10;
+                    let open = basePrice + (Math.random() - 0.49) * (basePrice * 0.001);
+                    let high = open + Math.random() * (basePrice * 0.0015);
+                    let low = open - Math.random() * (basePrice * 0.0015);
                     let close = low + Math.random() * (high - low);
                     candleData.push({{ x: t, o: open, h: high, l: low, c: close }});
-                    initialPrice = close;
+                    basePrice = close;
                 }}
 
-                const chart = new Chart(ctx, {{
+                if (window.myChartInstance) {{
+                    window.myChartInstance.destroy();
+                }}
+
+                window.myChartInstance = new Chart(ctx, {{
                     type: 'candlestick',
                     data: {{
                         datasets: [{{
@@ -698,13 +665,16 @@ with tab2:
                     }}
                 }});
 
-                // Smooth Live Price Tick Generator
+                // Smooth Non-Blinking Tick Stream
                 setInterval(() => {{
+                    let chart = window.myChartInstance;
+                    if(!chart) return;
                     let lastCandle = chart.data.datasets[0].data[chart.data.datasets[0].data.length - 1];
                     let nextTime = lastCandle.x + {interval_ms};
                     let newOpen = lastCandle.c;
-                    let newHigh = newOpen + Math.random() * 7;
-                    let newLow = newOpen - Math.random() * 7;
+                    let range = newOpen * 0.0008;
+                    let newHigh = newOpen + Math.random() * range;
+                    let newLow = newOpen - Math.random() * range;
                     let newClose = newLow + Math.random() * (newHigh - newLow);
 
                     chart.data.datasets[0].data.shift();
@@ -715,8 +685,8 @@ with tab2:
                         l: newLow,
                         c: newClose
                     }});
-                    chart.update();
-                }}, {interval_ms > 3000 and 3000 or interval_ms});
+                    chart.update('none'); // Mode 'none' disables full element refresh/flicker
+                }}, {interval_ms > 2000 and 2000 or interval_ms});
             </script>
         </body>
         </html>
@@ -732,10 +702,10 @@ with tab2:
         st.markdown("### 📊 VIP Dual Multi-Chart Grid Layout")
         mc1, mc2 = st.columns(2)
         with mc1:
-            asset1 = st.selectbox("Chart 1 Asset", ["BTCUSDT", "ETHUSDT", "SOLUSDT"], key="asset1_sel")
+            asset1 = st.selectbox("Chart 1 Asset", ASSET_CATEGORIES["Crypto Top Major"], key="asset1_sel")
             st.components.v1.html(render_pro_smc_engine(asset1, chart_tf, 460), height=480)
         with mc2:
-            asset2 = st.selectbox("Chart 2 Asset", ["ETHUSDT", "BTCUSDT", "BNBUSDT"], key="asset2_sel")
+            asset2 = st.selectbox("Chart 2 Asset", ASSET_CATEGORIES["Forex Currency Pairs"], key="asset2_sel")
             st.components.v1.html(render_pro_smc_engine(asset2, chart_tf, 460), height=480)
 
 with tab3:
@@ -745,7 +715,7 @@ with tab3:
     m2.metric("Win Rate", "93.8%", "+4.2%")
     m3.metric("Avg R:R Ratio", "1:3.2", "Optimal")
 
-# --- SUBSCRIPTION PLANS WITH UPDATED 3-DAY TRIAL PLAN ---
+# --- SUBSCRIPTION PLANS ---
 with tab4:
     st.markdown("### 💎 VIP Pro Plans & Pricing")
     
