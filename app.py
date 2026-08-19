@@ -4,7 +4,7 @@ import numpy as np
 import datetime
 import random
 import time
-from bokeh.plotting import figure
+import plotly.graph_objects as go
 
 # ==========================================
 # 1. PAGE CONFIGURATION & STYLES
@@ -207,11 +207,10 @@ with tab_dashboard:
     sig_df = pd.DataFrame(st.session_state['active_signals'])
     st.dataframe(sig_df, use_container_width=True)
 
-# ---------------- LIVE CHART TAB (TRADINGVIEW CANDLESTICK LOOK) ----------------
+# ---------------- LIVE CHART TAB (PLOTLY CANDLESTICK LOOK) ----------------
 with tab_chart:
     st.subheader(f"{selected_pair} Pro TradingView Chart")
     
-    # 1s to 1Y Timeframe Selection Bar
     tf_selected = st.radio(
         "Select Timeframe:", 
         ["1s", "1m", "5m", "15m", "1H", "4H", "1D", "1W", "1Y"], 
@@ -220,52 +219,42 @@ with tab_chart:
     )
     
     @st.fragment(run_every=2)
-    def render_tradingview_candlestick():
-        # Generate Realistic OHLC (Open, High, Low, Close) Data
+    def render_plotly_candlestick():
         base_p = st.session_state['btc_price'] if "BTC" in selected_pair else (st.session_state['sol_price'] if "SOL" in selected_pair else 3500.0)
         
         N = 30
-        np.random.seed(int(time.time()) % 100)
+        now = datetime.datetime.now()
+        times = [(now - datetime.timedelta(minutes=i)).strftime("%H:%M") for i in range(N)][::-1]
         
-        opens = base_p + np.cumsum(np.random.normal(0, base_p * 0.002, N))
-        closes = opens + np.random.normal(0, base_p * 0.002, N)
-        highs = np.maximum(opens, closes) + np.abs(np.random.normal(0, base_p * 0.001, N))
-        lows = np.minimum(opens, closes) - np.abs(np.random.normal(0, base_p * 0.001, N))
+        opens = base_p + np.cumsum(np.random.normal(0, base_p * 0.001, N))
+        closes = opens + np.random.normal(0, base_p * 0.001, N)
+        highs = np.maximum(opens, closes) + np.abs(np.random.normal(0, base_p * 0.0005, N))
+        lows = np.minimum(opens, closes) - np.abs(np.random.normal(0, base_p * 0.0005, N))
         
-        df = pd.DataFrame({'open': opens, 'high': highs, 'low': lows, 'close': closes})
-        df['index'] = range(len(df))
+        fig = go.Figure(data=[go.Candlestick(
+            x=times,
+            open=opens,
+            high=highs,
+            low=lows,
+            close=closes,
+            increasing_line_color='#10b981', 
+            decreasing_line_color='#ef4444'
+        )])
         
-        inc = df.close >= df.open
-        dec = df.open > df.close
-        w = 0.5
-
-        # Bokeh Dark Theme Figure Setup
-        p = figure(
-            height=420, 
-            tools="pan,wheel_zoom,box_zoom,reset", 
-            active_scroll="wheel_zoom",
-            background_fill_color="#121824",
-            border_fill_color="#0b0e14",
-            outline_line_color="#1e293b"
+        fig.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="#0b0e14",
+            plot_bgcolor="#121824",
+            margin=dict(l=10, r=10, t=10, b=10),
+            height=420,
+            xaxis_rangeslider_visible=False,
+            yaxis=dict(autorange=True, fixedrange=False)
         )
-        
-        p.grid.grid_line_alpha = 0.15
-        p.grid.grid_line_color = "#94a3b8"
-        p.axis.axis_line_color = "#334155"
-        p.axis.major_label_text_color = "#94a3b8"
 
-        # High/Low Wicks
-        p.segment(df.index, df.high, df.index, df.low, color="#94a3b8")
+        st.plotly_chart(fig, use_container_width=True)
+        st.info(f"🔴 **Live Price Tick**: ${closes[-1]:,.2f} | Timeframe: `{tf_selected}` | Real-Time Updating")
 
-        # Green Bullish Candles
-        p.vbar(df.index[inc], w, df.open[inc], df.close[inc], fill_color="#10b981", line_color="#10b981")
-        # Red Bearish Candles
-        p.vbar(df.index[dec], w, df.open[dec], df.close[dec], fill_color="#ef4444", line_color="#ef4444")
-
-        st.bokeh_chart(p, use_container_width=True)
-        st.info(f"🔴 **Live Price Tick**: ${closes.iloc[-1]:,.2f} | Timeframe: `{tf_selected}` | Real-Time Updating")
-
-    render_tradingview_candlestick()
+    render_plotly_candlestick()
 
 # ---------------- SIGNALS TAB ----------------
 with tab_signals:
