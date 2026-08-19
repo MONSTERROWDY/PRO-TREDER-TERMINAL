@@ -8,7 +8,7 @@ st.set_page_config(
     layout="wide",
 )
 
-# Custom CSS for Mobile Optimization & Pro Trading Look
+# Custom CSS for Professional Look
 st.markdown(
     """
     <style>
@@ -22,11 +22,19 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Initialize Session States
+# Initialize Database & Session States for User Accounts & Profiles
+if "users_db" not in st.session_state:
+  # Structure: { email: {"password": "...", "name": "..."} }
+  st.session_state.users_db = {
+      "admin@gmail.com": {"password": "password123", "name": "Admin Trader"}
+  }
+
 if "logged_in" not in st.session_state:
   st.session_state.logged_in = False
-if "user_identifier" not in st.session_state:
-  st.session_state.user_identifier = ""
+if "current_user_email" not in st.session_state:
+  st.session_state.current_user_email = ""
+if "current_user_name" not in st.session_state:
+  st.session_state.current_user_name = ""
 if "user_tier" not in st.session_state:
   st.session_state.user_tier = "Free User"
 if "signals_used" not in st.session_state:
@@ -34,40 +42,115 @@ if "signals_used" not in st.session_state:
 if "last_reset" not in st.session_state:
   st.session_state.last_reset = datetime.date.today()
 
-# Reset daily signals quota if date changes
+# Reset daily signals if date changes
 if st.session_state.last_reset != datetime.date.today():
   st.session_state.signals_used = 0
   st.session_state.last_reset = datetime.date.today()
 
-# --- SIDEBAR LOGIN & ACCOUNT SECTION ---
-st.sidebar.header("🔐 User Authentication")
 
+# --- AUTHENTICATION & REGISTRATION SCREEN WITH NAME ---
+def show_auth_screen():
+  st.markdown("<br><br>", unsafe_allow_html=True)
+  col1, col2, col3 = st.columns([1, 1.5, 1])
+
+  with col2:
+    st.markdown(
+        """
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h2>🔐 VEER PRO TERMINAL</h2>
+            <p style="color: #8b949e;">Login or Register to access your terminal</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    auth_tab1, auth_tab2 = st.tabs(["🔑 Login", "📝 Register"])
+
+    with auth_tab1:
+      st.markdown("### Welcome Back")
+      login_email = st.text_input(
+          "Email ID / Phone Number",
+          placeholder="Enter your registered email or phone",
+      )
+      login_pass = st.text_input(
+          "Password", type="password", placeholder="Enter your password"
+      )
+
+      if st.button("LOGIN TO TERMINAL"):
+        if login_email in st.session_state.users_db and st.session_state.users_db[
+            login_email
+        ]["password"] == login_pass:
+          st.session_state.logged_in = True
+          st.session_state.current_user_email = login_email
+          st.session_state.current_user_name = st.session_state.users_db[
+              login_email
+          ]["name"]
+          st.success("🎉 Login Successful!")
+          st.rerun()
+        else:
+          st.error("⚠️ Invalid Email ID or Password! Please check.")
+
+    with auth_tab2:
+      st.markdown("### Create New Account")
+      reg_name = st.text_input(
+          "Full Name", placeholder="Enter your full name (e.g. Veer Sharma)"
+      )
+      reg_email = st.text_input(
+          "Email ID / Phone Number ", placeholder="Enter email or phone"
+      )
+      reg_pass = st.text_input(
+          "Create Password", type="password", placeholder="Set a strong password"
+      )
+      reg_pass_confirm = st.text_input(
+          "Confirm Password", type="password", placeholder="Re-enter password"
+      )
+
+      if st.button("REGISTER ACCOUNT"):
+        if not reg_name or not reg_email or not reg_pass:
+          st.warning("⚠️ Please fill in all fields including your name.")
+        elif reg_email in st.session_state.users_db:
+          st.error(
+              "⚠️ This Email/Phone is already registered. Please login"
+              " directly."
+          )
+        elif reg_pass != reg_pass_confirm:
+          st.error("⚠️ Passwords do not match!")
+        elif len(reg_pass) < 6:
+          st.warning("⚠️ Password must be at least 6 characters long.")
+        else:
+          st.session_state.users_db[reg_email] = {
+              "password": reg_pass,
+              "name": reg_name.strip(),
+          }
+          st.success(
+              "✅ Registration Successful! Now switch to 'Login' tab to sign in."
+          )
+
+
+# Stop execution if not logged in
 if not st.session_state.logged_in:
-  st.sidebar.markdown("Please sign in to access the terminal.")
-  login_input = st.sidebar.text_input(
-      "Enter Gmail or Phone Number:", placeholder="e.g., user@gmail.com"
-  )
+  show_auth_screen()
+  st.stop()
 
-  if st.sidebar.button("🚀 Login / Register"):
-    if len(login_input.strip()) > 4:
-      st.session_state.logged_in = True
-      st.session_state.user_identifier = login_input.strip()
-      st.sidebar.success("Logged in successfully!")
-      st.rerun()
-    else:
-      st.sidebar.error("Please enter a valid Gmail or Phone number.")
-  st.stop()  # Stops execution here until the user logs in
-else:
-  st.sidebar.success(f"Connected: {st.session_state.user_identifier}")
-  st.sidebar.markdown(f"Status: **{st.session_state.user_tier}**")
-  if st.sidebar.button("🚪 Logout"):
-    st.session_state.logged_in = False
-    st.session_state.user_identifier = ""
-    st.session_state.user_tier = "Free User"
-    st.rerun()
 
-# Header Section
-st.title("🚀 VEER PRO TRADING TERMINAL")
+# --- MAIN APP (Customized with User's Profile Name) ---
+
+# Sidebar Profile & Logout
+st.sidebar.header("👤 User Profile")
+st.sidebar.markdown(f"👋 Hello, **{st.session_state.current_user_name}**")
+st.sidebar.markdown(f"📧 `{st.session_state.current_user_email}`")
+st.sidebar.markdown(f"🌟 Status: **{st.session_state.user_tier}**")
+if st.sidebar.button("🚪 Logout"):
+  st.session_state.logged_in = False
+  st.session_state.current_user_email = ""
+  st.session_state.current_user_name = ""
+  st.session_state.user_tier = "Free User"
+  st.rerun()
+
+# Header Section with Personalized Greeting
+st.title(
+    f"🚀 {st.session_state.current_user_name.upper()}'S PRO TRADING TERMINAL"
+)
 st.markdown(
     "**Institutional Grade Live Market, Interactive Charts & AI Smart"
     " Signals**"
