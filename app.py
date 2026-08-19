@@ -104,7 +104,7 @@ st.markdown(
 )
 
 
-# --- DATABASE SETUP & AUTO MIGRATION ---
+# --- ROBUST DATABASE SETUP & AUTO MIGRATION ---
 def get_db_connection():
   return sqlite3.connect("users_database.db", check_same_thread=False)
 
@@ -112,6 +112,8 @@ def get_db_connection():
 def init_db():
   conn = get_db_connection()
   cursor = conn.cursor()
+
+  # Users table
   cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             email TEXT PRIMARY KEY,
@@ -121,19 +123,21 @@ def init_db():
     """)
   conn.commit()
 
-  columns_to_add = [
+  # Safe user columns migration
+  user_columns = [
       ("username", "TEXT"),
       ("avatar", "TEXT"),
       ("tier", "TEXT DEFAULT 'Free User'"),
       ("expiry", "TEXT"),
   ]
-  for col_name, col_type in columns_to_add:
+  for col_name, col_type in user_columns:
     try:
       cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}")
       conn.commit()
     except sqlite3.OperationalError:
       pass
 
+  # Promo codes table
   cursor.execute("""
         CREATE TABLE IF NOT EXISTS promo_codes (
             code TEXT PRIMARY KEY,
@@ -144,7 +148,19 @@ def init_db():
     """)
   conn.commit()
 
-  # Ensure Admin Account Exists & Password Matches
+  # Safe promo columns migration (in case table already existed without used_by)
+  promo_columns = [
+      ("is_used", "INTEGER DEFAULT 0"),
+      ("used_by", "TEXT DEFAULT NULL"),
+  ]
+  for col_name, col_type in promo_columns:
+    try:
+      cursor.execute(f"ALTER TABLE promo_codes ADD COLUMN {col_name} {col_type}")
+      conn.commit()
+    except sqlite3.OperationalError:
+      pass
+
+  # Ensure Admin Account Exists
   cursor.execute("SELECT * FROM users WHERE email = ?", ("admin@gmail.com",))
   if not cursor.fetchone():
     cursor.execute(
@@ -165,6 +181,7 @@ def init_db():
     )
     conn.commit()
 
+  # Default single-use promo codes
   default_promos = [
       ("VEERPREMIUM30", "30 Days"),
       ("VEERPREMIUM1Y", "1 Year"),
@@ -187,16 +204,19 @@ init_db()
 
 
 def get_user_full(email):
-  conn = get_db_connection()
-  cursor = conn.cursor()
-  cursor.execute(
-      "SELECT password, name, username, avatar, tier FROM users WHERE email ="
-      " ?",
-      (email.strip().lower(),),
-  )
-  res = cursor.fetchone()
-  conn.close()
-  return res
+  try:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT password, name, username, avatar, tier FROM users WHERE email ="
+        " ?",
+        (email.strip().lower(),),
+    )
+    res = cursor.fetchone()
+    conn.close()
+    return res
+  except Exception:
+    return None
 
 
 def register_user(email, password, name, username):
@@ -217,19 +237,22 @@ def register_user(email, password, name, username):
     conn.commit()
     conn.close()
     return True
-  except sqlite3.IntegrityError:
+  except Exception:
     return False
 
 
 def update_user_profile(email, name, username, avatar):
-  conn = get_db_connection()
-  cursor = conn.cursor()
-  cursor.execute(
-      "UPDATE users SET name = ?, username = ?, avatar = ? WHERE email = ?",
-      (name, username, avatar, email),
-  )
-  conn.commit()
-  conn.close()
+  try:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE users SET name = ?, username = ?, avatar = ? WHERE email = ?",
+        (name, username, avatar, email),
+    )
+    conn.commit()
+    conn.close()
+  except Exception:
+    pass
 
 
 # --- COMPREHENSIVE LIVE MARKET PRICES ---
@@ -425,57 +448,62 @@ with st.sidebar:
 
   promo_input = st.text_input("Enter One-Time Promo Code", key="sidebar_promo")
   if st.button("Redeem Code"):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    # Check if code is valid and unused
-    cursor.execute(
-        "SELECT duration_type FROM promo_codes WHERE code = ? AND is_used = 0",
-        (promo_input.strip().upper(),),
-    )
-    p_data = cursor.fetchone()
-    if p_data:
-      duration = p_data[0]
-      new_tier = f"Premium Member ({duration})"
-      # Update user tier
+    try:
+      conn = get_db_connection()
+      cursor = conn.cursor()
       cursor.execute(
-          "UPDATE users SET tier = ? WHERE email = ?",
-          (new_tier, st.session_state.current_user_email),
+          "SELECT duration_type FROM promo_codes WHERE code = ? AND is_used = 0",
+          (promo_input.strip().upper(),),
       )
-      # Mark code as permanently used by this specific user so it can never be reused
-      cursor.execute(
-          "UPDATE promo_codes SET is_used = 1, used_by = ? WHERE code = ?",
-          (st.session_state.current_user_email, promo_input.strip().upper()),
-      )
-      conn.commit()
-      st.session_state.user_tier = new_tier
-      st.success(
-          f"Success! Code redeemed. Premium Activated ({duration}) for"
-          " single-use."
-      )
-      st.rerun()
-    else:
-      st.error(
-          "Invalid code, or this promo code has already been used by someone"
-          " else!"
-      )
-    conn.close()
+      p_data = cursor.fetchone()
+      if p_data:
+        duration = p_data[0]
+        new_tier = f"Premium Member ({duration})"
+        cursor.execute(
+            "UPDATE users SET tier = ? WHERE email = ?",
+            (new_tier, st.session_state.current_user_email),
+        )
+        cursor.execute(
+            "UPDATE promo_codes SET is_used = 1, used_by = ? WHERE code = ?",
+            (st.session_state.current_user_email, promo_input.strip().upper()),
+        )
+        conn.commit()
+        st.session_state.user_tier = new_tier
+        st.success(
+            f"Success! Code redeemed. Premium Activated ({duration}) for"
+            " single-use."
+        )
+        st.rerun()
+      else:
+        st.error(
+            "Invalid code, or this promo code has already been used by someone"
+            " else!"
+        )
+      conn.close()
+    except Exception as e:
+      st.error(f"Error redeeming code: {e}")
 
   # --- ADMIN PANEL (SINGLE-USE CODE MANAGEMENT) ---
   if st.session_state.current_user_email == "admin@gmail.com":
     st.markdown("---")
     st.markdown("### 🛠️ Admin Control Panel")
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT code, duration_type, used_by FROM promo_codes WHERE is_used = 0"
-    )
-    active_codes = cursor.fetchall()
-    cursor.execute(
-        "SELECT code, duration_type, used_by FROM promo_codes WHERE is_used = 1"
-    )
-    used_codes = cursor.fetchall()
-    conn.close()
+    try:
+      conn = get_db_connection()
+      cursor = conn.cursor()
+      cursor.execute(
+          "SELECT code, duration_type, used_by FROM promo_codes WHERE is_used ="
+          " 0"
+      )
+      active_codes = cursor.fetchall()
+      cursor.execute(
+          "SELECT code, duration_type, used_by FROM promo_codes WHERE is_used ="
+          " 1"
+      )
+      used_codes = cursor.fetchall()
+      conn.close()
+    except:
+      active_codes, used_codes = [], []
 
     with st.expander("👁️ Active (Unused) Codes"):
       if active_codes:
@@ -851,7 +879,7 @@ with tab_signals:
       "### 🎯 World's Best AI Confluence Engine (0% Loss & Precise Entries)"
   )
   if "Premium" not in st.session_state.user_tier:
-    rem = 2 - st.session_state.signals_used
+    rem = max(0, 2 - st.session_state.signals_used)
     st.info(f"Free Plan Quota: {rem}/2 Signals Remaining Today")
   else:
     st.success(
