@@ -4,6 +4,7 @@ import numpy as np
 import datetime
 import random
 import time
+from bokeh.plotting import figure
 
 # ==========================================
 # 1. PAGE CONFIGURATION & STYLES
@@ -28,10 +29,6 @@ st.markdown("""
     .header-title { font-size: 1.25rem; font-weight: 800; color: #ffffff; display: flex; align-items: center; gap: 8px; }
     .badge-vip { background: linear-gradient(135deg, #ffb703, #fb8500); color: #000; font-weight: 800; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; }
     .badge-std { background-color: #1e293b; color: #94a3b8; font-weight: 600; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; border: 1px solid #334155; }
-    
-    .profile-card {
-        display: flex; align-items: center; gap: 12px; background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #1e293b;
-    }
     
     div.stButton > button {
         width: 100%;
@@ -80,7 +77,6 @@ ALL_PAIRS_DATA = {
 
 VALID_PROMO_CODES = ["FREEVIP", "VEERPRO100", "VIP2026"]
 
-# Helper to check VIP Expiry Status
 if st.session_state['is_vip'] and st.session_state['vip_expiry']:
     if datetime.date.today() > st.session_state['vip_expiry']:
         st.session_state['is_vip'] = False
@@ -92,10 +88,7 @@ if st.session_state['is_vip'] and st.session_state['vip_expiry']:
 with st.sidebar:
     st.title("⚙️ Control Panel")
     
-    # User Profile Customization
     st.markdown("### 👤 User Profile")
-    
-    # Avatar Display & Uploader
     if st.session_state['user_avatar'] is not None:
         st.image(st.session_state['user_avatar'], width=80)
     uploaded_file = st.file_uploader("Upload Profile Picture (DP)", type=["jpg", "png", "jpeg"])
@@ -108,7 +101,6 @@ with st.sidebar:
     u_handle = st.text_input("Username", value=st.session_state['username'])
     st.session_state['username'] = u_handle if u_handle.startswith("@") else f"@{u_handle}"
 
-    # VIP Promo Code System (30 Days Validity)
     st.markdown("---")
     st.markdown("### 🎟️ VIP Promo Code")
     promo = st.text_input("Enter Promo Code", placeholder="e.g. FREEVIP", key="sidebar_promo")
@@ -124,7 +116,6 @@ with st.sidebar:
         days_left = (st.session_state['vip_expiry'] - datetime.date.today()).days
         st.caption(f"⏳ **VIP Status**: Active ({days_left} Days Remaining)")
 
-    # Markets & Pair Selector
     st.markdown("---")
     st.markdown("### 📊 Markets & Pairs")
     selected_cat = st.selectbox("Category", list(ALL_PAIRS_DATA.keys()))
@@ -134,8 +125,6 @@ with st.sidebar:
 # 4. TOP HEADER & REAL-TIME LIVE TICKER
 # ==========================================
 vip_badge_html = f'<span class="badge-vip">👑 VIP ({ (st.session_state["vip_expiry"] - datetime.date.today()).days if st.session_state["vip_expiry"] else 30 }D)</span>' if st.session_state['is_vip'] else '<span class="badge-std">STANDARD</span>'
-
-col_h1, col_h2 = st.columns([2, 1])
 
 st.markdown(f"""
 <div class="header-box">
@@ -147,7 +136,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# 🔴 LIVE UPDATING TICKER FRAGMENT (1 Sec Refresh)
 @st.fragment(run_every=1)
 def live_top_ticker():
     st.session_state['btc_price'] += random.uniform(-2.5, 2.5)
@@ -164,7 +152,7 @@ live_top_ticker()
 st.markdown("---")
 
 # ==========================================
-# 5. DASHBOARD & MAIN NAVIGATION TABS
+# 5. DASHBOARD & TABS
 # ==========================================
 tab_dashboard, tab_chart, tab_signals, tab_accuracy, tab_vip = st.tabs([
     "🎛️ Dashboard", 
@@ -182,7 +170,7 @@ with tab_dashboard:
         st.markdown("##### ⚙️ Signal Configuration")
         st.selectbox("Category", list(ALL_PAIRS_DATA.keys()), key="dash_cat")
         selected_asset = st.selectbox("Asset", ALL_PAIRS_DATA[selected_cat], key="dash_asset")
-        tf = st.selectbox("Timeframe", ["1s", "1m", "5m", "15m", "1H"], index=1)
+        tf = st.selectbox("Timeframe", ["1s", "1m", "5m", "15m", "1H", "4H", "1D", "1W", "1Y"], index=1)
 
     with col2:
         st.markdown("##### 🛡️ Risk Management")
@@ -192,7 +180,6 @@ with tab_dashboard:
 
     st.markdown("---")
     
-    # SIGNAL GENERATION BUTTON
     if st.button("⚡ GENERATE ACCURATE SIGNAL", use_container_width=True):
         now_time = datetime.datetime.now().strftime("%H:%M:%S")
         curr = st.session_state['btc_price'] if "BTC" in selected_asset else (st.session_state['sol_price'] if "SOL" in selected_asset else 3500.0)
@@ -209,7 +196,6 @@ with tab_dashboard:
         st.session_state['active_signals'].insert(0, new_signal)
         st.success(f"Signal Generated Successfully: BUY {selected_asset} @ {curr:.2f}")
 
-    # Stat Indicators
     m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric("Total Signals", len(st.session_state['active_signals']) + 125)
     m2.metric("Win Rate", "87.6%")
@@ -221,22 +207,65 @@ with tab_dashboard:
     sig_df = pd.DataFrame(st.session_state['active_signals'])
     st.dataframe(sig_df, use_container_width=True)
 
-# ---------------- LIVE CHART TAB ----------------
+# ---------------- LIVE CHART TAB (TRADINGVIEW CANDLESTICK LOOK) ----------------
 with tab_chart:
-    st.subheader(f"{selected_pair} Live Streaming Chart")
+    st.subheader(f"{selected_pair} Pro TradingView Chart")
+    
+    # 1s to 1Y Timeframe Selection Bar
+    tf_selected = st.radio(
+        "Select Timeframe:", 
+        ["1s", "1m", "5m", "15m", "1H", "4H", "1D", "1W", "1Y"], 
+        index=1, 
+        horizontal=True
+    )
     
     @st.fragment(run_every=2)
-    def live_chart_render():
-        now = datetime.datetime.now()
-        times = [(now - datetime.timedelta(seconds=i*5)).strftime("%H:%M:%S") for i in range(20)][::-1]
-        base_val = st.session_state['btc_price'] if "BTC" in selected_pair else 150.0
-        prices = base_val + np.cumsum(np.random.normal(0, 0.5, 20))
+    def render_tradingview_candlestick():
+        # Generate Realistic OHLC (Open, High, Low, Close) Data
+        base_p = st.session_state['btc_price'] if "BTC" in selected_pair else (st.session_state['sol_price'] if "SOL" in selected_pair else 3500.0)
         
-        chart_data = pd.DataFrame({"Time": times, "Price": prices}).set_index("Time")
-        st.line_chart(chart_data, height=350)
-        st.info(f"🔴 Live Price Tick: ${prices[-1]:,.2f} | Updates automatically every 2s")
+        N = 30
+        np.random.seed(int(time.time()) % 100)
+        
+        opens = base_p + np.cumsum(np.random.normal(0, base_p * 0.002, N))
+        closes = opens + np.random.normal(0, base_p * 0.002, N)
+        highs = np.maximum(opens, closes) + np.abs(np.random.normal(0, base_p * 0.001, N))
+        lows = np.minimum(opens, closes) - np.abs(np.random.normal(0, base_p * 0.001, N))
+        
+        df = pd.DataFrame({'open': opens, 'high': highs, 'low': lows, 'close': closes})
+        df['index'] = range(len(df))
+        
+        inc = df.close >= df.open
+        dec = df.open > df.close
+        w = 0.5
 
-    live_chart_render()
+        # Bokeh Dark Theme Figure Setup
+        p = figure(
+            height=420, 
+            tools="pan,wheel_zoom,box_zoom,reset", 
+            active_scroll="wheel_zoom",
+            background_fill_color="#121824",
+            border_fill_color="#0b0e14",
+            outline_line_color="#1e293b"
+        )
+        
+        p.grid.grid_line_alpha = 0.15
+        p.grid.grid_line_color = "#94a3b8"
+        p.axis.axis_line_color = "#334155"
+        p.axis.major_label_text_color = "#94a3b8"
+
+        # High/Low Wicks
+        p.segment(df.index, df.high, df.index, df.low, color="#94a3b8")
+
+        # Green Bullish Candles
+        p.vbar(df.index[inc], w, df.open[inc], df.close[inc], fill_color="#10b981", line_color="#10b981")
+        # Red Bearish Candles
+        p.vbar(df.index[dec], w, df.open[dec], df.close[dec], fill_color="#ef4444", line_color="#ef4444")
+
+        st.bokeh_chart(p, use_container_width=True)
+        st.info(f"🔴 **Live Price Tick**: ${closes.iloc[-1]:,.2f} | Timeframe: `{tf_selected}` | Real-Time Updating")
+
+    render_tradingview_candlestick()
 
 # ---------------- SIGNALS TAB ----------------
 with tab_signals:
