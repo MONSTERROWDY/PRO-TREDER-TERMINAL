@@ -17,11 +17,54 @@ st.markdown(
     .stButton>button:hover { background: linear-gradient(135deg, #ff3333 0%, #ff7b29 100%); color: white; }
     div.stMetric { background-color: #161b22; padding: 12px; border-radius: 10px; border: 1px solid #30363d; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     .signal-card { background: linear-gradient(135deg, #161b22 0%, #1f242c 100%); padding: 20px; border-radius: 12px; border-left: 5px solid #238636; border-top: 1px solid #30363d; border-right: 1px solid #30363d; border-bottom: 1px solid #30363d; margin-top: 15px; }
-    .pay-box { background-color: #161b22; padding: 20px; border-radius: 12px; border: 1px solid #30363d; text-align: center; }
     </style>
 """,
     unsafe_allow_html=True,
 )
+
+# Initialize Session States
+if "logged_in" not in st.session_state:
+  st.session_state.logged_in = False
+if "user_identifier" not in st.session_state:
+  st.session_state.user_identifier = ""
+if "user_tier" not in st.session_state:
+  st.session_state.user_tier = "Free User"
+if "signals_used" not in st.session_state:
+  st.session_state.signals_used = 0
+if "last_reset" not in st.session_state:
+  st.session_state.last_reset = datetime.date.today()
+
+# Reset daily signals quota if date changes
+if st.session_state.last_reset != datetime.date.today():
+  st.session_state.signals_used = 0
+  st.session_state.last_reset = datetime.date.today()
+
+# --- SIDEBAR LOGIN & ACCOUNT SECTION ---
+st.sidebar.header("🔐 User Authentication")
+
+if not st.session_state.logged_in:
+  st.sidebar.markdown("Please sign in to access the terminal.")
+  login_input = st.sidebar.text_input(
+      "Enter Gmail or Phone Number:", placeholder="e.g., user@gmail.com"
+  )
+
+  if st.sidebar.button("🚀 Login / Register"):
+    if len(login_input.strip()) > 4:
+      st.session_state.logged_in = True
+      st.session_state.user_identifier = login_input.strip()
+      st.sidebar.success("Logged in successfully!")
+      st.rerun()
+    else:
+      st.sidebar.error("Please enter a valid Gmail or Phone number.")
+  st.stop()  # Stops execution here until the user logs in
+else:
+  st.sidebar.success(f"Connected: {st.session_state.user_identifier}")
+  st.sidebar.markdown(f"Status: **{st.session_state.user_tier}**")
+  if st.sidebar.button("🚪 Logout"):
+    st.session_state.logged_in = False
+    st.session_state.user_identifier = ""
+    st.session_state.user_tier = "Free User"
+    st.rerun()
 
 # Header Section
 st.title("🚀 VEER PRO TRADING TERMINAL")
@@ -30,25 +73,6 @@ st.markdown(
     " Signals**"
 )
 st.markdown("---")
-
-# Initialize session state for user tier and UTR tracking
-if "user_tier" not in st.session_state:
-  st.session_state.user_tier = "Free User"
-
-if "signals_used" not in st.session_state:
-  st.session_state.signals_used = 0
-  st.session_state.last_reset = datetime.date.today()
-
-if st.session_state.last_reset != datetime.date.today():
-  st.session_state.signals_used = 0
-  st.session_state.last_reset = datetime.date.today()
-
-# Sidebar for Access Control Status
-st.sidebar.header("🔐 User Account")
-st.sidebar.markdown(f"Current Status: **{st.session_state.user_tier}**")
-if st.sidebar.button("Reset Session / Logout"):
-  st.session_state.user_tier = "Free User"
-  st.rerun()
 
 # Main Navigation Tabs
 tab1, tab2, tab3, tab4 = st.tabs(
@@ -89,19 +113,23 @@ with tab1:
 
     can_generate = True
     if st.session_state.user_tier == "Free User":
-      remaining_signals = 5 - st.session_state.signals_used
+      remaining_signals = 2 - st.session_state.signals_used
       st.markdown(
-          f"📢 Free Plan Quota: **{remaining_signals}/5** signals remaining"
+          f"📢 Free Plan Quota: **{remaining_signals}/2** signals remaining"
           " today."
       )
       if remaining_signals <= 0:
         can_generate = False
+    else:
+      st.markdown(
+          "👑 VIP Status Active: **Unlimited Signals** available for you."
+      )
 
     if st.button("✨ GENERATE SMART AI SIGNAL"):
       if not can_generate:
         st.error(
-            "⚠️ Daily free limit reached! Go to 'VIP Plan' tab to unlock"
-            " unlimited access."
+            "⚠️ Daily free limit of 2 signals reached! Go to 'VIP Plan' tab to"
+            " upgrade for unlimited access."
         )
       else:
         if st.session_state.user_tier == "Free User":
@@ -210,7 +238,6 @@ with tab4:
         "Click below to pay securely through PhonePe, Google Pay, or Paytm:"
     )
 
-    # UPI Intent link configured with your UPI ID (Hidden from plain text view)
     upi_intent_url = (
         "upi://pay?pa=7479465676-7@ybl&pn=VEER%20PRO%20TRADER&am=999.00&cu=INR"
     )
@@ -218,7 +245,6 @@ with tab4:
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 📷 Option 2: Scan QR Code")
-    # Public standard UPI QR generator API using your hidden UPI ID
     qr_code_url = (
         "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data="
         + upi_intent_url
