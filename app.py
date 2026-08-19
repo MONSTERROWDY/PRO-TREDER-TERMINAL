@@ -259,7 +259,7 @@ if not st.session_state.logged_in:
     show_auth_screen()
     st.stop()
 
-# --- OPTIMIZED SIDEBAR (PROMO CODE INCLUDED HERE) ---
+# --- OPTIMIZED SIDEBAR (CLEAN PROMO CODE FIELD) ---
 with st.sidebar:
     st.markdown("### 👤 User Profile")
     st.markdown(f"👋 **{st.session_state.current_user_name}**")
@@ -272,9 +272,9 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # 🎟️ PROMO CODE SECTION IN SIDEBAR
+    # 🎟️ SECURE PROMO CODE SECTION
     st.markdown("### 🎟️ VIP Access Code")
-    sidebar_promo = st.text_input("Enter Promo Code:", placeholder="e.g. FREEVIP2026", key="sidebar_promo_code")
+    sidebar_promo = st.text_input("Enter Promo Code:", placeholder="Enter Promo Code", key="sidebar_promo_code")
     
     if st.button("Redeem Promo Code", key="apply_sidebar_promo"):
         if sidebar_promo.strip().upper() == "FREEVIP2026":
