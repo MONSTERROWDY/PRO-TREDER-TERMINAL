@@ -11,12 +11,8 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Initialize Cookie Manager for persistent session across refreshes
-@st.cache_resource
-def get_cookie_manager():
-    return stx.CookieManager()
-
-cookie_manager = get_cookie_manager()
+# Initialize Cookie Manager for persistent session across refreshes (WITHOUT @st.cache_resource)
+cookie_manager = stx.CookieManager(key="cookie_manager")
 
 # 2. Custom CSS for Premium Dark Theme
 st.markdown(
@@ -229,7 +225,6 @@ def show_auth_screen():
                         st.session_state.current_user_email = cleaned_reg_email
                         st.session_state.current_user_name = reg_name.strip()
                         
-                        # Save session to Browser Cookies for 30 days
                         cookie_manager.set("user_email", cleaned_reg_email, key="set_reg_email", expires_at=datetime.datetime.now() + datetime.timedelta(days=30))
                         cookie_manager.set("user_name", reg_name.strip(), key="set_reg_name", expires_at=datetime.datetime.now() + datetime.timedelta(days=30))
                         
@@ -254,7 +249,6 @@ def show_auth_screen():
                         st.session_state.current_user_email = cleaned_email
                         st.session_state.current_user_name = user_data[1]
                         
-                        # Save session to Browser Cookies for 30 days
                         cookie_manager.set("user_email", cleaned_email, key="set_log_email", expires_at=datetime.datetime.now() + datetime.timedelta(days=30))
                         cookie_manager.set("user_name", user_data[1], key="set_log_name", expires_at=datetime.datetime.now() + datetime.timedelta(days=30))
                         
