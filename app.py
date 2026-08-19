@@ -134,7 +134,7 @@ def init_db():
     )
     conn.commit()
 
-  # Default Promo Codes Setup as requested
+  # Default Promo Codes Setup
   default_promos = [
       ("फ्री वीआईपी 30", "30 Days"),
       ("VEERVIP30", "30 Days"),
@@ -335,21 +335,13 @@ if not st.session_state.logged_in:
   st.stop()
 
 
-# --- SIDEBAR & HEADER ---
+# --- STREAMLINED SIDEBAR (Clean & Minimal) ---
 with st.sidebar:
-  st.markdown("### 👤 User Profile Panel")
-  avatar_url = (
-      st.session_state.avatar
-      if "avatar" in st.session_state and st.session_state.avatar
-      else "https://i.imgur.com/71916rK.png"
+  st.markdown("### ⚡ Terminal Navigation")
+  st.info(
+      f"👋 **{st.session_state.current_user_name}**\n\n🌟 Tier:"
+      f" **{st.session_state.user_tier}**"
   )
-  st.image(avatar_url, width=80)
-  st.write(
-      f"👋 **{st.session_state.current_user_name}**"
-      f" (@{st.session_state.get('username', 'trader')})"
-  )
-  st.caption(f"📧 {st.session_state.current_user_email}")
-  st.write(f"🌟 Tier: **{st.session_state.user_tier}**")
   st.markdown("---")
   if st.button("🚪 Sign Out", key="logout_btn"):
     st.session_state.logged_in = False
@@ -387,12 +379,12 @@ with tc3:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- MAIN TABS ---
+# --- MAIN TABS (Combined User Profile & Promo into one complete section) ---
 tab_dash, tab_chart, tab_signals, tab_profile, tab_vip = st.tabs([
     "⚙️ Dashboard",
     "📊 Global Chart",
     "🎯 Signals",
-    "👤 My Profile & Promo",
+    "👤 User Profile & VIP",
     "👑 VIP Plans",
 ])
 
@@ -525,17 +517,39 @@ with tab_signals:
       )
 
 with tab_profile:
-  st.markdown("### 👤 User Profile & VIP Promo Code Redemption")
+  st.markdown("### 👤 User Profile & VIP Access Control")
   st.write(
-      "Manage your personal details, profile picture, username, and redeem"
-      " your VIP promo codes here."
+      "Manage your personal profile settings, view your account tier, and"
+      " redeem or generate VIP promo codes all in one place."
   )
 
-  p_col1, p_col2 = st.columns(2)
+  # Profile Preview Card on top of the tab
+  avatar_url = (
+      st.session_state.avatar
+      if "avatar" in st.session_state and st.session_state.avatar
+      else "https://i.imgur.com/71916rK.png"
+  )
+  col_av, col_info = st.columns([1, 4])
+  with col_av:
+    st.image(avatar_url, width=100)
+  with col_info:
+    st.markdown(
+        f"### ⚡ {st.session_state.current_user_name} "
+        f"(@{st.session_state.get('username', 'trader')})"
+    )
+    st.write(f"📧 **Email/Mobile:** {st.session_state.current_user_email}")
+    st.write(f"🌟 **Current Membership Tier:** `{st.session_state.user_tier}`")
+
+  st.markdown("---")
+
+  p_col1, p_col2 = st.columns(2, gap="large")
+
   with p_col1:
     with st.form("profile_update_form"):
-      st.markdown("#### Edit Profile Details")
-      new_name = st.text_input("Full Name", value=st.session_state.current_user_name)
+      st.markdown("#### ✏️ Edit Profile Details")
+      new_name = st.text_input(
+          "Full Name", value=st.session_state.current_user_name
+      )
       new_uname = st.text_input(
           "Username",
           value=st.session_state.get(
@@ -549,7 +563,7 @@ with tab_profile:
           ),
       )
       st.markdown("<br>", unsafe_allow_html=True)
-      if st.form_submit_button("Save Profile"):
+      if st.form_submit_button("Save Profile Settings"):
         st.session_state.current_user_name = new_name
         st.session_state.username = new_uname
         st.session_state.avatar = new_avatar
@@ -565,14 +579,13 @@ with tab_profile:
   with p_col2:
     st.markdown("#### 🎟️ Redeem VIP Promo Code")
     st.info(
-        "💡 **उपलब्ध प्रोमो कोड्स:**\n"
+        "💡 **विशेष प्रोमो कोड्स:**\n"
         "- 30 दिन के लिए: `फ्री वीआईपी 30` या `VEERVIP30`\n"
         "- 1 साल के लिए: `वीर वीआईपी वन ईयर` या `VEERVIP1Y`\n"
-        "- 3 दिन के लिए: `वीआईपी फ्री थ्री डे` या `VEER3DAYS`"
+        "- 3 दिन के लिए: `वीआईपी फ्री थ्री डे` या `VEER3DAYS`\n"
+        "- लाइफटाइम के लिए: `VEERLIFETIME`"
     )
-    promo_input = st.text_input(
-        "Enter Promo Code Here", key="promo_box"
-    )
+    promo_input = st.text_input("Enter VIP Promo Code Here", key="promo_box")
     if st.button("Redeem Promo Code"):
       conn = get_db_connection()
       cursor = conn.cursor()
@@ -591,13 +604,16 @@ with tab_profile:
         conn.commit()
         conn.close()
         st.success(
-            f"🎉 Promo Code Applied Successfully! VIP Access Granted for"
-            f" {duration}."
+            f"🎉 प्रोमो कोड सफलतापूर्वक लागू हो गया है! VIP Access ({duration})"
+            " मिल गया है।"
         )
         st.rerun()
       else:
         conn.close()
-        st.error("❌ Invalid or Expired Promo Code! कृपया सही कोड दर्ज करें।")
+        st.error(
+            "❌ अमान्य (Invalid) या एक्सपायर्ड प्रोमो कोड! कृपया सही कोड दर्ज"
+            " करें।"
+        )
 
     st.markdown("---")
     st.markdown("#### 🛠️ Admin / Creator Code Generator")
@@ -617,13 +633,12 @@ with tab_profile:
           )
           conn.commit()
           conn.close()
-          st.success(f"✅ New Promo Code '{gen_code}' Generated Successfully!")
+          st.success(f"✅ नया प्रोमो कोड '{gen_code}' सफलतापूर्वक बना दिया गया है!")
         except:
-          st.error("This promo code already exists!")
+          st.error("यह प्रोमो कोड पहले से मौजूद है!")
     else:
       st.info(
-          "🔒 Creator Code Generation tools are restricted to Admin accounts"
-          " only."
+          "🔒 Creator Code Generation टूल केवल Admin अकाउंट के लिए उपलब्ध है।"
       )
 
 with tab_vip:
