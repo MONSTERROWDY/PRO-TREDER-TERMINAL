@@ -1,6 +1,7 @@
 import datetime
 import sqlite3
 import pandas as pd
+import plotly.graph_objects as go
 import requests
 import streamlit as st
 
@@ -243,11 +244,7 @@ def fetch_global_prices():
 
 def fetch_live_chart_data(symbol, interval="1h"):
   try:
-    limit_val = (
-        40
-        if interval in ["1m", "5m"]
-        else (80 if interval in ["15m", "1h"] else 120)
-    )
+    limit_val = 80
     if symbol in ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT"]:
       url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit_val}"
       res = requests.get(url, timeout=4).json()
@@ -269,7 +266,7 @@ def fetch_live_chart_data(symbol, interval="1h"):
         df["time"] = pd.to_datetime(df["time"], unit="ms")
         for col in ["open", "high", "low", "close", "volume"]:
           df[col] = df[col].astype(float)
-        return df[["time", "close", "open", "high", "low", "volume"]].dropna()
+        return df[["time", "open", "high", "low", "close", "volume"]].dropna()
   except Exception:
     pass
 
@@ -289,10 +286,10 @@ def fetch_live_chart_data(symbol, interval="1h"):
   price_paths = base + np.cumsum(np.random.randn(80) * (base * 0.0015))
   df = pd.DataFrame({
       "time": dates,
+      "open": price_paths - 15,
+      "high": price_paths + 25,
+      "low": price_paths - 25,
       "close": price_paths,
-      "open": price_paths - 10,
-      "high": price_paths + 20,
-      "low": price_paths - 20,
       "volume": np.random.randint(1000, 5000, size=80),
   })
   return df
@@ -473,7 +470,7 @@ st.markdown(
         </div>
         <div>
             <span style="background: #181a20; border: 1px solid #23272e; padding: 5px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; color: #0ecb81;">
-                ● INSTITUTIONAL SMC & PAPER BROKER ACTIVE
+                ● INSTITUTIONAL SMC & TRADINGVIEW CANDLESTICKS ACTIVE
             </span>
         </div>
     </div>
@@ -651,8 +648,8 @@ with main_tab2:
   st.markdown("### 📊 TradingView Professional Chart Analyst & VIP SMC Suite")
   st.markdown(
       "<p style='color:#848e9c; font-size:13px;'>Analyze institutional market"
-      " structure, toggle smart buy/sell signals, and execute paper trades"
-      " directly from the chart window.</p>",
+      " structure with live professional candlestick patterns, toggle smart"
+      " buy/sell signals, and execute paper trades directly.</p>",
       unsafe_allow_html=True,
   )
 
@@ -670,8 +667,8 @@ with main_tab2:
     chart_type = st.selectbox(
         "🕯️ Chart View Style",
         [
+            "TradingView Candlesticks",
             "Line Price Chart",
-            "Candles + Volume Profile",
             "Heikin Ashi Style",
         ],
         key="tv_chart_style",
@@ -745,7 +742,6 @@ with main_tab2:
               "Exponential Moving Average (EMA 20)",
               "Bollinger Bands (BB)",
               "Relative Strength Index (RSI)",
-              "VWAP (Volume Weighted Average)",
           ],
           key="tv_selected_indicator",
       )
@@ -760,7 +756,6 @@ with main_tab2:
               "Trendline / Channel",
               "Fibonacci Retracement Levels",
               "Long Position Risk-Reward Box",
-              "Short Position Risk-Reward Box",
           ],
           key="tv_drawing_tool",
       )
@@ -772,42 +767,69 @@ with main_tab2:
 
     df_chart = fetch_live_chart_data(chart_symbol, chart_timeframe)
     if not df_chart.empty:
-      chart_df_plot = df_chart.copy()
+      # --- PLOTLY PROFESSIONAL CANDLESTICK & CHART RENDERER ---
+      fig = go.Figure()
 
-      if "Simple Moving Average" in active_indicator:
-        chart_df_plot["SMA_20"] = (
-            chart_df_plot["close"].rolling(window=10).mean()
+      if "Line" in chart_type:
+        fig.add_trace(
+            go.Scatter(
+                x=df_chart["time"],
+                y=df_chart["close"],
+                mode="lines",
+                name="Price",
+                line=dict(color="#fcd535", width=2),
+            )
         )
-        plot_df = chart_df_plot.set_index("time")[["close", "SMA_20"]]
-        st.line_chart(plot_df, height=310, color=["#fcd535", "#2962ff"])
-      elif "Exponential Moving Average" in active_indicator:
-        chart_df_plot["EMA_20"] = (
-            chart_df_plot["close"].ewm(span=10, adjust=False).mean()
-        )
-        plot_df = chart_df_plot.set_index("time")[["close", "EMA_20"]]
-        st.line_chart(plot_df, height=310, color=["#fcd535", "#ff6d00"])
-      elif "Bollinger" in active_indicator:
-        sma = chart_df_plot["close"].rolling(window=10).mean()
-        std = chart_df_plot["close"].rolling(window=10).std()
-        chart_df_plot["BB_Upper"] = sma + (std * 2)
-        chart_df_plot["BB_Lower"] = sma - (std * 2)
-        plot_df = chart_df_plot.set_index("time")[
-            ["close", "BB_Upper", "BB_Lower"]
-        ]
-        st.line_chart(
-            plot_df, height=310, color=["#fcd535", "#f6465d", "#0ecb81"]
-        )
-      elif "RSI" in active_indicator:
-        delta = chart_df_plot["close"].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-        rs = gain / loss
-        chart_df_plot["RSI"] = 100 - (100 / (1 + rs))
-        plot_df = chart_df_plot.set_index("time")[["RSI"]]
-        st.line_chart(plot_df, height=310, color=["#ab47bc"])
       else:
-        plot_df = chart_df_plot.set_index("time")[["close"]]
-        st.line_chart(plot_df, height=310, color=["#fcd535"])
+        fig.add_trace(
+            go.Candlestick(
+                x=df_chart["time"],
+                open=df_chart["open"],
+                high=df_chart["high"],
+                low=df_chart["low"],
+                close=df_chart["close"],
+                name="Candlesticks",
+                increasing_line_color="#0ecb81",
+                decreasing_line_color="#f6465d",
+            )
+        )
+
+      # Add Indicator overlay if selected
+      if "Simple Moving Average" in active_indicator:
+        sma_vals = df_chart["close"].rolling(window=10).mean()
+        fig.add_trace(
+            go.Scatter(
+                x=df_chart["time"],
+                y=sma_vals,
+                mode="lines",
+                name="SMA 20",
+                line=dict(color="#2962ff", width=1.5),
+            )
+        )
+      elif "Exponential Moving Average" in active_indicator:
+        ema_vals = df_chart["close"].ewm(span=10, adjust=False).mean()
+        fig.add_trace(
+            go.Scatter(
+                x=df_chart["time"],
+                y=ema_vals,
+                mode="lines",
+                name="EMA 20",
+                line=dict(color="#ff6d00", width=1.5),
+            )
+        )
+
+      fig.update_layout(
+          template="plotly_dark",
+          paper_bgcolor="#0b0e11",
+          plot_bgcolor="#12161c",
+          margin=dict(l=10, r=10, t=10, b=10),
+          height=380,
+          xaxis_rangeslider_visible=False,
+          legend=dict(
+              orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
+          ),
+      )
+      st.plotly_chart(fig, use_container_width=True)
 
       # --- VIP SMC MARKET STRUCTURE & SIGNAL BADGES RENDERED BELOW CHART ---
       if is_vip_user and (
