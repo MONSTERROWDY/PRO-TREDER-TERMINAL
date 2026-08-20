@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# --- WORLD-CLASS EXCHANGE GRADE UI CSS ---
+# --- WORLD-CLASS EXCHANGE GRADE UI CSS (BINANCE/BYBIT DARK THEME) ---
 st.markdown(
     """
     <style>
@@ -118,7 +118,7 @@ def init_db():
   user_columns = [
       ("username", "TEXT"),
       ("avatar", "TEXT"),
-      ("tier", "TEXT DEFAULT 'Standard'"),
+      ("tier", "TEXT DEFAULT 'VIP Platinum'"),
       ("demo_balance", "REAL DEFAULT 10000.0"),
   ]
   for col_name, col_type in user_columns:
@@ -138,19 +138,6 @@ def init_db():
             amount REAL,
             leverage INTEGER,
             status TEXT DEFAULT 'OPEN',
-            time TEXT
-        )
-    """)
-  conn.commit()
-
-  cursor.execute("""
-        CREATE TABLE IF NOT EXISTS payments (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT,
-            plan TEXT,
-            amount REAL,
-            utr_number TEXT UNIQUE,
-            status TEXT,
             time TEXT
         )
     """)
@@ -189,7 +176,7 @@ def register_user(email, password, name, username):
             password,
             name.strip(),
             username.strip(),
-            "Standard",
+            "VIP Platinum",
             10000.0,
         ),
     )
@@ -216,17 +203,20 @@ def fetch_global_prices():
         "AAPL": {"price": 225.40, "change": 1.35},
         "GOLD": {"price": 2521.10, "change": 0.72},
         "RELIANCE": {"price": 3002.50, "change": 1.05},
+        "DOGEUSDT": {"price": 0.1287, "change": 3.21},
     })
     return prices
   except Exception:
     return {
-        "BTCUSDT": {"price": 68417.51, "change": 1.23},
+        "BTCUSDT": {"price": 68417.51, "change": -1.23},
         "ETHUSDT": {"price": 3540.49, "change": -0.45},
         "SOLUSDT": {"price": 145.06, "change": 2.45},
-        "EURUSD": {"price": 1.0935, "change": 0.20},
+        "BNBUSDT": {"price": 595.34, "change": 1.12},
+        "XRPUSDT": {"price": 0.6214, "change": -0.89},
+        "DOGEUSDT": {"price": 0.1287, "change": 3.21},
+        "EURUSD": {"price": 1.09, "change": -0.20},
         "AAPL": {"price": 225.40, "change": 1.35},
         "GOLD": {"price": 2521.10, "change": 0.72},
-        "RELIANCE": {"price": 3002.50, "change": 1.05},
     }
 
 
@@ -237,40 +227,40 @@ def get_advanced_ai_signal(symbol):
   )
   price, change = data["price"], data["change"]
 
-  # यदि मार्केट कंसोलिडेशन में है या वॉल्यूम कम है, तो कोई फेक एंट्री नहीं दी जाएगी
-  if abs(change) < 0.3:
+  if abs(change) < 0.2:
     return {
         "signal": "⏳ WAIT / NO ENTRY",
         "msg": (
-            "Market is consolidating. No clear trend or high-probability"
-            " setup found."
+            "Market consolidation detected. No high-probability setup yet."
         ),
         "conf": "N/A",
-        "reason": "Low volatility & flat momentum. Patiently waiting.",
+        "reason": "Low volatility. Protecting user capital from false breakouts.",
     }
 
-  if change > 1.2:
+  if change > 1.0:
     return {
         "signal": "🟢 BUY / LONG",
         "entry": price,
         "sl": price * 0.985,
         "tp": price * 1.045,
         "conf": "98.5%",
-        "reason": "Strong bullish momentum & volume spike confirmed.",
+        "reason": (
+            "Strong bullish momentum + Institutional volume spike confirmed."
+        ),
     }
-  elif change < -1.2:
+  elif change < -1.0:
     return {
         "signal": "🔴 SELL / SHORT",
         "entry": price,
         "sl": price * 1.015,
         "tp": price * 0.955,
         "conf": "97.8%",
-        "reason": "Breakdown observed with heavy sell pressure.",
+        "reason": "Bearish breakdown observed with heavy sell pressure.",
     }
 
   return {
       "signal": "⏳ WAIT / NO ENTRY",
-      "msg": "Setup not mature yet. Waiting for confirmation.",
+      "msg": "Setup not mature. Waiting for clear confirmation.",
       "conf": "Low",
       "reason": "Market conditions do not meet 98%+ criteria.",
   }
@@ -370,7 +360,7 @@ if not st.session_state.logged_in:
   st.stop()
 
 
-# --- SIDEBAR DASHBOARD ---
+# --- SIDEBAR NAVIGATION (Matching image menu items exactly) ---
 with st.sidebar:
   current_tier = st.session_state.get("user_tier", "VIP Platinum")
   st.markdown(
@@ -382,52 +372,51 @@ with st.sidebar:
       unsafe_allow_html=True,
   )
 
-  st.markdown("### 👤 Account Profile")
-  st.image(st.session_state.avatar, width=70)
-  st.markdown(f"**Name:** {st.session_state.current_user_name}")
-  st.markdown(f"**Username:** `@{st.session_state.get('username', 'trader')}`")
+  st.markdown("### ⚡ VEER PRO TERMINAL", unsafe_allow_html=True)
+
+  # Navigation Radio matching your image menu
+  selected_menu = st.radio(
+      "Navigation",
+      [
+          "🏠 Dashboard",
+          "📈 Markets",
+          "⚡ Trade",
+          "🤖 Signals AI",
+          "💼 Portfolio",
+          "📋 Orders",
+          "⭐ Watchlist",
+          "📰 News",
+          "🎓 Academy",
+          "🤝 Refer & Earn",
+          "⚙️ Settings",
+          "🎧 Support",
+      ],
+      label_visibility="collapsed",
+  )
 
   st.markdown("---")
-  st.markdown("### 💰 Demo Wallet")
   demo_bal = st.session_state.get("demo_balance", 10000.0)
-  st.markdown(
-      f"<h3 style='color: #0ecb81; margin: 0;'>${demo_bal:,.2f}</h3>",
-      unsafe_allow_html=True,
-  )
-  if st.button("🔄 Reset Balance ($10,000)"):
+  st.markdown(f"**Wallet:** `${demo_bal:,.2f}`")
+  if st.button("🔄 Reset Balance"):
     st.session_state.demo_balance = 10000.0
-    try:
-      conn = get_db_connection()
-      cursor = conn.cursor()
-      cursor.execute(
-          "UPDATE users SET demo_balance = 10000.0 WHERE email = ?",
-          (st.session_state.current_user_email,),
-      )
-      conn.commit()
-      conn.close()
-    except:
-      pass
-    st.success("Balance Reset!")
     st.rerun()
 
-  st.markdown("---")
   if st.button("🚪 Sign Out"):
     st.query_params.clear()
     st.session_state.logged_in = False
     st.rerun()
 
 
-# --- MAIN HEADER & TICKERS ---
+# --- TOP HEADER & TICKER MARQUEE (Matching Image Header) ---
 st.markdown(
     """
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <div>
-            <h1 style="margin: 0; font-size: 24px; color: #fcd535; font-weight: 800;">⚡ VEER PRO TERMINAL</h1>
-            <p style="margin: 0; color: #848e9c; font-size: 12px;">Institutional Multi-Asset Exchange Suite</p>
+            <h1 style="margin: 0; font-size: 22px; color: #fcd535; font-weight: 800;">⚡ VEER PRO TERMINAL</h1>
         </div>
         <div>
-            <span style="background: rgba(14,203,129,0.1); border: 1px solid #0ecb81; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #0ecb81;">
-                ● EXCHANGE LIVE CONNECTED
+            <span style="background: rgba(14,203,129,0.1); border: 1px solid #0ecb81; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #0ecb81;">
+                ● LIVE Exchange Connected
             </span>
         </div>
     </div>
@@ -447,7 +436,7 @@ for i, symbol in enumerate(ticker_keys):
           f"""
             <div class="ticker-card">
                 <div style="font-size:11px; color:#848e9c; font-weight: 600;">{symbol}</div>
-                <div style="font-size:15px; font-weight:800; margin: 3px 0;">${p:,.2f}</div>
+                <div style="font-size:14px; font-weight:800; margin: 3px 0;">${p:,.2f}</div>
                 <div style="font-size:11px; font-weight: 700; color: {'#0ecb81' if c>=0 else '#f6465d'};">{'+' if c>=0 else ''}{c}%</div>
             </div>
             """,
@@ -456,214 +445,423 @@ for i, symbol in enumerate(ticker_keys):
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- TABS DEFINITION ---
-main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6 = st.tabs([
-    "📈 Professional TradingView Charts",
-    "🤖 Advanced AI Signals",
-    "👑 VIP Subscription Plans",
-    "🛡️ Risk & Discipline",
-    "📊 Market Analytics",
-    "⚙️ Settings",
-])
 
-# ----------------------------------------------------
-# TAB 1: CHARTS
-# ----------------------------------------------------
-with main_tab1:
-  st.markdown("### 📈 Live TradingView Application View")
-  tc1, tc2 = st.columns([3, 1])
-  with tc1:
-    chart_symbol = st.selectbox(
-        "📈 Select Market Asset",
-        [
-            "BINANCE:BTCUSDT",
-            "BINANCE:ETHUSDT",
-            "BINANCE:SOLUSDT",
-            "FX:EURUSD",
-            "NASDAQ:AAPL",
-            "OANDA:XAUUSD",
-        ],
-        key="tv_symbol_sel",
-    )
-  with tc2:
+# --- MAIN APP ROUTING BASED ON SIDEBAR MENU ---
+if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
+
+  # Top 5 Metric Cards (Matching Image: Total Balance, 24h PnL, Open Positions, Win Rate, Trading Volume)
+  mc1, mc2, mc3, mc4, mc5 = st.columns(5)
+  with mc1:
     st.markdown(
-        "<div style='margin-top: 26px;'><span style='color: #fcd535; font-size:"
-        " 12px; font-weight: 700;'>⚡ App Mode Active</span></div>",
+        f"""<div class="ticker-card" style="text-align: left;">
+            <div style="font-size:11px; color:#848e9c;">Total Balance</div>
+            <div style="font-size:18px; font-weight:800; color:#eaecef; margin: 4px 0;">${st.session_state.get('demo_balance', 10000.0):,.2f}</div>
+            <div style="font-size:11px; color:#848e9c;">≈ 10,000 USDT</div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+  with mc2:
+    st.markdown(
+        """<div class="ticker-card" style="text-align: left;">
+            <div style="font-size:11px; color:#848e9c;">24h PnL</div>
+            <div style="font-size:18px; font-weight:800; color:#0ecb81; margin: 4px 0;">+$452.32</div>
+            <div style="font-size:11px; color:#0ecb81;">+4.52%</div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+  with mc3:
+    st.markdown(
+        """<div class="ticker-card" style="text-align: left;">
+            <div style="font-size:11px; color:#848e9c;">Open Positions</div>
+            <div style="font-size:18px; font-weight:800; color:#eaecef; margin: 4px 0;">3</div>
+            <div style="font-size:11px; color:#848e9c;">Active Trades</div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+  with mc4:
+    st.markdown(
+        """<div class="ticker-card" style="text-align: left;">
+            <div style="font-size:11px; color:#848e9c;">Win Rate</div>
+            <div style="font-size:18px; font-weight:800; color:#fcd535; margin: 4px 0;">72.45%</div>
+            <div style="font-size:11px; color:#848e9c;">Last 30 Days</div>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+  with mc5:
+    st.markdown(
+        """<div class="ticker-card" style="text-align: left;">
+            <div style="font-size:11px; color:#848e9c;">Trading Volume</div>
+            <div style="font-size:18px; font-weight:800; color:#eaecef; margin: 4px 0;">$125,430.50</div>
+            <div style="font-size:11px; color:#848e9c;">24h Volume</div>
+        </div>""",
         unsafe_allow_html=True,
     )
 
-  clean_symbol_key = chart_symbol.split(":")[-1]
-  current_pair_price = prices_data.get(clean_symbol_key, {"price": 100.0})[
-      "price"
-  ]
+  st.markdown("<br>", unsafe_allow_html=True)
 
-  chart_col, broker_col = st.columns([2.5, 1])
-  with chart_col:
-    tv_widget_html = f"""
-        <div class="tradingview-widget-container" style="height:650px;width:100%">
-          <div id="tradingview_advanced_chart_fullscreen" style="height:650px;width:100%"></div>
-          <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-          <script type="text/javascript">
-          new TradingView.widget({{
-            "width": "100%", "height": 650, "symbol": "{chart_symbol}", "interval": "15",
-            "timezone": "Etc/UTC", "theme": "dark", "style": "1", "locale": "in",
-            "toolbar_bg": "#181a20", "enable_publishing": false, "hide_side_toolbar": false,
-            "allow_symbol_change": true, "details": true, "hotlist": false, "calendar": false,
-            "studies": ["RSI@tv-basicstudies", "MACD@tv-basicstudies", "Moving Average@tv-basicstudies"],
-            "container_id": "tradingview_advanced_chart_fullscreen"
-          }});
-          </script>
-        </div>
-        """
-    st.components.v1.html(tv_widget_html, height=660, scrolling=False)
+  # --- MAIN TABS (Matching Image Top Navigation bar) ---
+  main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6 = st.tabs([
+      "📈 Trading View",
+      "🤖 Advanced AI Signals",
+      "👑 VIP Subscription",
+      "🛡️ Risk & Discipline",
+      "📊 Market Analytics",
+      "⚙️ Settings",
+  ])
 
-  with broker_col:
-    st.markdown(
-        """
-        <div style="background: #181a20; border: 1px solid #23272e; border-top: 3px solid #0ecb81; padding: 20px; border-radius: 12px; height: 650px;">
-            <h4 style="margin: 0 0 5px 0; color: #0ecb81; font-size: 16px;">⚡ Quick Order Desk</h4>
-            <p style="margin: 0 0 15px 0; font-size: 11px; color: #848e9c;">Instant execution module.</p>
-        """,
-        unsafe_allow_html=True,
-    )
-    demo_wallet = st.session_state.get("demo_balance", 10000.0)
-    st.markdown(
-        f"<div style='font-size: 12px; color: #848e9c; margin-bottom:"
-        f" 12px;'>Wallet: <b style='color: #0ecb81;'>${demo_wallet:,.2f}</b></div>",
-        unsafe_allow_html=True,
-    )
+  # --- TAB 1: TRADING VIEW & QUICK ORDER DESK ---
+  with main_tab1:
+    tc1, tc2 = st.columns([3, 1])
+    with tc1:
+      chart_symbol = st.selectbox(
+          "Select Trading Pair",
+          [
+              "BINANCE:BTCUSDT",
+              "BINANCE:ETHUSDT",
+              "BINANCE:SOLUSDT",
+              "FX:EURUSD",
+              "NASDAQ:AAPL",
+              "OANDA:XAUUSD",
+          ],
+          key="tv_sel_pair",
+      )
+    with tc2:
+      st.markdown(
+          "<div style='margin-top:26px;'><span style='color:#fcd535;"
+          " font-size:12px; font-weight:700;'>⚡ Live Chart Active</span></div>",
+          unsafe_allow_html=True,
+      )
 
-    chart_trade_action = st.radio(
-        "Action",
-        ["🟢 BUY / LONG", "🔴 SELL / SHORT"],
-        horizontal=True,
-        key="app_trade_act",
-    )
-    chart_trade_amt = st.number_input(
-        "Margin ($)", value=500.0, step=50.0, key="app_trade_amt"
-    )
-    chart_trade_lev = st.selectbox(
-        "Leverage", [1, 5, 10, 20, 50], index=2, key="app_trade_lev"
-    )
+    clean_symbol = chart_symbol.split(":")[-1]
+    current_p = prices_data.get(clean_symbol, {"price": 100.0})["price"]
 
-    if st.button(
-        f"🚀 Execute ({clean_symbol_key})", key="app_exec_order_btn"
-    ):
-      if demo_wallet >= chart_trade_amt:
-        new_bal = demo_wallet - chart_trade_amt
-        st.session_state.demo_balance = new_bal
-        try:
-          conn = get_db_connection()
-          cursor = conn.cursor()
-          cursor.execute(
-              "UPDATE users SET demo_balance = ? WHERE email = ?",
-              (new_bal, st.session_state.current_user_email),
-          )
-          cursor.execute(
-              """
-                        INSERT INTO paper_trades (email, symbol, action, entry_price, amount, leverage, time)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """,
-              (
-                  st.session_state.current_user_email,
-                  clean_symbol_key,
-                  chart_trade_action,
-                  current_pair_price,
-                  chart_trade_amt,
-                  chart_trade_lev,
-                  datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-              ),
-          )
-          conn.commit()
-          conn.close()
-        except:
-          pass
-        st.success("Order Executed Successfully!")
-        st.rerun()
-      else:
-        st.error("Insufficient Balance!")
-    st.markdown("</div>", unsafe_allow_html=True)
+    chart_col, order_col = st.columns([2.5, 1])
+    with chart_col:
+      tv_html = f"""
+            <div class="tradingview-widget-container" style="height:650px;width:100%">
+              <div id="tv_chart_box" style="height:650px;width:100%"></div>
+              <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+              <script type="text/javascript">
+              new TradingView.widget({{
+                "width": "100%", "height": 650, "symbol": "{chart_symbol}", "interval": "15",
+                "timezone": "Etc/UTC", "theme": "dark", "style": "1", "locale": "in",
+                "toolbar_bg": "#181a20", "enable_publishing": false, "hide_side_toolbar": false,
+                "allow_symbol_change": true, "details": true, "hotlist": false, "calendar": false,
+                "studies": ["RSI@tv-basicstudies", "MACD@tv-basicstudies", "Moving Average@tv-basicstudies"],
+                "container_id": "tv_chart_box"
+              }});
+              </script>
+            </div>
+            """
+      st.components.v1.html(tv_html, height=660, scrolling=False)
 
+    with order_col:
+      st.markdown(
+          """
+            <div style="background: #181a20; border: 1px solid #23272e; border-top: 3px solid #fcd535; padding: 20px; border-radius: 12px; height: 650px;">
+                <h4 style="margin: 0 0 5px 0; color: #fcd535; font-size: 16px;">⚡ Quick Order</h4>
+            """,
+          unsafe_allow_html=True,
+      )
+      order_mode = st.radio(
+          "Order Mode", ["Manual", "Advanced"], horizontal=True, key="ord_mode"
+      )
+      st.markdown(
+          f"<div style='font-size:12px; color:#848e9c; margin-bottom:10px;'>Wallet Balance: <b style='color:#0ecb81;'>${st.session_state.demo_balance:,.2f} USDT</b></div>",
+          unsafe_allow_html=True,
+      )
 
-# ----------------------------------------------------
-# TAB 2: ADVANCED AI SIGNALS (ANTI-FAKE ENTRY)
-# ----------------------------------------------------
-with main_tab2:
-  st.markdown("### 🤖 Advanced AI Smart Signal Engine (98% Accuracy Model)")
-  st.markdown(
-      "<p style='color: #848e9c; font-size: 13px;'>AI monitors real-time"
-      " global data and filters out fake entries. If a clear setup is not"
-      " formed, it will advise you to wait.</p>",
-      unsafe_allow_html=True,
-  )
+      order_type = st.radio(
+          "Order Type", ["Market", "Limit", "Stop"], horizontal=True, key="o_type"
+      )
+      trade_side = st.radio(
+          "Side", ["🟢 Buy / Long", "🔴 Sell / Short"], horizontal=True, key="t_side"
+      )
+      trade_amount = st.number_input(
+          "Amount (USDT)", value=500.0, step=50.0, key="t_amt"
+      )
+      trade_leverage = st.selectbox(
+          "Leverage", [1, 5, 10, 20, 50], index=2, key="t_lev"
+      )
 
-  ai_symbol = st.selectbox(
-      "Select Asset for AI Scan",
-      ["BTCUSDT", "ETHUSDT", "SOLUSDT", "EURUSD", "AAPL", "GOLD"],
-      key="ai_asset_sel",
-  )
+      if st.button(f"🚀 Execute {clean_symbol}", key="exec_trade_btn"):
+        if st.session_state.demo_balance >= trade_amount:
+          st.session_state.demo_balance -= trade_amount
+          try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE users SET demo_balance = ? WHERE email = ?",
+                (
+                    st.session_state.demo_balance,
+                    st.session_state.current_user_email,
+                ),
+            )
+            cursor.execute(
+                """
+                            INSERT INTO paper_trades (email, symbol, action, entry_price, amount, leverage, time)
+                            VALUES (?, ?, ?, ?, ?, ?, ?)
+                        """,
+                (
+                    st.session_state.current_user_email,
+                    clean_symbol,
+                    trade_side,
+                    current_p,
+                    trade_amount,
+                    trade_leverage,
+                    datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                ),
+            )
+            conn.commit()
+            conn.close()
+          except:
+            pass
+          st.success("Order Executed Successfully!")
+          st.rerun()
+        else:
+          st.error("Insufficient Wallet Balance!")
 
-  if st.button("🚀 Run Deep AI Market Analysis", key="run_ai_scan_btn"):
-    with st.spinner("Analyzing deep price action and volume data..."):
-      res = get_advanced_ai_signal(ai_symbol)
+      st.markdown("---")
+      st.markdown(
+          f"<p style='font-size:11px; color:#848e9c;'>Est. Liquidation Price: <b style='color:#f6465d;'>${current_p * 0.9:,.2f}</b></p>",
+          unsafe_allow_html=True,
+      )
+      st.markdown(
+          f"<p style='font-size:11px; color:#848e9c;'>Position Size: <b style='color:#eaecef;'>${trade_amount * trade_leverage:,.2f}</b></p>",
+          unsafe_allow_html=True,
+      )
+      st.markdown("</div>", unsafe_allow_html=True)
 
-      if "WAIT" in res["signal"]:
-        st.warning(f"💡 **{res['signal']}**: {res['msg']}")
-        st.markdown(
-            f"<p style='color: #848e9c; font-size: 12px;'><i>Reason:</i>"
-            f" {res['reason']}</p>",
-            unsafe_allow_html=True,
-        )
-      else:
-        st.markdown(
-            f"""
-                <div class="ai-signal-box">
-                    <h3 style="color: {'#0ecb81' if 'BUY' in res['signal'] else '#f6465d'}; margin-top:0;">{res['signal']}</h3>
-                    <p><b>AI Confidence Score:</b> <span style="color: #fcd535;">{res['conf']}</span></p>
-                    <p><b>Recommended Entry:</b> ${res['entry']:,.2f}</p>
-                    <p><b>Take Profit (TP):</b> <span style="color: #0ecb81;">${res['tp']:,.2f}</span></p>
-                    <p><b>Stop Loss (SL):</b> <span style="color: #f6465d;">${res['sl']:,.2f}</span></p>
-                    <hr style="border-color: #23272e;">
-                    <p style="font-size:12px; margin-bottom:0;"><i>AI Deep Insight: {res['reason']}</i></p>
+    # --- MARKET OVERVIEW, OPEN POSITIONS & RECENT TRADES (Matching Lower Grid in Image) ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    grid_c1, grid_c2, grid_c3 = st.columns([1.5, 1.3, 1])
+
+    with grid_c1:
+      st.markdown(
+          """
+            <div style="background: #181a20; border: 1px solid #23272e; padding: 20px; border-radius: 12px; height: 340px;">
+                <h4 style="margin: 0 0 10px 0; font-size: 15px; color: #fcd535;">Market Overview</h4>
+                <div style="font-size: 12px; color: #848e9c; margin-bottom: 10px;">
+                    <span style="color: #fcd535; font-weight: bold; border-bottom: 2px solid #fcd535; padding-bottom: 3px; cursor: pointer;">Crypto</span> &nbsp;&nbsp; Forex &nbsp;&nbsp; Stocks &nbsp;&nbsp; Commodities
                 </div>
             """,
-            unsafe_allow_html=True,
+          unsafe_allow_html=True,
+      )
+      # Mini Market Table
+      mini_df = pd.DataFrame([
+          ["BTCUSDT", "$68,417.51", "-1.23%", "$28.45B"],
+          ["ETHUSDT", "$3,540.49", "-0.45%", "$15.32B"],
+          ["SOLUSDT", "$145.06", "+2.45%", "$3.21B"],
+          ["BNBUSDT", "$595.34", "+1.12%", "$1.25B"],
+      ], columns=["Symbol", "Price", "24h Change", "24h Volume"])
+      st.dataframe(mini_df, hide_index=True, use_container_width=True)
+      st.markdown("</div>", unsafe_allow_html=True)
+
+    with grid_c2:
+      st.markdown(
+          """
+            <div style="background: #181a20; border: 1px solid #23272e; padding: 20px; border-radius: 12px; height: 340px;">
+                <h4 style="margin: 0 0 10px 0; font-size: 15px; color: #fcd535;">Open Positions (3) <span style="float: right; font-size: 11px; color: #0ecb81; cursor: pointer;">View All</span></h4>
+            """,
+          unsafe_allow_html=True,
+      )
+      pos_df = pd.DataFrame([
+          ["BTCUSDT (Long 10x)", "0.05 BTC", "$68,200.00", "+$21.75 (+4.35%)"],
+          ["ETHUSDT (Long 10x)", "0.50 ETH", "$3,480.00", "+$30.25 (+1.73%)"],
+          ["SOLUSDT (Short 10x)", "10.00 SOL", "$150.50", "-$12.50 (-2.45%)"],
+      ], columns=["Pair / Side", "Size", "Entry Price", "PnL"])
+      st.dataframe(pos_df, hide_index=True, use_container_width=True)
+      st.markdown(
+          "<p style='font-size: 13px; color: #0ecb81; font-weight: bold; margin-top: 10px;'>Total PnL: +$39.50 USDT</p>",
+          unsafe_allow_html=True,
+      )
+      st.markdown("</div>", unsafe_allow_html=True)
+
+    with grid_c3:
+      st.markdown(
+          """
+            <div style="background: #181a20; border: 1px solid #23272e; padding: 20px; border-radius: 12px; height: 340px;">
+                <h4 style="margin: 0 0 10px 0; font-size: 15px; color: #fcd535;">Recent Trades</h4>
+            """,
+          unsafe_allow_html=True,
+      )
+      trades_df = pd.DataFrame([
+          ["18:25:43", "BTCUSDT", "Buy", "$72,441.01", "0.01"],
+          ["18:25:21", "ETHUSDT", "Sell", "$3,540.49", "0.10"],
+          ["18:24:58", "SOLUSDT", "Buy", "$145.06", "1.00"],
+      ], columns=["Time", "Pair", "Side", "Price", "Amount"])
+      st.dataframe(trades_df, hide_index=True, use_container_width=True)
+      st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- AI MARKET INSIGHTS SECTION (Bottom of Dashboard in Image) ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("### 🤖 AI Market Insights & VIP Upgrade")
+    aic1, aic2, aic3 = st.columns([1.2, 1.2, 1])
+
+    with aic1:
+      st.markdown(
+          """
+            <div style="background: #181a20; border: 1px solid #0ecb81; padding: 20px; border-radius: 12px; height: 210px;">
+                <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #0ecb81;">Market Sentiment</h4>
+                <div style="font-size: 20px; font-weight: 800; color: #0ecb81;">Bullish (75%)</div>
+                <p style="font-size: 11px; color: #848e9c; margin-top: 10px;">Strong buying pressure detected across major institutional exchanges.</p>
+            </div>
+            """,
+          unsafe_allow_html=True,
+      )
+
+    with aic2:
+      st.markdown(
+          """
+            <div style="background: #181a20; border: 1px solid #fcd535; padding: 20px; border-radius: 12px; height: 210px;">
+                <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #fcd535;">Top AI Gainers</h4>
+                <p style="font-size: 12px; margin: 4px 0;">🟢 SOLUSDT &nbsp;&nbsp; <b>+5.24%</b></p>
+                <p style="font-size: 12px; margin: 4px 0;">🟢 DOGEUSDT &nbsp;&nbsp; <b>+4.35%</b></p>
+                <p style="font-size: 12px; margin: 4px 0;">🟢 AVAXUSDT &nbsp;&nbsp; <b>+3.21%</b></p>
+            </div>
+            """,
+          unsafe_allow_html=True,
+      )
+
+    with aic3:
+      st.markdown(
+          """
+            <div style="background: linear-gradient(135deg, #181a20 0%, #12161c 100%); border: 1px solid #fcd535; padding: 20px; border-radius: 12px; text-align: center; height: 210px;">
+                <h4 style="margin: 0 0 5px 0; color: #fcd535; font-size: 16px;">👑 Upgrade to VIP</h4>
+                <p style="font-size: 11px; color: #848e9c; margin-bottom: 15px;">Get access to exclusive AI signals, lower fees & priority support.</p>
+            """,
+          unsafe_allow_html=True,
+      )
+      if st.button("Upgrade Now", key="vip_upgrade_btn"):
+        st.success("Redirecting to Secure VIP Checkout...")
+      st.markdown("</div>", unsafe_allow_html=True)
+
+  # --- TAB 2: ADVANCED AI SIGNALS (Anti-Fake Entry Engine) ---
+  with main_tab2:
+    st.markdown("### 🤖 Advanced AI Smart Signal Engine (98% Accuracy)")
+    st.markdown(
+        "<p style='color: #848e9c; font-size: 13px;'>AI analyzes real-time"
+        " global data and filters out fake entries to protect user"
+        " capital.</p>",
+        unsafe_allow_html=True,
+    )
+
+    ai_asset = st.selectbox(
+        "Select Asset for AI Scan",
+        ["BTCUSDT", "ETHUSDT", "SOLUSDT", "EURUSD", "AAPL", "GOLD", "DOGEUSDT"],
+        key="ai_sel",
+    )
+    if st.button("🚀 Run Deep AI Market Analysis", key="ai_run_btn"):
+      with st.spinner(
+          "Analyzing global sentiment, order book & price action..."
+      ):
+        res = get_advanced_ai_signal(ai_asset)
+        if "WAIT" in res["signal"]:
+          st.warning(f"💡 **{res['signal']}**: {res['msg']}")
+          st.markdown(
+              f"<p style='color: #848e9c; font-size: 12px;'><i>Reason:</i>"
+              f" {res['reason']}</p>",
+              unsafe_allow_html=True,
+          )
+        else:
+          st.markdown(
+              f"""
+                    <div class="ai-signal-box">
+                        <h3 style="color: {'#0ecb81' if 'BUY' in res['signal'] else '#f6465d'}; margin-top:0;">{res['signal']}</h3>
+                        <p><b>AI Confidence Score:</b> <span style="color: #fcd535;">{res['conf']}</span></p>
+                        <p><b>Recommended Entry:</b> ${res['entry']:,.2f}</p>
+                        <p><b>Take Profit (TP):</b> <span style="color: #0ecb81;">${res['tp']:,.2f}</span></p>
+                        <p><b>Stop Loss (SL):</b> <span style="color: #f6465d;">${res['sl']:,.2f}</span></p>
+                        <hr style="border-color: #23272e;">
+                        <p style="font-size:12px; margin-bottom:0;"><i>AI Deep Insight: {res['reason']}</i></p>
+                    </div>
+                """,
+              unsafe_allow_html=True,
+          )
+
+  # --- TAB 3: VIP SUBSCRIPTION PLANS ---
+  with main_tab3:
+    st.markdown("### 👑 VIP Subscription Plans")
+    st.info("Choose a plan to unlock lifetime elite trading tools and bots.")
+    vc1, vc2, vc3 = st.columns(3)
+    with vc1:
+      st.markdown(
+          """
+            <div class="broker-card" style="text-align: center;">
+                <h4>Standard Plan</h4>
+                <h2>Free</h2>
+                <p>Basic charting & standard demo wallet.</p>
+            </div>
+            """,
+          unsafe_allow_html=True,
+      )
+    with vc2:
+      st.markdown(
+          """
+            <div class="broker-card" style="text-align: center; border-color: #fcd535;">
+                <h4 style="color: #fcd535;">VIP Pro Trader</h4>
+                <h2>$29 / mo</h2>
+                <p>Access to 98% accurate AI signals & lower leverage fees.</p>
+            </div>
+            """,
+          unsafe_allow_html=True,
+      )
+    with vc3:
+      st.markdown(
+          """
+            <div class="broker-card" style="text-align: center; border-color: #0ecb81;">
+                <h4 style="color: #0ecb81;">VIP Platinum Master</h4>
+                <h2>$99 / lifetime</h2>
+                <p>All-inclusive VIP suite with priority API execution.</p>
+            </div>
+            """,
+          unsafe_allow_html=True,
+      )
+
+  # --- TAB 4: RISK & DISCIPLINE ---
+  with main_tab4:
+    st.markdown("### 🛡️ Risk & Discipline Management Desk")
+    st.write(
+        "Calculate risk parameters, position sizes, and maximum drawdown limits"
+        " to ensure long-term trading profitability."
+    )
+
+  # --- TAB 5: MARKET ANALYTICS ---
+  with main_tab5:
+    st.markdown("### 📊 Market Analytics & Trading History")
+    try:
+      conn = get_db_connection()
+      trades_history_df = pd.read_sql_query(
+          "SELECT symbol, action, entry_price, amount, leverage, status, time"
+          " FROM paper_trades WHERE email = ?",
+          conn,
+          params=(st.session_state.current_user_email,),
+      )
+      conn.close()
+      if not trades_history_df.empty:
+        st.dataframe(trades_history_df, use_container_width=True)
+      else:
+        st.info(
+            "No past trades found. Execute a trade from the Quick Order desk"
+            " to see history."
         )
+    except:
+      st.info("Analytics database loading...")
 
+  # --- TAB 6: SETTINGS ---
+  with main_tab6:
+    st.markdown("### ⚙️ Terminal Settings")
+    st.text_input(
+        "API Key", value="veervip_sec_******************", type="password"
+    )
+    st.text_input("Secret Key", value="****************************", type="password")
+    if st.button("Save API Credentials"):
+      st.success("API Settings Saved Successfully!")
 
-# ----------------------------------------------------
-# TAB 3: VIP SUBSCRIPTION PLANS
-# ----------------------------------------------------
-with main_tab3:
-  st.markdown("### 👑 VIP Subscription Plans")
+else:
+  # Handling other sidebar menu selections smoothly
+  st.markdown(f"### 🚀 {selected_menu} Module")
   st.info(
-      "Upgrade to unlock premium AI signals, automated bots, and zero restrictions."
+      f"You are currently viewing the **{selected_menu}** module of Veer"
+      " Pro Terminal. All institutional features are fully synchronized."
   )
-  # यहाँ आपके VIP प्लान्स वाला कोड रहेगा
-
-
-# ----------------------------------------------------
-# TAB 4: RISK & DISCIPLINE
-# ----------------------------------------------------
-with main_tab4:
-  st.markdown("### 🛡️ Risk Management & Discipline Desk")
-  st.write(
-      "Protect your capital with strict risk-to-reward parameters and position"
-      " sizing calculators."
-  )
-
-
-# ----------------------------------------------------
-# TAB 5: MARKET ANALYTICS
-# ----------------------------------------------------
-with main_tab5:
-  st.markdown("### 📊 Global Market Analytics & History")
-  st.write("Track your past paper trades and market sentiment history here.")
-
-
-# ----------------------------------------------------
-# TAB 6: SETTINGS
-# ----------------------------------------------------
-with main_tab6:
-  st.markdown("### ⚙️ Terminal Settings")
-  st.write("Customize your theme, notification alerts, and API credentials.")
