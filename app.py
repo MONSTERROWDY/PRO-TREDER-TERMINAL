@@ -441,7 +441,7 @@ for i, symbol in enumerate(ticker_keys):
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- REFINED TABS INCLUDING DEDICATED AI SIGNALS DESK & FULL TRADINGVIEW ---
+# --- REFINED TABS INCLUDING DEDICATED AI SIGNALS DESK & RESTORED VIP SUBSCRIPTION PLANS ---
 main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6 = st.tabs([
     "📈 Professional TradingView Charts",
     "🤖 Advanced AI Signals",
@@ -488,7 +488,6 @@ with main_tab1:
       "price"
   ]
 
-  # --- LARGE TRADINGVIEW WIDGET & SIDE PANEL BROKER ---
   chart_col, broker_col = st.columns([2.5, 1])
 
   with chart_col:
@@ -732,15 +731,19 @@ with main_tab2:
 
 
 # ----------------------------------------------------
-# TAB 3: VIP SUBSCRIPTION PLANS
+# TAB 3: VIP SUBSCRIPTION PLANS (RESTORED ORIGINAL FORMAT & PROMO CODE SUPPORT)
 # ----------------------------------------------------
 with main_tab3:
-  st.markdown("### 👑 VIP Exchange Membership Plans")
+  st.markdown("### 👑 VIP Subscription Plans & Promo Activation")
   st.markdown(
       "<p style='color:#848e9c; font-size:13px;'>Unlock unlimited AI signals,"
-      " high leverage, and premium institutional indicators.</p>",
+      " advanced institutional indicators, and high leverage paper trading with"
+      " your active VIP access or promo code.</p>",
       unsafe_allow_html=True,
   )
+
+  # Persistent VIP Status check for existing users
+  active_user_tier = st.session_state.get("user_tier", "Standard")
 
   sc1, sc2, sc3 = st.columns(3)
 
@@ -750,10 +753,10 @@ with main_tab3:
         <div class="pricing-card">
             <h3 style="color: #eaecef; font-size: 18px;">Standard Plan</h3>
             <div style="font-size: 24px; font-weight: 800; color: #848e9c; margin: 10px 0;">FREE</div>
-            <p style="font-size: 12px; color: #848e9c;">Basic charts & paper trading.</p>
+            <p style="font-size: 12px; color: #848e9c;">Basic TradingView Charts & Standard Paper Trading.</p>
             <hr style="border-color: #23272e;">
             <ul style="text-align: left; font-size: 12px; color: #848e9c; padding-left: 15px; margin-bottom: 20px;">
-                <li>Standard TradingView Charts</li>
+                <li>Standard Charts</li>
                 <li>$10,000 Demo Balance</li>
                 <li><span style="color: #f6465d;">No AI Signals</span></li>
             </ul>
@@ -761,21 +764,22 @@ with main_tab3:
         """,
         unsafe_allow_html=True,
     )
-    st.button("Current Tier", key="plan_std_main", disabled=True)
+    if st.button("Current Tier", key="plan_std_main", disabled=True):
+      pass
 
   with sc2:
     st.markdown(
         """
         <div class="pricing-card" style="border: 2px solid #fcd535;">
-            <div style="background: #fcd535; color: #0b0e11; font-weight: 800; font-size: 10px; padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 8px;">MOST POPULAR</div>
+            <div style="background: #fcd535; color: #0b0e11; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 5px;">POPULAR</div>
             <h3 style="color: #fcd535; font-size: 18px;">VIP Pro Trader</h3>
             <div style="font-size: 26px; font-weight: 800; color: #fcd535; margin: 10px 0;">₹1,999<span style="font-size: 12px; color: #848e9c;">/mo</span></div>
-            <p style="font-size: 12px; color: #848e9c;">For active intraday traders.</p>
+            <p style="font-size: 12px; color: #848e9c;">Designed for active intraday and crypto traders.</p>
             <hr style="border-color: #23272e;">
             <ul style="text-align: left; font-size: 12px; color: #eaecef; padding-left: 15px; margin-bottom: 20px;">
                 <li><b>Unlimited AI Buy/Sell Signals</b></li>
-                <li>Advanced SMC indicators</li>
-                <li>Priority Execution</li>
+                <li>Advanced SMC (BOS/CHoCH)</li>
+                <li>Priority Order Execution</li>
             </ul>
         </div>
         """,
@@ -794,7 +798,7 @@ with main_tab3:
         conn.close()
       except:
         pass
-      st.success("Upgraded to VIP Pro Successfully!")
+      st.success("Successfully Upgraded to VIP Pro!")
       st.rerun()
 
   with sc3:
@@ -803,12 +807,12 @@ with main_tab3:
         <div class="pricing-card">
             <h3 style="color: #0ecb81; font-size: 18px;">VIP Platinum</h3>
             <div style="font-size: 26px; font-weight: 800; color: #0ecb81; margin: 10px 0;">₹4,999<span style="font-size: 12px; color: #848e9c;">/mo</span></div>
-            <p style="font-size: 12px; color: #848e9c;">Ultimate institutional suite.</p>
+            <p style="font-size: 12px; color: #848e9c;">Ultimate institutional suite with full automation.</p>
             <hr style="border-color: #23272e;">
             <ul style="text-align: left; font-size: 12px; color: #eaecef; padding-left: 15px; margin-bottom: 20px;">
                 <li><b>All VIP Pro Features</b></li>
                 <li>Institutional Order Blocks</li>
-                <li>1-on-1 Mentorship Support</li>
+                <li>1-on-1 Strategy Support</li>
             </ul>
         </div>
         """,
@@ -827,8 +831,37 @@ with main_tab3:
         conn.close()
       except:
         pass
-      st.success("Upgraded to VIP Platinum Successfully!")
+      st.success("Successfully Upgraded to VIP Platinum!")
       st.rerun()
+
+  # --- PROMO CODE ACTIVATION SECTION FOR EXISTING USERS / PROMOS ---
+  st.markdown("<br>", unsafe_allow_html=True)
+  with st.expander("🎁 Have a VIP Promo Code? Click here to redeem"):
+    promo_code_input = st.text_input(
+        "Enter Promo Code", placeholder="e.g., VEERVIP2026"
+    )
+    if st.button("Apply Promo Code", key="apply_promo_btn"):
+      cleaned_code = promo_code_input.strip().upper()
+      if cleaned_code in ["VEERVIP2026", "PROTRADER", "VIPFREE"]:
+        st.session_state.user_tier = "VIP Platinum"
+        try:
+          conn = get_db_connection()
+          cursor = conn.cursor()
+          cursor.execute(
+              "UPDATE users SET tier = 'VIP Platinum' WHERE email = ?",
+              (st.session_state.current_user_email,),
+          )
+          conn.commit()
+          conn.close()
+        except:
+          pass
+        st.success(
+            "🎉 Promo Code Applied Successfully! You have been granted VIP"
+            " Platinum access."
+        )
+        st.rerun()
+      else:
+        st.error("Invalid or expired promo code!")
 
 
 # ----------------------------------------------------
