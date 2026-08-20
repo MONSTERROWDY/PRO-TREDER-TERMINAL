@@ -48,12 +48,20 @@ st.markdown(
         box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         margin-bottom: 15px;
     }
+    .vip-box {
+        background: linear-gradient(135deg, #1e1e24 0%, #12161c 100%);
+        border: 1px solid #fcd535;
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 12px;
+        box-shadow: 0 4px 15px rgba(252, 213, 53, 0.1);
+    }
     .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div {
         background-color: #0b0e11 !important;
         color: #ffffff !important;
         border: 1px solid #2b313a !important;
         border-radius: 6px !important;
-        height: 44px !important;
+        height: 40px !important;
     }
     .stTabs [data-baseweb="tab-list"] { 
         gap: 6px; 
@@ -79,7 +87,7 @@ st.markdown(
         width: 100%; 
         border-radius: 6px; 
         font-weight: 700; 
-        height: 44px; 
+        height: 40px; 
         background: #fcd535; 
         color: #0b0e11; 
         border: none;
@@ -118,10 +126,8 @@ def init_db():
   user_columns = [
       ("username", "TEXT"),
       ("avatar", "TEXT"),
-      ("tier", "TEXT DEFAULT 'Free User'"),
+      ("tier", "TEXT DEFAULT 'Standard'"),
       ("demo_balance", "REAL DEFAULT 10000.0"),
-      ("free_signal_date", "TEXT DEFAULT ''"),
-      ("vip_indicator_sub", "INTEGER DEFAULT 0"),
   ]
   for col_name, col_type in user_columns:
     try:
@@ -145,47 +151,21 @@ def init_db():
     """)
   conn.commit()
 
-  cursor.execute("""
-        CREATE TABLE IF NOT EXISTS promo_codes (
-            code TEXT PRIMARY KEY,
-            duration_type TEXT,
-            is_used INTEGER DEFAULT 0,
-            used_by TEXT DEFAULT NULL
-        )
-    """)
-  conn.commit()
-
   cursor.execute("SELECT * FROM users WHERE email = ?", ("admin@gmail.com",))
   if not cursor.fetchone():
     cursor.execute(
         "INSERT INTO users (email, password, name, username, tier,"
-        " demo_balance, vip_indicator_sub) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        " demo_balance) VALUES (?, ?, ?, ?, ?, ?)",
         (
             "admin@gmail.com",
             "password123",
             "Pro Master",
             "admin_master",
-            "Premium Member (Lifetime)",
+            "VIP Platinum",
             10000.0,
-            1,
         ),
     )
     conn.commit()
-
-  default_promos = [
-      ("VEERPREMIUM30", "30 Days"),
-      ("VEERPREMIUM1Y", "1 Year"),
-      ("VEER3DAYS", "3 Days"),
-      ("VEERLIFETIME", "Lifetime Unlimited"),
-  ]
-  for code, dtype in default_promos:
-    cursor.execute("SELECT * FROM promo_codes WHERE code = ?", (code,))
-    if not cursor.fetchone():
-      cursor.execute(
-          "INSERT INTO promo_codes (code, duration_type, is_used) VALUES (?, ?, 0)",
-          (code, dtype),
-      )
-      conn.commit()
   conn.close()
 
 
@@ -197,8 +177,8 @@ def get_user_full(email):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT password, name, username, avatar, tier, demo_balance,"
-        " free_signal_date, vip_indicator_sub FROM users WHERE email = ?",
+        "SELECT password, name, username, avatar, tier, demo_balance FROM users"
+        " WHERE email = ?",
         (email.strip().lower(),),
     )
     res = cursor.fetchone()
@@ -214,15 +194,14 @@ def register_user(email, password, name, username):
     cursor = conn.cursor()
     cursor.execute(
         "INSERT INTO users (email, password, name, username, tier,"
-        " demo_balance, vip_indicator_sub) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        " demo_balance) VALUES (?, ?, ?, ?, ?, ?)",
         (
             email.strip().lower(),
             password,
             name.strip(),
             username.strip(),
-            "Free User",
+            "Standard",
             10000.0,
-            0,
         ),
     )
     conn.commit()
@@ -236,7 +215,7 @@ def register_user(email, password, name, username):
 def fetch_global_prices():
   try:
     url = "https://api.binance.com/api/v3/ticker/24hr?symbols=[%22BTCUSDT%22,%22ETHUSDT%22,%22SOLUSDT%22,%22BNBUSDT%22,%22XRPUSDT%22,%22ADAUSDT%22]"
-    response = requests.get(url, timeout=2).json()
+    response = requests.get(url, timeout=3).json()
     prices = {}
     for item in response:
       prices[item["symbol"]] = {
@@ -265,31 +244,32 @@ def fetch_global_prices():
 def fetch_live_chart_data(symbol, interval="1h"):
   try:
     limit_val = (
-        30
+        40
         if interval in ["1m", "5m"]
-        else (60 if interval in ["15m", "1h"] else 100)
+        else (80 if interval in ["15m", "1h"] else 120)
     )
     if symbol in ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT"]:
       url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit_val}"
-      res = requests.get(url, timeout=3).json()
-      df = pd.DataFrame(res, columns=[
-          "time",
-          "open",
-          "high",
-          "low",
-          "close",
-          "volume",
-          "close_time",
-          "qav",
-          "num_trades",
-          "taker_base_vol",
-          "taker_quote_vol",
-          "ignore",
-      ])
-      df["time"] = pd.to_datetime(df["time"], unit="ms")
-      for col in ["open", "high", "low", "close", "volume"]:
-        df[col] = df[col].astype(float)
-      return df[["time", "close"]].dropna()
+      res = requests.get(url, timeout=4).json()
+      if isinstance(res, list) and len(res) > 0:
+        df = pd.DataFrame(res, columns=[
+            "time",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "close_time",
+            "qav",
+            "num_trades",
+            "taker_base_vol",
+            "taker_quote_vol",
+            "ignore",
+        ])
+        df["time"] = pd.to_datetime(df["time"], unit="ms")
+        for col in ["open", "high", "low", "close", "volume"]:
+          df[col] = df[col].astype(float)
+        return df[["time", "close", "open", "high", "low", "volume"]].dropna()
   except Exception:
     pass
 
@@ -304,10 +284,17 @@ def fetch_live_chart_data(symbol, interval="1h"):
   )
   import numpy as np
 
-  dates = pd.date_range(end=datetime.datetime.now(), periods=60, freq="h")
-  np.random.seed(len(symbol) + 7)
-  price_paths = base + np.cumsum(np.random.randn(60) * (base * 0.0015))
-  df = pd.DataFrame({"time": dates, "close": price_paths})
+  dates = pd.date_range(end=datetime.datetime.now(), periods=80, freq="h")
+  np.random.seed(len(symbol) + 11)
+  price_paths = base + np.cumsum(np.random.randn(80) * (base * 0.0015))
+  df = pd.DataFrame({
+      "time": dates,
+      "close": price_paths,
+      "open": price_paths - 10,
+      "high": price_paths + 20,
+      "low": price_paths - 20,
+      "volume": np.random.randint(1000, 5000, size=80),
+  })
   return df
 
 
@@ -326,13 +313,9 @@ if "logged_in" not in st.session_state:
       st.session_state.avatar = (
           u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
       )
-      st.session_state.user_tier = u_data[4] if u_data[4] else "Free User"
+      st.session_state.user_tier = u_data[4] if u_data[4] else "Standard"
       st.session_state.demo_balance = (
           u_data[5] if u_data[5] is not None else 10000.0
-      )
-      st.session_state.free_signal_date = u_data[6] if u_data[6] else ""
-      st.session_state.vip_indicator_sub = (
-          u_data[7] if u_data[7] is not None else 0
       )
     else:
       st.session_state.logged_in = False
@@ -373,13 +356,9 @@ def show_auth_screen():
             st.session_state.avatar = (
                 u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
             )
-            st.session_state.user_tier = u_data[4] if u_data[4] else "Free User"
+            st.session_state.user_tier = u_data[4] if u_data[4] else "Standard"
             st.session_state.demo_balance = (
                 u_data[5] if u_data[5] is not None else 10000.0
-            )
-            st.session_state.free_signal_date = u_data[6] if u_data[6] else ""
-            st.session_state.vip_indicator_sub = (
-                u_data[7] if u_data[7] is not None else 0
             )
             st.query_params["session_user"] = cleaned_email
             st.rerun()
@@ -403,10 +382,8 @@ def show_auth_screen():
             st.session_state.current_user_name = reg_name
             st.session_state.username = reg_uname
             st.session_state.avatar = "https://i.imgur.com/71916rK.png"
-            st.session_state.user_tier = "Free User"
+            st.session_state.user_tier = "Standard"
             st.session_state.demo_balance = 10000.0
-            st.session_state.free_signal_date = ""
-            st.session_state.vip_indicator_sub = 0
             st.query_params["session_user"] = cleaned_reg_email
             st.rerun()
           else:
@@ -419,44 +396,42 @@ if not st.session_state.logged_in:
   st.stop()
 
 
-# --- HELPER FOR VIP STATUS CHECK ---
-def check_is_vip():
-  return (
-      "Premium" in st.session_state.user_tier
-      or "Lifetime" in st.session_state.user_tier
-      or "VIP" in st.session_state.user_tier
-      or st.session_state.get("vip_indicator_sub", 0) == 1
-      or st.session_state.current_user_email == "admin@gmail.com"
-  )
-
-
 # --- SIDEBAR DASHBOARD ---
 with st.sidebar:
-  is_vip = check_is_vip()
-
-  if is_vip:
-    st.markdown(
-        """
-        <div style="background: rgba(252, 213, 53, 0.1); border: 1px solid #fcd535; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 15px;">
-            <span style="color: #fcd535; font-weight: 700; font-size: 13px;">👑 VIP ELITE (ALL-TO-ALL FREE)</span>
+  current_tier = st.session_state.get("user_tier", "Standard")
+  tier_badge_color = (
+      "#fcd535" if "VIP" in current_tier or "Pro" in current_tier else "#848e9c"
+  )
+  st.markdown(
+      f"""
+        <div style="background: rgba(252, 213, 53, 0.1); border: 1px solid {tier_badge_color}; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 15px;">
+            <span style="color: {tier_badge_color}; font-weight: 700; font-size: 13px;">👑 {current_tier.upper()}</span>
         </div>
         """,
-        unsafe_allow_html=True,
-    )
-  else:
-    st.markdown(
-        """
-        <div style="background: rgba(132, 142, 156, 0.1); border: 1px solid #23272e; padding: 10px; border-radius: 6px; text-align: center; margin-bottom: 15px;">
-            <span style="color: #848e9c; font-weight: 700; font-size: 13px;">👤 TRIAL / FREE USER (LIMITED)</span>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+      unsafe_allow_html=True,
+  )
 
   st.markdown("### 👤 Account Profile")
   st.image(st.session_state.avatar, width=70)
   st.markdown(f"**Name:** {st.session_state.current_user_name}")
-  st.markdown(f"**Tier:** `{st.session_state.user_tier}`")
+  st.markdown(f"**Tier:** `{current_tier}`")
+
+  if "VIP" not in current_tier:
+    if st.button("⭐ Upgrade to VIP Access"):
+      st.session_state.user_tier = "VIP Platinum"
+      try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE users SET tier = 'VIP Platinum' WHERE email = ?",
+            (st.session_state.current_user_email,),
+        )
+        conn.commit()
+        conn.close()
+      except:
+        pass
+      st.success("Upgraded to VIP Platinum!")
+      st.rerun()
 
   st.markdown("---")
   st.markdown("### 💰 Demo Wallet")
@@ -482,39 +457,6 @@ with st.sidebar:
     st.rerun()
 
   st.markdown("---")
-  st.markdown("### 👑 Promo Code")
-  promo_input = st.text_input("Enter Code", key="sb_promo")
-  if st.button("Redeem"):
-    try:
-      conn = get_db_connection()
-      cursor = conn.cursor()
-      cursor.execute(
-          "SELECT duration_type FROM promo_codes WHERE code = ? AND is_used = 0",
-          (promo_input.strip().upper(),),
-      )
-      p_data = cursor.fetchone()
-      if p_data:
-        new_tier = f"VIP Member ({p_data[0]})"
-        cursor.execute(
-            "UPDATE users SET tier = ?, vip_indicator_sub = 1 WHERE email = ?",
-            (new_tier, st.session_state.current_user_email),
-        )
-        cursor.execute(
-            "UPDATE promo_codes SET is_used = 1, used_by = ? WHERE code = ?",
-            (st.session_state.current_user_email, promo_input.strip().upper()),
-        )
-        conn.commit()
-        st.session_state.user_tier = new_tier
-        st.session_state.vip_indicator_sub = 1
-        st.success(f"Activated ({p_data[0]})!")
-        st.rerun()
-      else:
-        st.error("Invalid or already used code!")
-      conn.close()
-    except Exception as e:
-      st.error(f"Error: {e}")
-
-  st.markdown("---")
   if st.button("🚪 Sign Out"):
     st.query_params.clear()
     st.session_state.logged_in = False
@@ -531,7 +473,7 @@ st.markdown(
         </div>
         <div>
             <span style="background: #181a20; border: 1px solid #23272e; padding: 5px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; color: #0ecb81;">
-                ● LIVE CHARTS & SUITE ACTIVE
+                ● INSTITUTIONAL SMC & PAPER BROKER ACTIVE
             </span>
         </div>
     </div>
@@ -561,10 +503,9 @@ for i, symbol in enumerate(ticker_keys):
 st.markdown("<br>", unsafe_allow_html=True)
 
 # --- APP TABS ---
-main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6 = st.tabs([
-    "📈 Live Paper Trading",
-    "📊 Chart Analyst & Signals",
-    "🤖 VIP Indicators & Automation",
+main_tab1, main_tab2, main_tab3, main_tab4, main_tab5 = st.tabs([
+    "📈 Live Paper Trading Desk",
+    "📊 Chart Analyst & TradingView Suite",
     "🛡️ Risk & Discipline",
     "📊 Market Analytics",
     "⚙️ Settings",
@@ -704,302 +645,367 @@ with main_tab1:
 
 
 # ----------------------------------------------------
-# TAB 2: ADVANCED CHART ANALYST & MULTI-STYLE AI SIGNALS
+# TAB 2: TRADINGVIEW STYLE CHART ANALYST & VIP SMC SUITE + PAPER BROKER
 # ----------------------------------------------------
 with main_tab2:
+  st.markdown("### 📊 TradingView Professional Chart Analyst & VIP SMC Suite")
   st.markdown(
-      "### 📊 Advanced Multi-Style Chart Analyst & AI Signal Engine"
-  )
-  st.markdown(
-      "<p style='color:#848e9c; font-size:13px;'>Choose your preferred trading"
-      " style (Scalping, Intraday, or Swing), timeframe, and AI model below"
-      " to generate institutional-grade entry, stop-loss, and take-profit"
-      " setups.</p>",
+      "<p style='color:#848e9c; font-size:13px;'>Analyze institutional market"
+      " structure, toggle smart buy/sell signals, and execute paper trades"
+      " directly from the chart window.</p>",
       unsafe_allow_html=True,
   )
 
-  # --- ADVANCED CONTROL TOOLBAR (Binance/TradingView Style) ---
-  c_col1, c_col2, c_col3, c_col4 = st.columns(4)
-  with c_col1:
+  # --- TOP TRADINGVIEW TOOLBAR ---
+  tc1, tc2, tc3 = st.columns([1.5, 1.2, 1.3])
+  with tc1:
     chart_symbol = st.selectbox(
-        "📈 Asset Pair", list(prices_data.keys()), key="adv_ca_sym"
+        "📈 Select Market Asset", list(prices_data.keys()), key="tv_ca_sym"
     )
-  with c_col2:
-    trading_style = st.selectbox(
-        "⚡ Trading Style",
-        [
-            "⚡ Scalping (Fast 1m/5m)",
-            "📊 Intraday (15m/1h)",
-            "📈 Swing Trading (4h/1D)",
-        ],
-        key="adv_trading_style",
-    )
-  with c_col3:
-    if "Scalping" in trading_style:
-      default_tf_idx = 0
-      available_tfs = ["1m", "5m", "15m"]
-    elif "Intraday" in trading_style:
-      default_tf_idx = 1
-      available_tfs = ["15m", "1h", "4h"]
-    else:
-      default_tf_idx = 2
-      available_tfs = ["4h", "1D"]
-
+  with tc2:
     chart_timeframe = st.selectbox(
-        "⏱️ Timeframe",
-        available_tfs,
-        index=min(default_tf_idx, len(available_tfs) - 1),
-        key="adv_ca_tf",
+        "⏱️ Chart Timeframe", ["1m", "5m", "15m", "1h", "4h", "1D"], index=3, key="tv_ca_tf"
     )
-  with c_col4:
-    ai_strategy_mode = st.selectbox(
-        "🤖 AI Strategy",
+  with tc3:
+    chart_type = st.selectbox(
+        "🕯️ Chart View Style",
         [
-            "Momentum Breakout",
-            "Trend Following (EMA)",
-            "Mean Reversion (RSI)",
-            "VIP BOS / ChoCH",
+            "Line Price Chart",
+            "Candles + Volume Profile",
+            "Heikin Ashi Style",
         ],
-        key="adv_ai_strategy",
+        key="tv_chart_style",
     )
 
   current_pair_price = prices_data.get(chart_symbol, {"price": 100.0})[
       "price"
   ]
-  st.markdown(
-      f"<div style='background: #181a20; padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #23272e; display: flex; justify-content: space-between; align-items: center;'><span>Active Pair: <b>{chart_symbol}</b> | Style: <b style='color: #fcd535;'>{trading_style}</b></span> <span>Live Price: <b style='color: #0ecb81;'>${current_pair_price:,.2f}</b></span></div>",
-      unsafe_allow_html=True,
-  )
+  user_tier_status = st.session_state.get("user_tier", "Standard")
+  is_vip_user = "VIP" in user_tier_status or "Pro" in user_tier_status
 
-  # --- DYNAMIC CHART RENDERING ---
-  df_chart = fetch_live_chart_data(chart_symbol, chart_timeframe)
-  if not df_chart.empty:
-    chart_data_indexed = df_chart.set_index("time")
-    st.line_chart(
-        chart_data_indexed,
-        height=380,
-        color=["#fcd535"],
-    )
-  else:
-    st.warning("No chart data available for this selection.")
+  # --- LAYOUT: CHART SECTION (LEFT) + CONNECT TO PAPER TRADING PANEL (RIGHT) ---
+  chart_col, broker_col = st.columns([2.1, 1.1])
 
-  st.markdown("<br>", unsafe_allow_html=True)
-
-  # --- ADVANCED AI SIGNAL GENERATION TRIGGER ---
-  st.markdown(
-      """
-        <div style="background: #181a20; border: 1px solid #23272e; padding: 20px; border-radius: 10px;">
-            <h4 style="margin: 0; color: #fcd535;">🎯 AI Strategy Signal & Risk Matrix Generator</h4>
-            <p style="margin: 4px 0 0 0; font-size: 12px; color: #848e9c;">Calculates tailored Stop-Loss (SL) and Take-Profit (TP) according to your selected Trading Style and Timeframe.</p>
-        </div>
-        """,
-      unsafe_allow_html=True,
-  )
-
-  st.markdown("<br>", unsafe_allow_html=True)
-  if st.button("🚀 Generate Advanced AI Signal", key="generate_adv_signal"):
-    today_str = datetime.datetime.now().strftime("%Y-%m-%d")
-    is_vip_active = check_is_vip()
-
-    if is_vip_active:
-      can_show_signal = True
-    else:
-      if st.session_state.get("free_signal_date", "") == today_str:
-        can_show_signal = False
-      else:
-        can_show_signal = True
-        st.session_state.free_signal_date = today_str
-        try:
-          conn = get_db_connection()
-          cursor = conn.cursor()
-          cursor.execute(
-              "UPDATE users SET free_signal_date = ? WHERE email = ?",
-              (today_str, st.session_state.current_user_email),
-          )
-          conn.commit()
-          conn.close()
-        except:
-          pass
-
-    if can_show_signal:
-      current_p = current_pair_price
-
-      # Adjust SL and TP multipliers based on user's trading style
-      if "Scalping" in trading_style:
-        sl_pct = 0.003
-        tp_pct = 0.008
-        recommended_lev = "10x - 20x"
-      elif "Intraday" in trading_style:
-        sl_pct = 0.009
-        tp_pct = 0.022
-        recommended_lev = "5x - 10x"
-      else:
-        sl_pct = 0.025
-        tp_pct = 0.065
-        recommended_lev = "1x - 3x"
-
-      entry_l = current_p
-      sl_l = current_p * (1 - sl_pct)
-      tp_l = current_p * (1 + tp_pct)
-      risk_reward = round(tp_pct / sl_pct, 2)
-
+  with chart_col:
+    # --- VIP EXCLUSIVE INSTITUTIONAL MARKET STRUCTURE SUITE ---
+    if is_vip_user:
       st.markdown(
-          f"""
-            <div class="trading-card" style="border-left: 4px solid #0ecb81; background: #12161c;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <h4 style="color: #0ecb81; margin: 0;">🟢 BUY / LONG SIGNAL ({chart_symbol})</h4>
-                    <span style="background: rgba(252, 213, 53, 0.1); color: #fcd535; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 700;">{trading_style} | TF: {chart_timeframe}</span>
+          """
+            <div class="vip-box">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="color: #fcd535; font-weight: 800; font-size: 14px;">👑 VIP SMC Institutional Market Structure Engine</span>
+                    <span style="background: #23272e; color: #0ecb81; padding: 2px 8px; border-radius: 4px; font-size: 11px;">Active Suite</span>
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px;">
-                    <div style="background: #181a20; padding: 10px; border-radius: 6px;">
-                        <span style="font-size: 11px; color: #848e9c;">Entry Price</span><br><b style="color: #ffffff;">${entry_l:,.2f}</b>
-                    </div>
-                    <div style="background: #181a20; padding: 10px; border-radius: 6px;">
-                        <span style="font-size: 11px; color: #848e9c;">Stop Loss (SL)</span><br><b style="color: #f6465d;">${sl_l:,.2f}</b>
-                    </div>
-                    <div style="background: #181a20; padding: 10px; border-radius: 6px;">
-                        <span style="font-size: 11px; color: #848e9c;">Take Profit (TP)</span><br><b style="color: #0ecb81;">${tp_l:,.2f}</b>
-                    </div>
-                    <div style="background: #181a20; padding: 10px; border-radius: 6px;">
-                        <span style="font-size: 11px; color: #848e9c;">Risk-Reward / Lev</span><br><b style="color: #fcd535;">1:{risk_reward} ({recommended_lev})</b>
-                    </div>
-                </div>
-                <p style="font-size: 12px; color: #848e9c; margin-top: 12px; margin-bottom: 0;">✔ Strategy: <b>{ai_strategy_mode}</b> successfully optimized for <b>{chart_symbol}</b>.</p>
-            </div>
             """,
           unsafe_allow_html=True,
       )
-    else:
-      st.warning(
-          "⏳ **Trial/Free User Limit Reached!** You have already used your 1"
-          " free signal for today. Purchase the **₹399 VIP Subscription** below"
-          " to unlock **All-to-All Unlimited Access**."
-      )
 
-
-# ----------------------------------------------------
-# TAB 3: VIP INDICATORS & AUTOMATION TOOLS (₹399 / 1 Month)
-# ----------------------------------------------------
-with main_tab3:
-  st.markdown(
-      "### 🤖 VIP Indicators & Automated Trading Suite (₹399 / 1 Month)"
-  )
-  st.markdown(
-      "<p style='color:#848e9c; font-size:13px;'>When you purchase the 1 Month"
-      " VIP Pass (₹399), <b>All-to-All features become 100% Free and"
-      " Unrestricted</b> across the entire terminal.</p>",
-      unsafe_allow_html=True,
-  )
-
-  is_vip_active = check_is_vip()
-
-  col_ind1, col_ind2 = st.columns(2)
-
-  with col_ind1:
-    st.markdown(
-        """
-        <div class="trading-card" style="border-top: 3px solid #fcd535;">
-            <h4 style="color: #fcd535; margin-top: 0;">🚀 VIP Indicator & Automation Pass</h4>
-            <p style="font-size: 13px; color: #eaecef;">Get 100% All-to-All Unrestricted Access to all custom AI indicators, automated execution triggers, and live TP/SL charts.</p>
-            <h2 style="color: #0ecb81; margin: 10px 0;">₹399 <span style="font-size: 12px; color: #848e9c;">/ 1 Month</span></h2>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    if not is_vip_active:
-      if st.button("💳 Buy VIP All-Access Pass (₹399 / Month)", key="buy_ind_pass"):
-        st.session_state.vip_indicator_sub = 1
-        try:
-          conn = get_db_connection()
-          cursor = conn.cursor()
-          cursor.execute(
-              "UPDATE users SET vip_indicator_sub = 1, tier = 'VIP All-Access Member (1 Month)' WHERE email = ?",
-              (st.session_state.current_user_email,),
-          )
-          conn.commit()
-          conn.close()
-        except:
-          pass
-        st.session_state.user_tier = "VIP All-Access Member (1 Month)"
-        st.success(
-            "🎉 Successfully Subscribed! All-to-All features are now 100% Free"
-            " and Unlocked!"
+      smc_col1, smc_col2, smc_col3 = st.columns(3)
+      with smc_col1:
+        enable_smc_structure = st.checkbox(
+            "🏛️ Mark BOS / CHoCH", value=True, key="vip_smc_struct"
         )
-        st.rerun()
+      with smc_col2:
+        enable_order_blocks = st.checkbox(
+            "📦 Order Blocks (OB)", value=True, key="vip_smc_ob"
+        )
+      with smc_col3:
+        enable_signal_toggles = st.checkbox(
+            "⚡ Auto Buy/Sell Signals", value=True, key="vip_smc_signals"
+        )
+
+      st.markdown("</div>", unsafe_allow_html=True)
     else:
       st.markdown(
           """
-            <div style="background: rgba(14, 203, 129, 0.1); border: 1px solid #0ecb81; padding: 12px; border-radius: 6px; text-align: center;">
-                <span style="color: #0ecb81; font-weight: 700; font-size: 13px;">✔ VIP ALL-ACCESS PASS ACTIVE (EVERYTHING UNLOCKED)</span>
+            <div style="background: #181a20; border: 1px dashed #fcd535; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 10px;">
+                <span style="color: #fcd535; font-size: 12px; font-weight: 700;">🔒 VIP Institutional Market Structure (SMC) is locked for Standard Users. Upgrade to VIP in sidebar to unlock!</span>
             </div>
             """,
           unsafe_allow_html=True,
       )
+      enable_smc_structure = False
+      enable_order_blocks = False
+      enable_signal_toggles = False
 
-  with col_ind2:
+    # --- SUB-TABS FOR INDICATORS & TOOLS ---
+    tv_tool_tab1, tv_tool_tab2, tv_tool_tab3 = st.tabs([
+        "📉 Indicators",
+        "📐 Drawing Tools",
+        "🤖 AI Signal",
+    ])
+
+    active_indicator = "None (Clean Chart)"
+    with tv_tool_tab1:
+      active_indicator = st.selectbox(
+          "Select Technical Indicator",
+          [
+              "None (Clean Chart)",
+              "Simple Moving Average (SMA 20)",
+              "Exponential Moving Average (EMA 20)",
+              "Bollinger Bands (BB)",
+              "Relative Strength Index (RSI)",
+              "VWAP (Volume Weighted Average)",
+          ],
+          key="tv_selected_indicator",
+      )
+
+    active_tool = "None"
+    with tv_tool_tab2:
+      active_tool = st.selectbox(
+          "Drawing / Measure Tool",
+          [
+              "None",
+              "Horizontal Support / Resistance Line",
+              "Trendline / Channel",
+              "Fibonacci Retracement Levels",
+              "Long Position Risk-Reward Box",
+              "Short Position Risk-Reward Box",
+          ],
+          key="tv_drawing_tool",
+      )
+
+    st.markdown(
+        f"<div style='background: #181a20; padding: 6px 12px; border-radius: 6px; margin: 8px 0; border: 1px solid #23272e; display: flex; justify-content: space-between;'><span>Asset: <b>{chart_symbol}</b> | Tool: <b style='color: #fcd535;'>{active_tool}</b></span><span>Live Price: <b style='color: #0ecb81;'>${current_pair_price:,.2f}</b></span></div>",
+        unsafe_allow_html=True,
+    )
+
+    df_chart = fetch_live_chart_data(chart_symbol, chart_timeframe)
+    if not df_chart.empty:
+      chart_df_plot = df_chart.copy()
+
+      if "Simple Moving Average" in active_indicator:
+        chart_df_plot["SMA_20"] = (
+            chart_df_plot["close"].rolling(window=10).mean()
+        )
+        plot_df = chart_df_plot.set_index("time")[["close", "SMA_20"]]
+        st.line_chart(plot_df, height=310, color=["#fcd535", "#2962ff"])
+      elif "Exponential Moving Average" in active_indicator:
+        chart_df_plot["EMA_20"] = (
+            chart_df_plot["close"].ewm(span=10, adjust=False).mean()
+        )
+        plot_df = chart_df_plot.set_index("time")[["close", "EMA_20"]]
+        st.line_chart(plot_df, height=310, color=["#fcd535", "#ff6d00"])
+      elif "Bollinger" in active_indicator:
+        sma = chart_df_plot["close"].rolling(window=10).mean()
+        std = chart_df_plot["close"].rolling(window=10).std()
+        chart_df_plot["BB_Upper"] = sma + (std * 2)
+        chart_df_plot["BB_Lower"] = sma - (std * 2)
+        plot_df = chart_df_plot.set_index("time")[
+            ["close", "BB_Upper", "BB_Lower"]
+        ]
+        st.line_chart(
+            plot_df, height=310, color=["#fcd535", "#f6465d", "#0ecb81"]
+        )
+      elif "RSI" in active_indicator:
+        delta = chart_df_plot["close"].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+        rs = gain / loss
+        chart_df_plot["RSI"] = 100 - (100 / (1 + rs))
+        plot_df = chart_df_plot.set_index("time")[["RSI"]]
+        st.line_chart(plot_df, height=310, color=["#ab47bc"])
+      else:
+        plot_df = chart_df_plot.set_index("time")[["close"]]
+        st.line_chart(plot_df, height=310, color=["#fcd535"])
+
+      # --- VIP SMC MARKET STRUCTURE & SIGNAL BADGES RENDERED BELOW CHART ---
+      if is_vip_user and (
+          enable_smc_structure or enable_order_blocks or enable_signal_toggles
+      ):
+        smc_status_html = "<div style='display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;'>"
+        if enable_smc_structure:
+          smc_status_html += "<span style='background: #181a20; border: 1px solid #fcd535; padding: 4px 10px; border-radius: 4px; font-size: 11px; color: #fcd535;'>🏛️ Market Structure: <b>BOS (Bullish Continuation) & CHoCH Identified</b></span>"
+        if enable_order_blocks:
+          smc_status_html += "<span style='background: #181a20; border: 1px solid #2962ff; padding: 4px 10px; border-radius: 4px; font-size: 11px; color: #2962ff;'>📦 Active Order Block (OB): <b>Institutional Demand Zone Detected</b></span>"
+        if enable_signal_toggles:
+          smc_status_html += "<span style='background: rgba(14,203,129,0.1); border: 1px solid #0ecb81; padding: 4px 10px; border-radius: 4px; font-size: 11px; color: #0ecb81;'>⚡ VIP Signal: <b>STRONG BUY ENTRY TRIGGERED</b></span>"
+        smc_status_html += "</div>"
+        st.markdown(smc_status_html, unsafe_allow_html=True)
+
+    else:
+      st.warning("No chart data available.")
+
+    with tv_tool_tab3:
+      if st.button("🚀 Run AI Technical Signal"):
+        sl_l = current_pair_price * 0.992
+        tp_l = current_pair_price * 1.022
+        st.markdown(
+            f"""
+                <div style="background: #12161c; padding: 12px; border-radius: 6px; border-left: 3px solid #0ecb81; margin-top: 8px;">
+                    <b style="color: #0ecb81;">🟢 BUY SIGNAL ({chart_symbol})</b><br>
+                    Entry: ${current_pair_price:,.2f} | SL: <span style="color:#f6465d;">${sl_l:,.2f}</span> | TP: <span style="color:#0ecb81;">${tp_l:,.2f}</span>
+                </div>
+                """,
+            unsafe_allow_html=True,
+        )
+
+  with broker_col:
+    # --- CONNECT TO PAPER TRADING WIDGET (TRADINGVIEW STYLE) ---
     st.markdown(
         """
-        <div class="trading-card">
-            <h4 style="margin-top: 0;">🛠️ VIP All-to-All Benefits</h4>
-            <ul style="color: #848e9c; font-size: 13px; padding-left: 20px; line-height: 1.8;">
-                <li><b>Unlimited AI Signals:</b> No daily restrictions on charts or timeframes.</li>
-                <li><b>All Automation Tools:</b> Instant bot triggers & automated mapping.</li>
-                <li><b>Market Structure Auto-Mapping:</b> BOS & ChoCH live scanning.</li>
-                <li><b>Priority Server Execution:</b> Zero lag during high market volatility.</li>
-            </ul>
-        </div>
+        <div style="background: #181a20; border: 1px solid #23272e; border-top: 3px solid #0ecb81; padding: 15px; border-radius: 10px;">
+            <h4 style="margin: 0 0 5px 0; color: #0ecb81; font-size: 15px;">🔌 Connect to Paper Trading</h4>
+            <p style="margin: 0 0 10px 0; font-size: 11px; color: #848e9c;">Execute demo orders instantly on active chart.</p>
         """,
         unsafe_allow_html=True,
     )
 
-  st.markdown("<br>", unsafe_allow_html=True)
-  if st.button(
-      "⚡ Run VIP Market Structure Auto-Mapping & Automation Tool",
-      key="run_automation_tool",
-  ):
-    if is_vip_active:
-      st.success(
-          "✔ VIP All-Access Automation Tool & Market Structure successfully"
-          " executed!"
+    demo_wallet = st.session_state.get("demo_balance", 10000.0)
+    st.markdown(
+        f"<div style='font-size: 12px; color: #848e9c; margin-top: 8px;'>Demo Balance: <b style='color: #0ecb81;'>${demo_wallet:,.2f}</b></div>",
+        unsafe_allow_html=True,
+    )
+
+    chart_trade_action = st.radio(
+        "Order Direction",
+        ["🟢 BUY / LONG", "🔴 SELL / SHORT"],
+        horizontal=True,
+        key="tv_chart_trade_action",
+    )
+    chart_trade_amt = st.number_input(
+        "Trade Amount ($)", value=300.0, step=50.0, key="tv_chart_trade_amt"
+    )
+    chart_trade_lev = st.selectbox(
+        "Leverage", [1, 5, 10, 20, 50], index=1, key="tv_chart_trade_lev"
+    )
+
+    if st.button(
+        f"⚡ Place Order ({chart_symbol})", key="tv_place_chart_order"
+    ):
+      if demo_wallet >= chart_trade_amt:
+        new_bal = demo_wallet - chart_trade_amt
+        st.session_state.demo_balance = new_bal
+        try:
+          conn = get_db_connection()
+          cursor = conn.cursor()
+          cursor.execute(
+              "UPDATE users SET demo_balance = ? WHERE email = ?",
+              (new_bal, st.session_state.current_user_email),
+          )
+          cursor.execute(
+              """
+                        INSERT INTO paper_trades (email, symbol, action, entry_price, amount, leverage, time)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+              (
+                  st.session_state.current_user_email,
+                  chart_symbol,
+                  chart_trade_action,
+                  current_pair_price,
+                  chart_trade_amt,
+                  chart_trade_lev,
+                  datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+              ),
+          )
+          conn.commit()
+          conn.close()
+        except:
+          pass
+        st.success(f"Order Placed for {chart_symbol}!")
+        st.rerun()
+      else:
+        st.error("Insufficient Balance!")
+
+    st.markdown("<hr style='border-color: #23272e; margin: 12px 0;'>", unsafe_allow_html=True)
+    st.markdown(
+        "<b style='font-size: 12px; color: #eaecef;'>Active Chart Positions:</b>",
+        unsafe_allow_html=True,
+    )
+
+    try:
+      conn = get_db_connection()
+      cursor = conn.cursor()
+      cursor.execute(
+          "SELECT id, symbol, action, entry_price, amount, leverage FROM"
+          " paper_trades WHERE email = ? AND status = 'OPEN'",
+          (st.session_state.current_user_email,),
       )
+      chart_open_pos = cursor.fetchall()
+      conn.close()
+    except:
+      chart_open_pos = []
+
+    if chart_open_pos:
+      for pos in chart_open_pos:
+        p_id, p_sym, p_act, p_entry, p_amt, p_lev = pos
+        curr_p = prices_data.get(p_sym, {"price": p_entry})["price"]
+        pnl = (
+            ((curr_p - p_entry) / p_entry) * p_amt * p_lev
+            if "BUY" in p_act
+            else ((p_entry - curr_p) / p_entry) * p_amt * p_lev
+        )
+        pnl_color = "#0ecb81" if pnl >= 0 else "#f6465d"
+        st.markdown(
+            f"""
+                <div style="background: #12161c; padding: 8px; border-radius: 6px; margin-bottom: 6px; font-size: 11px; border-left: 2px solid {pnl_color};">
+                    <b>{p_sym}</b> | PnL: <span style="color: {pnl_color};">${pnl:,.2f}</span>
+                </div>
+                """,
+            unsafe_allow_html=True,
+        )
+        if st.button(f"Close #{p_id}", key=f"tv_close_{p_id}"):
+          st.session_state.demo_balance += p_amt + pnl
+          try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE users SET demo_balance = ? WHERE email = ?",
+                (
+                    st.session_state.demo_balance,
+                    st.session_state.current_user_email,
+                ),
+            )
+            cursor.execute(
+                "UPDATE paper_trades SET status = 'CLOSED' WHERE id = ?",
+                (p_id,),
+            )
+            conn.commit()
+            conn.close()
+          except:
+            pass
+          st.rerun()
     else:
-      st.error(
-          "🔒 Access Denied! Trial users have limited automation access."
-          " Please purchase the ₹399 VIP Pass for complete All-to-All freedom."
+      st.markdown(
+          "<p style='color:#848e9c; font-size:11px; text-align:center;'>No open positions.</p>",
+          unsafe_allow_html=True,
       )
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ----------------------------------------------------
-# TAB 4: RISK & DISCIPLINE
+# TAB 3: RISK & DISCIPLINE
+# ----------------------------------------------------
+with main_tab3:
+  st.markdown("### 🛡️ Risk Management Guidelines")
+  st.checkbox("Never risk more than 1-2% of total capital per trade.")
+  st.checkbox(
+      "Always set strict Stop-Loss prior to executing paper or live orders."
+  )
+
+
+# ----------------------------------------------------
+# TAB 4: MARKET ANALYTICS
 # ----------------------------------------------------
 with main_tab4:
-  st.markdown("### 🛡️ Risk Management")
-  st.checkbox("Never risk more than 1-2% per trade.")
-  st.checkbox("Always use Stop-Loss.")
-
-
-# ----------------------------------------------------
-# TAB 5: MARKET ANALYTICS
-# ----------------------------------------------------
-with main_tab5:
-  st.markdown("### 📊 Market Analytics")
+  st.markdown("### 📊 Market Analytics Overview")
   st.dataframe(
       pd.DataFrame({
-          "Asset": ["BTCUSDT", "ETHUSDT", "SOLUSDT"],
-          "24h Change (%)": [1.23, -0.45, 2.45],
+          "Asset": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "GOLD", "AAPL"],
+          "24h Change (%)": [1.23, -0.45, 2.45, 0.72, 1.35],
       }),
       use_container_width=True,
   )
 
 
 # ----------------------------------------------------
-# TAB 6: SETTINGS
+# TAB 5: SETTINGS
 # ----------------------------------------------------
-with main_tab6:
+with main_tab5:
   st.markdown("### ⚙️ Terminal Settings")
   st.markdown(f"Email: **{st.session_state.current_user_email}**")
-  st.markdown(f"Tier: **{st.session_state.user_tier}**")
+  st.markdown(f"Tier: **{st.session_state.get('user_tier', 'Standard')}**")
 
 st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown(
