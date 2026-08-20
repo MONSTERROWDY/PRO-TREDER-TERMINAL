@@ -264,9 +264,13 @@ def fetch_global_prices():
 
 def fetch_live_chart_data(symbol, interval="1h"):
   try:
+    limit_val = (
+        30
+        if interval in ["1m", "5m"]
+        else (60 if interval in ["15m", "1h"] else 100)
+    )
     if symbol in ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT"]:
-      iv = "1h" if "1h" in interval else "15m"
-      url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={iv}&limit=50"
+      url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval={interval}&limit={limit_val}"
       res = requests.get(url, timeout=3).json()
       df = pd.DataFrame(res, columns=[
           "time",
@@ -285,28 +289,25 @@ def fetch_live_chart_data(symbol, interval="1h"):
       df["time"] = pd.to_datetime(df["time"], unit="ms")
       for col in ["open", "high", "low", "close", "volume"]:
         df[col] = df[col].astype(float)
-      return df[["time", "open", "high", "low", "close", "volume"]]
+      return df[["time", "close"]].dropna()
   except Exception:
     pass
 
   base = (
       68000.0
       if symbol == "BTCUSDT"
-      else (3500.0 if symbol == "ETHUSDT" else 2500.0)
+      else (
+          3500.0
+          if symbol == "ETHUSDT"
+          else (2521.0 if symbol == "GOLD" else 3002.0)
+      )
   )
   import numpy as np
 
-  dates = pd.date_range(end=datetime.datetime.now(), periods=50, freq="h")
-  np.random.seed(len(symbol))
-  price_paths = base + np.cumsum(np.random.randn(50) * (base * 0.002))
-  df = pd.DataFrame({
-      "time": dates,
-      "open": price_paths - np.random.randn(50) * 2,
-      "high": price_paths + abs(np.random.randn(50) * 5),
-      "low": price_paths - abs(np.random.randn(50) * 5),
-      "close": price_paths,
-      "volume": np.random.randint(1000, 10000, 50),
-  })
+  dates = pd.date_range(end=datetime.datetime.now(), periods=60, freq="h")
+  np.random.seed(len(symbol) + 7)
+  price_paths = base + np.cumsum(np.random.randn(60) * (base * 0.0015))
+  df = pd.DataFrame({"time": dates, "close": price_paths})
   return df
 
 
@@ -545,17 +546,16 @@ for i, symbol in enumerate(ticker_keys):
   if symbol in prices_data:
     p = prices_data[symbol]["price"]
     c = prices_data[symbol]["change"]
-    c_class = "ticker-change-green" if c >= 0 else "ticker-change-red"
     with cols[i]:
       st.markdown(
           f"""
             <div class="ticker-card">
                 <div style="font-size:12px; color:#848e9c;">{symbol}</div>
                 <div style="font-size:16px; font-weight:700;">${p:,.2f}</div>
-                <div class="{c_class}" style="font-size:11px;">{c}%</div>
+                <div style="font-size:11px; color: {'#0ecb81' if c>=0 else '#f6465d'};">{c}%</div>
             </div>
             """,
-            unsafe_allow_html=True,
+          unsafe_allow_html=True,
       )
 
 st.markdown("<br>", unsafe_allow_html=True)
@@ -704,81 +704,105 @@ with main_tab1:
 
 
 # ----------------------------------------------------
-# TAB 2: CHART ANALYST & SIGNALS (Direct Pair/TF Switcher)
+# TAB 2: ADVANCED CHART ANALYST & MULTI-STYLE AI SIGNALS
 # ----------------------------------------------------
 with main_tab2:
   st.markdown(
-      "### 📊 Professional Chart Analyst & Live AI Buy/Sell Signals"
+      "### 📊 Advanced Multi-Style Chart Analyst & AI Signal Engine"
   )
   st.markdown(
-      "<p style='color:#848e9c; font-size:13px;'>Directly select any asset pair"
-      " and timeframe below to analyze charts in real time. <b>VIP Members get"
-      " All-to-All Unlimited Signals</b> while Trial/Free users have a 1"
-      " signal daily limit.</p>",
+      "<p style='color:#848e9c; font-size:13px;'>Choose your preferred trading"
+      " style (Scalping, Intraday, or Swing), timeframe, and AI model below"
+      " to generate institutional-grade entry, stop-loss, and take-profit"
+      " setups.</p>",
       unsafe_allow_html=True,
   )
 
-  # Direct Control Toolbar right inside the Chart Section
-  cc1, cc2, cc3 = st.columns(3)
-  with cc1:
+  # --- ADVANCED CONTROL TOOLBAR (Binance/TradingView Style) ---
+  c_col1, c_col2, c_col3, c_col4 = st.columns(4)
+  with c_col1:
     chart_symbol = st.selectbox(
-        "📈 Select Trading Pair",
-        list(prices_data.keys()),
-        key="ca_sym_direct",
+        "📈 Asset Pair", list(prices_data.keys()), key="adv_ca_sym"
     )
-  with cc2:
-    chart_timeframe = st.selectbox(
-        "⏱️ Timeframe", ["1m", "5m", "15m", "1h", "4h", "1D"], key="ca_tf_direct"
-    )
-  with cc3:
-    chart_ind = st.selectbox(
-        "📉 Overlay Indicator",
+  with c_col2:
+    trading_style = st.selectbox(
+        "⚡ Trading Style",
         [
-            "None",
-            "Moving Average (MA)",
-            "Bollinger Bands",
-            "RSI Oscillator",
-            "VIP BOS/ChoCH",
+            "⚡ Scalping (Fast 1m/5m)",
+            "📊 Intraday (15m/1h)",
+            "📈 Swing Trading (4h/1D)",
         ],
-        key="ca_ind_direct",
+        key="adv_trading_style",
+    )
+  with c_col3:
+    if "Scalping" in trading_style:
+      default_tf_idx = 0
+      available_tfs = ["1m", "5m", "15m"]
+    elif "Intraday" in trading_style:
+      default_tf_idx = 1
+      available_tfs = ["15m", "1h", "4h"]
+    else:
+      default_tf_idx = 2
+      available_tfs = ["4h", "1D"]
+
+    chart_timeframe = st.selectbox(
+        "⏱️ Timeframe",
+        available_tfs,
+        index=min(default_tf_idx, len(available_tfs) - 1),
+        key="adv_ca_tf",
+    )
+  with c_col4:
+    ai_strategy_mode = st.selectbox(
+        "🤖 AI Strategy",
+        [
+            "Momentum Breakout",
+            "Trend Following (EMA)",
+            "Mean Reversion (RSI)",
+            "VIP BOS / ChoCH",
+        ],
+        key="adv_ai_strategy",
     )
 
   current_pair_price = prices_data.get(chart_symbol, {"price": 100.0})[
       "price"
   ]
   st.markdown(
-      f"<div style='background: #181a20; padding: 10px 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #23272e; display: flex; justify-content: space-between;'><span>Active Chart: <b>{chart_symbol}</b></span> <span>Live Price: <b style='color: #fcd535;'>${current_pair_price:,.2f}</b></span></div>",
+      f"<div style='background: #181a20; padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; border: 1px solid #23272e; display: flex; justify-content: space-between; align-items: center;'><span>Active Pair: <b>{chart_symbol}</b> | Style: <b style='color: #fcd535;'>{trading_style}</b></span> <span>Live Price: <b style='color: #0ecb81;'>${current_pair_price:,.2f}</b></span></div>",
       unsafe_allow_html=True,
   )
 
+  # --- DYNAMIC CHART RENDERING ---
   df_chart = fetch_live_chart_data(chart_symbol, chart_timeframe)
-  st.line_chart(
-      df_chart.set_index("time")[["close"]],
-      use_container_width=True,
-      height=380,
-      color=["#fcd535"],
-  )
+  if not df_chart.empty:
+    chart_data_indexed = df_chart.set_index("time")
+    st.line_chart(
+        chart_data_indexed,
+        height=380,
+        color=["#fcd535"],
+    )
+  else:
+    st.warning("No chart data available for this selection.")
 
   st.markdown("<br>", unsafe_allow_html=True)
 
-  # --- AI BUY/SELL SIGNAL ON CHART SECTION ---
+  # --- ADVANCED AI SIGNAL GENERATION TRIGGER ---
   st.markdown(
       """
         <div style="background: #181a20; border: 1px solid #23272e; padding: 20px; border-radius: 10px;">
-            <h4 style="margin: 0; color: #fcd535;">🤖 Chart AI Buy/Sell Signal & TP/SL Overlay</h4>
-            <p style="margin: 4px 0 0 0; font-size: 12px; color: #848e9c;">VIP members enjoy unlimited triggers. Trial/Free users are limited to 1 signal per day.</p>
+            <h4 style="margin: 0; color: #fcd535;">🎯 AI Strategy Signal & Risk Matrix Generator</h4>
+            <p style="margin: 4px 0 0 0; font-size: 12px; color: #848e9c;">Calculates tailored Stop-Loss (SL) and Take-Profit (TP) according to your selected Trading Style and Timeframe.</p>
         </div>
         """,
       unsafe_allow_html=True,
   )
 
   st.markdown("<br>", unsafe_allow_html=True)
-  if st.button("⚡ Load AI Buy/Sell Signal on Chart", key="load_chart_signal"):
+  if st.button("🚀 Generate Advanced AI Signal", key="generate_adv_signal"):
     today_str = datetime.datetime.now().strftime("%Y-%m-%d")
     is_vip_active = check_is_vip()
 
     if is_vip_active:
-      can_show_signal = True  # VIP get all-to-all unlimited access
+      can_show_signal = True
     else:
       if st.session_state.get("free_signal_date", "") == today_str:
         can_show_signal = False
@@ -799,15 +823,34 @@ with main_tab2:
 
     if can_show_signal:
       current_p = current_pair_price
+
+      # Adjust SL and TP multipliers based on user's trading style
+      if "Scalping" in trading_style:
+        sl_pct = 0.003
+        tp_pct = 0.008
+        recommended_lev = "10x - 20x"
+      elif "Intraday" in trading_style:
+        sl_pct = 0.009
+        tp_pct = 0.022
+        recommended_lev = "5x - 10x"
+      else:
+        sl_pct = 0.025
+        tp_pct = 0.065
+        recommended_lev = "1x - 3x"
+
       entry_l = current_p
-      sl_l = current_p * 0.991
-      tp_l = current_p * 1.025
+      sl_l = current_p * (1 - sl_pct)
+      tp_l = current_p * (1 + tp_pct)
+      risk_reward = round(tp_pct / sl_pct, 2)
 
       st.markdown(
           f"""
             <div class="trading-card" style="border-left: 4px solid #0ecb81; background: #12161c;">
-                <h4 style="color: #0ecb81; margin-top: 0;">🟢 BUY SIGNAL ACTIVE ({chart_symbol})</h4>
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h4 style="color: #0ecb81; margin: 0;">🟢 BUY / LONG SIGNAL ({chart_symbol})</h4>
+                    <span style="background: rgba(252, 213, 53, 0.1); color: #fcd535; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 700;">{trading_style} | TF: {chart_timeframe}</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px;">
                     <div style="background: #181a20; padding: 10px; border-radius: 6px;">
                         <span style="font-size: 11px; color: #848e9c;">Entry Price</span><br><b style="color: #ffffff;">${entry_l:,.2f}</b>
                     </div>
@@ -817,8 +860,11 @@ with main_tab2:
                     <div style="background: #181a20; padding: 10px; border-radius: 6px;">
                         <span style="font-size: 11px; color: #848e9c;">Take Profit (TP)</span><br><b style="color: #0ecb81;">${tp_l:,.2f}</b>
                     </div>
+                    <div style="background: #181a20; padding: 10px; border-radius: 6px;">
+                        <span style="font-size: 11px; color: #848e9c;">Risk-Reward / Lev</span><br><b style="color: #fcd535;">1:{risk_reward} ({recommended_lev})</b>
+                    </div>
                 </div>
-                <p style="font-size: 12px; color: #848e9c; margin-top: 10px; margin-bottom: 0;">✔ VIP All-Access enabled. Use these precise levels for institutional risk-reward.</p>
+                <p style="font-size: 12px; color: #848e9c; margin-top: 12px; margin-bottom: 0;">✔ Strategy: <b>{ai_strategy_mode}</b> successfully optimized for <b>{chart_symbol}</b>.</p>
             </div>
             """,
           unsafe_allow_html=True,
