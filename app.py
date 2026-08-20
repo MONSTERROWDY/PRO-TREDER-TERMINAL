@@ -145,16 +145,22 @@ def init_db():
 init_db()
 
 
-# --- AUTHENTICATION HELPERS ---
-def verify_user_credentials(email, password):
+# --- AUTHENTICATION HELPERS (FLEXIBLE: MOBILE / EMAIL / USERNAME) ---
+def verify_user_credentials(input_val, password):
   try:
     conn = get_db_connection()
     cursor = conn.cursor()
-    clean_email = email.strip().lower()
+    clean_input = input_val.strip()
+    clean_input_lower = clean_input.lower()
+
+    # सभी संभावित कॉलम्स में चेक करें (ईमेल, मोबाइल नंबर या यूजरनेम)
     cursor.execute(
-        "SELECT password, name, username, tier, demo_balance FROM users WHERE"
-        " LOWER(email) = ?",
-        (clean_email,),
+        """
+        SELECT password, name, username, tier, demo_balance, email 
+        FROM users 
+        WHERE email = ? OR LOWER(email) = ? OR username = ? OR LOWER(username) = ?
+    """,
+        (clean_input, clean_input_lower, clean_input, clean_input_lower),
     )
     res = cursor.fetchone()
     conn.close()
@@ -164,7 +170,7 @@ def verify_user_credentials(email, password):
       if stored_pass == password:
         return {
             "success": True,
-            "email": clean_email,
+            "id_used": res[5],  # वास्तविक रजिस्टर्ड आईडी/नंबर
             "name": res[1],
             "username": res[2] if res[2] else "trader",
             "tier": res[3] if res[3] else "VIP Platinum",
@@ -179,13 +185,11 @@ def register_new_user(email, password, name, username):
   try:
     conn = get_db_connection()
     cursor = conn.cursor()
-    clean_email = email.strip().lower()
-    cursor.execute(
-        "SELECT email FROM users WHERE LOWER(email) = ?", (clean_email,)
-    )
+    clean_email = email.strip()
+    cursor.execute("SELECT email FROM users WHERE email = ?", (clean_email,))
     if cursor.fetchone():
       conn.close()
-      return {"success": False, "msg": "Email ID already registered!"}
+      return {"success": False, "msg": "ID/Mobile already registered!"}
 
     cursor.execute(
         "INSERT INTO users (email, password, name, username, tier,"
@@ -238,27 +242,25 @@ def fetch_global_prices():
     }
 
 
-# --- SESSION MANAGEMENT (STABLE RESTORATION) ---
+# --- SESSION MANAGEMENT ---
 if "logged_in" not in st.session_state:
   st.session_state.logged_in = False
 
-# Check query parameters for session persistence without forcing logout bugs
 query_params = st.query_params
-saved_email = query_params.get("session_user", "")
+saved_user = query_params.get("session_user", "")
 
-if not st.session_state.logged_in and saved_email:
+if not st.session_state.logged_in and saved_user:
   conn = get_db_connection()
   cursor = conn.cursor()
   cursor.execute(
-      "SELECT name, username, tier, demo_balance FROM users WHERE LOWER(email)"
-      " = ?",
-      (saved_email.strip().lower(),),
+      "SELECT name, username, tier, demo_balance FROM users WHERE email = ?",
+      (saved_user.strip(),),
   )
   user_row = cursor.fetchone()
   conn.close()
   if user_row:
     st.session_state.logged_in = True
-    st.session_state.current_user_email = saved_email.strip().lower()
+    st.session_state.current_user_email = saved_user.strip()
     st.session_state.current_user_name = user_row[0]
     st.session_state.username = user_row[1] if user_row[1] else "trader"
     st.session_state.user_tier = user_row[2] if user_row[2] else "VIP Platinum"
@@ -286,8 +288,10 @@ if not st.session_state.logged_in:
 
     with t1:
       with st.form("login_form_secure"):
-        login_email = st.text_input(
-            "Email ID", value="", placeholder="name@example.com"
+        login_input = st.text_input(
+            "Mobile Number / Email / Username",
+            value="",
+            placeholder="Enter Mobile or Email",
         )
         login_pass = st.text_input(
             "Password", value="", type="password", placeholder="••••••••"
@@ -295,22 +299,22 @@ if not st.session_state.logged_in:
         login_btn = st.form_submit_button("Access Terminal")
 
         if login_btn:
-          if not login_email or not login_pass:
-            st.error("Please fill in both Email and Password!")
+          if not login_input or not login_pass:
+            st.error("Please fill in both fields!")
           else:
-            auth_res = verify_user_credentials(login_email, login_pass)
+            auth_res = verify_user_credentials(login_input, login_pass)
             if auth_res.get("success"):
               st.session_state.logged_in = True
-              st.session_state.current_user_email = auth_res["email"]
+              st.session_state.current_user_email = auth_res["id_used"]
               st.session_state.current_user_name = auth_res["name"]
               st.session_state.username = auth_res["username"]
               st.session_state.user_tier = auth_res["tier"]
               st.session_state.demo_balance = auth_res["balance"]
-              st.query_params["session_user"] = auth_res["email"]
+              st.query_params["session_user"] = auth_res["id_used"]
               st.rerun()
             else:
               st.error(
-                  "Invalid Credentials! Please check your registered Email and"
+                  "Invalid Credentials! Please check your Mobile/Email and"
                   " Password."
               )
 
@@ -318,7 +322,9 @@ if not st.session_state.logged_in:
       with st.form("register_form_secure"):
         reg_name = st.text_input("Full Name", placeholder="John Doe")
         reg_uname = st.text_input("Username", placeholder="trader_alpha")
-        reg_email = st.text_input("Email ID", placeholder="john@example.com")
+        reg_email = st.text_input(
+            "Mobile Number or Email", placeholder="Enter Mobile Number"
+        )
         reg_pass = st.text_input(
             "Password", type="password", placeholder="••••••••"
         )
@@ -331,14 +337,14 @@ if not st.session_state.logged_in:
             reg_res = register_new_user(reg_email, reg_pass, reg_name, reg_uname)
             if reg_res.get("success"):
               st.session_state.logged_in = True
-              st.session_state.current_user_email = reg_email.strip().lower()
+              st.session_state.current_user_email = reg_email.strip()
               st.session_state.current_user_name = reg_name
               st.session_state.username = (
                   reg_uname if reg_uname else "trader"
               )
               st.session_state.user_tier = "VIP Platinum"
               st.session_state.demo_balance = 10000.0
-              st.query_params["session_user"] = reg_email.strip().lower()
+              st.query_params["session_user"] = reg_email.strip()
               st.rerun()
             else:
               st.error(reg_res.get("msg", "Registration failed!"))
@@ -390,7 +396,7 @@ with st.sidebar:
       conn = get_db_connection()
       cursor = conn.cursor()
       cursor.execute(
-          "UPDATE users SET demo_balance = 10000.0 WHERE LOWER(email) = ?",
+          "UPDATE users SET demo_balance = 10000.0 WHERE email = ?",
           (st.session_state.current_user_email,),
       )
       conn.commit()
@@ -447,7 +453,6 @@ st.markdown("<br>", unsafe_allow_html=True)
 # --- DASHBOARD & TRADING DESK ---
 if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
 
-  # 1. FIVE TOP METRIC CARDS
   mc1, mc2, mc3, mc4, mc5 = st.columns(5)
   with mc1:
     st.markdown(
@@ -497,7 +502,6 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
 
   st.markdown("<br>", unsafe_allow_html=True)
 
-  # 2. SUB-TABS NAVIGATION
   main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6 = st.tabs([
       "📈 Trading View",
       "🤖 Advanced AI Signals",
@@ -582,7 +586,7 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
             conn = get_db_connection()
             cursor = conn.cursor()
             cursor.execute(
-                "UPDATE users SET demo_balance = ? WHERE LOWER(email) = ?",
+                "UPDATE users SET demo_balance = ? WHERE email = ?",
                 (
                     st.session_state.demo_balance,
                     st.session_state.current_user_email,
@@ -623,7 +627,6 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
       )
       st.markdown("</div>", unsafe_allow_html=True)
 
-    # 3. LOWER GRID
     st.markdown("<br>", unsafe_allow_html=True)
     grid_c1, grid_c2, grid_c3 = st.columns([1.5, 1.3, 1])
 
@@ -659,7 +662,7 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
         conn = get_db_connection()
         pos_df = pd.read_sql_query(
             "SELECT symbol, action, entry_price, amount, leverage FROM paper_trades"
-            " WHERE LOWER(email) = ? AND status='OPEN'",
+            " WHERE email = ? AND status='OPEN'",
             conn,
             params=(st.session_state.current_user_email,),
         )
@@ -684,7 +687,7 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
       )
       st.success("Database Connected Successfully")
       st.success("Authentication Engine Active")
-      st.info(f"Logged in as: {st.session_state.current_user_email}")
+      st.info(f"Logged in ID: {st.session_state.current_user_email}")
       st.markdown("</div>", unsafe_allow_html=True)
 
   with main_tab2:
@@ -710,7 +713,7 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
     try:
       conn = get_db_connection()
       df_h = pd.read_sql_query(
-          "SELECT * FROM paper_trades WHERE LOWER(email) = ?",
+          "SELECT * FROM paper_trades WHERE email = ?",
           conn,
           params=(st.session_state.current_user_email,),
       )
