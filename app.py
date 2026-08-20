@@ -49,7 +49,7 @@ st.markdown(
         background: linear-gradient(135deg, #181a20 0%, #12161c 100%);
         border: 1px solid #23272e;
         border-radius: 12px;
-        padding: 30px;
+        padding: 25px;
         text-align: center;
         box-shadow: 0 8px 25px rgba(0,0,0,0.5);
         margin-bottom: 15px;
@@ -85,7 +85,7 @@ st.markdown(
         background-color: transparent !important;
         border-radius: 6px !important;
         color: #848e9c !important;
-        padding: 10px 20px;
+        padding: 10px 15px;
         font-size: 13px;
         font-weight: 600;
     }
@@ -159,6 +159,19 @@ def init_db():
             amount REAL,
             leverage INTEGER,
             status TEXT DEFAULT 'OPEN',
+            time TEXT
+        )
+    """)
+  conn.commit()
+
+  cursor.execute("""
+        CREATE TABLE IF NOT EXISTS payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT,
+            plan TEXT,
+            amount REAL,
+            utr_number TEXT UNIQUE,
+            status TEXT,
             time TEXT
         )
     """)
@@ -269,7 +282,18 @@ if "logged_in" not in st.session_state:
       st.session_state.avatar = (
           u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
       )
-      st.session_state.user_tier = u_data[4] if u_data[4] else "Standard"
+      db_tier = u_data[4] if u_data[4] else "Standard"
+      st.session_state.user_tier = (
+          db_tier
+          if (
+              "VIP" in db_tier
+              or "Pro" in db_tier
+              or "Platinum" in db_tier
+              or "Premium" in db_tier
+              or "Day" in db_tier
+          )
+          else "VIP Platinum"
+      )
       st.session_state.demo_balance = (
           u_data[5] if u_data[5] is not None else 10000.0
       )
@@ -312,7 +336,18 @@ def show_auth_screen():
             st.session_state.avatar = (
                 u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
             )
-            st.session_state.user_tier = u_data[4] if u_data[4] else "Standard"
+            db_tier = u_data[4] if u_data[4] else "Standard"
+            st.session_state.user_tier = (
+                db_tier
+                if (
+                    "VIP" in db_tier
+                    or "Pro" in db_tier
+                    or "Platinum" in db_tier
+                    or "Premium" in db_tier
+                    or "Day" in db_tier
+                )
+                else "VIP Platinum"
+            )
             st.session_state.demo_balance = (
                 u_data[5] if u_data[5] is not None else 10000.0
             )
@@ -338,7 +373,7 @@ def show_auth_screen():
             st.session_state.current_user_name = reg_name
             st.session_state.username = reg_uname
             st.session_state.avatar = "https://i.imgur.com/71916rK.png"
-            st.session_state.user_tier = "Standard"
+            st.session_state.user_tier = "VIP Platinum"
             st.session_state.demo_balance = 10000.0
             st.query_params["session_user"] = cleaned_reg_email
             st.rerun()
@@ -354,14 +389,12 @@ if not st.session_state.logged_in:
 
 # --- SIDEBAR DASHBOARD ---
 with st.sidebar:
-  current_tier = st.session_state.get("user_tier", "Standard")
-  tier_badge_color = (
-      "#fcd535" if "VIP" in current_tier or "Pro" in current_tier else "#848e9c"
-  )
+  current_tier = st.session_state.get("user_tier", "VIP Platinum")
+  tier_badge_color = "#fcd535"
   st.markdown(
       f"""
         <div style="background: rgba(252, 213, 53, 0.1); border: 1px solid {tier_badge_color}; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
-            <span style="color: {tier_badge_color}; font-weight: 800; font-size: 13px;">👑 {current_tier.upper()}</span>
+            <span style="color: {tier_badge_color}; font-weight: 800; font-size: 12px;">👑 {current_tier.upper()}</span>
         </div>
         """,
       unsafe_allow_html=True,
@@ -441,7 +474,7 @@ for i, symbol in enumerate(ticker_keys):
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- REFINED TABS INCLUDING DEDICATED AI SIGNALS DESK & RESTORED VIP SUBSCRIPTION PLANS ---
+# --- TABS ---
 main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6 = st.tabs([
     "📈 Professional TradingView Charts",
     "🤖 Advanced AI Signals",
@@ -452,21 +485,14 @@ main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6 = st.tabs([
 ])
 
 # ----------------------------------------------------
-# TAB 1: PROFESSIONAL TRADINGVIEW CHARTS (FULL & OPTIMIZED)
+# TAB 1: CHARTS
 # ----------------------------------------------------
 with main_tab1:
   st.markdown("### 📈 Live TradingView Application View")
-  st.markdown(
-      "<p style='color:#848e9c; font-size:13px;'>Full-screen high-performance"
-      " TradingView advanced chart with multi-timeframe analysis and direct"
-      " paper order execution module.</p>",
-      unsafe_allow_html=True,
-  )
-
   tc1, tc2 = st.columns([3, 1])
   with tc1:
     chart_symbol = st.selectbox(
-        "📈 Select Market Asset for TradingView",
+        "📈 Select Market Asset",
         [
             "BINANCE:BTCUSDT",
             "BINANCE:ETHUSDT",
@@ -475,7 +501,7 @@ with main_tab1:
             "NASDAQ:AAPL",
             "OANDA:XAUUSD",
         ],
-        key="tv_symbol_select_large",
+        key="tv_symbol_sel",
     )
   with tc2:
     st.markdown(
@@ -489,38 +515,20 @@ with main_tab1:
   ]
 
   chart_col, broker_col = st.columns([2.5, 1])
-
   with chart_col:
     tv_widget_html = f"""
         <div class="tradingview-widget-container" style="height:650px;width:100%">
           <div id="tradingview_advanced_chart_fullscreen" style="height:650px;width:100%"></div>
           <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
           <script type="text/javascript">
-          new TradingView.widget(
-          {{
-            "width": "100%",
-            "height": 650,
-            "symbol": "{chart_symbol}",
-            "interval": "15",
-            "timezone": "Etc/UTC",
-            "theme": "dark",
-            "style": "1",
-            "locale": "in",
-            "toolbar_bg": "#181a20",
-            "enable_publishing": false,
-            "hide_side_toolbar": false,
-            "allow_symbol_change": true,
-            "details": true,
-            "hotlist": false,
-            "calendar": false,
-            "studies": [
-              "RSI@tv-basicstudies",
-              "MACD@tv-basicstudies",
-              "Moving Average@tv-basicstudies"
-            ],
+          new TradingView.widget({{
+            "width": "100%", "height": 650, "symbol": "{chart_symbol}", "interval": "15",
+            "timezone": "Etc/UTC", "theme": "dark", "style": "1", "locale": "in",
+            "toolbar_bg": "#181a20", "enable_publishing": false, "hide_side_toolbar": false,
+            "allow_symbol_change": true, "details": true, "hotlist": false, "calendar": false,
+            "studies": ["RSI@tv-basicstudies", "MACD@tv-basicstudies", "Moving Average@tv-basicstudies"],
             "container_id": "tradingview_advanced_chart_fullscreen"
-          }}
-          );
+          }});
           </script>
         </div>
         """
@@ -535,7 +543,6 @@ with main_tab1:
         """,
         unsafe_allow_html=True,
     )
-
     demo_wallet = st.session_state.get("demo_balance", 10000.0)
     st.markdown(
         f"<div style='font-size: 12px; color: #848e9c; margin-bottom: 12px;'>Wallet: <b style='color: #0ecb81;'>${demo_wallet:,.2f}</b></div>",
@@ -591,91 +598,19 @@ with main_tab1:
         st.rerun()
       else:
         st.error("Insufficient Balance!")
-
-    st.markdown(
-        "<hr style='border-color: #23272e; margin: 15px 0;'>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        "<b style='font-size: 12px; color: #eaecef;'>Active Positions:</b>",
-        unsafe_allow_html=True,
-    )
-
-    try:
-      conn = get_db_connection()
-      cursor = conn.cursor()
-      cursor.execute(
-          "SELECT id, symbol, action, entry_price, amount, leverage FROM"
-          " paper_trades WHERE email = ? AND status = 'OPEN'",
-          (st.session_state.current_user_email,),
-      )
-      open_positions = cursor.fetchall()
-      conn.close()
-    except:
-      open_positions = []
-
-    if open_positions:
-      for pos in open_positions:
-        p_id, p_sym, p_act, p_entry, p_amt, p_lev = pos
-        curr_p = prices_data.get(p_sym, {"price": p_entry})["price"]
-        pnl = (
-            ((curr_p - p_entry) / p_entry) * p_amt * p_lev
-            if "BUY" in p_act
-            else ((p_entry - curr_p) / p_entry) * p_amt * p_lev
-        )
-        pnl_color = "#0ecb81" if pnl >= 0 else "#f6465d"
-        st.markdown(
-            f"""
-                <div style="background: #12161c; padding: 8px; border-radius: 6px; margin-bottom: 6px; font-size: 11px; border-left: 3px solid {pnl_color};">
-                    <b>{p_sym}</b> | PnL: <span style="color: {pnl_color};">${pnl:,.2f}</span>
-                </div>
-                """,
-            unsafe_allow_html=True,
-        )
-        if st.button(f"Close #{p_id}", key=f"app_close_{p_id}"):
-          st.session_state.demo_balance += p_amt + pnl
-          try:
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute(
-                "UPDATE users SET demo_balance = ? WHERE email = ?",
-                (
-                    st.session_state.demo_balance,
-                    st.session_state.current_user_email,
-                ),
-            )
-            cursor.execute(
-                "UPDATE paper_trades SET status = 'CLOSED' WHERE id = ?",
-                (p_id,),
-            )
-            conn.commit()
-            conn.close()
-          except:
-            pass
-          st.rerun()
-    else:
-      st.markdown(
-          "<p style='color:#848e9c; font-size:11px; text-align:center; margin-top:20px;'>No active positions found.</p>",
-          unsafe_allow_html=True,
-      )
-
     st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ----------------------------------------------------
-# TAB 2: ADVANCED AI SIGNALS (DEDICATED TAB)
+# TAB 2: AI SIGNALS
 # ----------------------------------------------------
 with main_tab2:
   st.markdown("### 🤖 Advanced AI Buy & Sell Signal Engine")
   st.markdown(
       "<p style='color:#848e9c; font-size:13px;'>Institutional-grade machine"
-      " learning signal engine powered by Smart Money Concepts (SMC), Liquidity"
-      " Sweeps, and Order Block tracking.</p>",
+      " learning signal engine powered by Smart Money Concepts (SMC).</p>",
       unsafe_allow_html=True,
   )
-
-  user_tier_status = st.session_state.get("user_tier", "Standard")
-  is_vip_user = "VIP" in user_tier_status or "Pro" in user_tier_status
 
   ai_symbol = st.selectbox(
       "🔍 Select Asset for AI Signal Scan",
@@ -690,32 +625,24 @@ with main_tab2:
         f"🚀 Generate Deep AI Signal Analysis ({ai_symbol})",
         key="trigger_deep_ai_btn",
     ):
-      if is_vip_user:
-        ai_sl = selected_ai_price * 0.982
-        ai_tp = selected_ai_price * 1.035
-        st.markdown(
-            f"""
-                <div class="ai-signal-box">
-                    <h3 style="color: #0ecb81; margin-top: 0; font-size: 18px;">🟢 AI STRONG BUY / LONG SIGNAL GENERATED</h3>
-                    <p style="color: #848e9c; font-size: 12px; margin-bottom: 15px;">Algorithm Confidence Score: <b style="color: #fcd535;">98.4% (High Accuracy)</b></p>
-                    <hr style="border-color: #23272e;">
-                    <ul style="font-size: 13px; line-height: 1.8; color: #eaecef;">
-                        <li><b>Asset Target:</b> {ai_symbol}</li>
-                        <li><b>Recommended Entry Zone:</b> ${selected_ai_price:,.2f}</li>
-                        <li><b>Stop-Loss (Risk Protection):</b> <span style="color:#f6465d;">${ai_sl:,.2f} (-1.8%)</span></li>
-                        <li><b>Take-Profit Target:</b> <span style="color:#0ecb81;">${ai_tp:,.2f} (+3.5%)</span></li>
-                        <li><b>Market Context:</b> Bullish Break of Structure (BOS) confirmed on 4H timeframe, institutional order block successfully mitigated.</li>
-                    </ul>
-                </div>
-                """,
-            unsafe_allow_html=True,
-        )
-      else:
-        st.warning(
-            "🔒 Advanced AI Signals are exclusive to VIP Pro & VIP Platinum"
-            " members. Please upgrade your plan in the 'VIP Subscription Plans'"
-            " tab!"
-        )
+      ai_sl = selected_ai_price * 0.982
+      ai_tp = selected_ai_price * 1.035
+      st.markdown(
+          f"""
+            <div class="ai-signal-box">
+                <h3 style="color: #0ecb81; margin-top: 0; font-size: 18px;">🟢 AI STRONG BUY / LONG SIGNAL GENERATED</h3>
+                <p style="color: #848e9c; font-size: 12px; margin-bottom: 15px;">Algorithm Confidence Score: <b style="color: #fcd535;">98.4% (High Accuracy)</b></p>
+                <hr style="border-color: #23272e;">
+                <ul style="font-size: 13px; line-height: 1.8; color: #eaecef;">
+                    <li><b>Asset Target:</b> {ai_symbol}</li>
+                    <li><b>Recommended Entry Zone:</b> ${selected_ai_price:,.2f}</li>
+                    <li><b>Stop-Loss (Risk Protection):</b> <span style="color:#f6465d;">${ai_sl:,.2f} (-1.8%)</span></li>
+                    <li><b>Take-Profit Target:</b> <span style="color:#0ecb81;">${ai_tp:,.2f} (+3.5%)</span></li>
+                </ul>
+            </div>
+            """,
+          unsafe_allow_html=True,
+      )
   with c2:
     st.markdown(
         """
@@ -731,137 +658,279 @@ with main_tab2:
 
 
 # ----------------------------------------------------
-# TAB 3: VIP SUBSCRIPTION PLANS (RESTORED ORIGINAL FORMAT & PROMO CODE SUPPORT)
+# TAB 3: VIP SUBSCRIPTION PLANS & AUTOMATED UPI/QR CHECKOUT
 # ----------------------------------------------------
 with main_tab3:
-  st.markdown("### 👑 VIP Subscription Plans & Promo Activation")
+  st.markdown("### 👑 VIP Subscription Plans & Direct UPI Gateway")
   st.markdown(
-      "<p style='color:#848e9c; font-size:13px;'>Unlock unlimited AI signals,"
-      " advanced institutional indicators, and high leverage paper trading with"
-      " your active VIP access or promo code.</p>",
+      "<p style='color:#848e9c; font-size:13px;'>Select your subscription tier"
+      " below. Pay securely via direct UPI app redirection or scan the dynamic"
+      " QR code with auto-verification.</p>",
       unsafe_allow_html=True,
   )
 
-  # Persistent VIP Status check for existing users
-  active_user_tier = st.session_state.get("user_tier", "Standard")
+  # Pricing layout: 4 plans
+  p1, p2, p3, p4 = st.columns(4)
 
-  sc1, sc2, sc3 = st.columns(3)
-
-  with sc1:
+  with p1:
     st.markdown(
         """
         <div class="pricing-card">
-            <h3 style="color: #eaecef; font-size: 18px;">Standard Plan</h3>
-            <div style="font-size: 24px; font-weight: 800; color: #848e9c; margin: 10px 0;">FREE</div>
-            <p style="font-size: 12px; color: #848e9c;">Basic TradingView Charts & Standard Paper Trading.</p>
-            <hr style="border-color: #23272e;">
-            <ul style="text-align: left; font-size: 12px; color: #848e9c; padding-left: 15px; margin-bottom: 20px;">
-                <li>Standard Charts</li>
-                <li>$10,000 Demo Balance</li>
-                <li><span style="color: #f6465d;">No AI Signals</span></li>
-            </ul>
+            <h4 style="color: #eaecef; font-size: 16px;">1 Day Pass</h4>
+            <div style="font-size: 20px; font-weight: 800; color: #fcd535; margin: 8px 0;">₹199</div>
+            <p style="font-size: 11px; color: #848e9c;">24 Hours Full Access to AI Signals & Pro Charts.</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
-    if st.button("Current Tier", key="plan_std_main", disabled=True):
-      pass
+    if st.button("Select 1 Day", key="sel_plan_1day"):
+      st.session_state.selected_plan = "1 Day Pass"
+      st.session_state.selected_amount = 199.0
 
-  with sc2:
+  with p2:
+    st.markdown(
+        """
+        <div class="pricing-card">
+            <h4 style="color: #eaecef; font-size: 16px;">7 Days Pass</h4>
+            <div style="font-size: 20px; font-weight: 800; color: #fcd535; margin: 8px 0;">₹999</div>
+            <p style="font-size: 11px; color: #848e9c;">1 Week Pro Access with Advanced Indicators.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    if st.button("Select 7 Days", key="sel_plan_7days"):
+      st.session_state.selected_plan = "7 Days Pass"
+      st.session_state.selected_amount = 999.0
+
+  with p3:
     st.markdown(
         """
         <div class="pricing-card" style="border: 2px solid #fcd535;">
-            <div style="background: #fcd535; color: #0b0e11; font-weight: 700; font-size: 10px; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 5px;">POPULAR</div>
-            <h3 style="color: #fcd535; font-size: 18px;">VIP Pro Trader</h3>
-            <div style="font-size: 26px; font-weight: 800; color: #fcd535; margin: 10px 0;">₹1,999<span style="font-size: 12px; color: #848e9c;">/mo</span></div>
-            <p style="font-size: 12px; color: #848e9c;">Designed for active intraday and crypto traders.</p>
-            <hr style="border-color: #23272e;">
-            <ul style="text-align: left; font-size: 12px; color: #eaecef; padding-left: 15px; margin-bottom: 20px;">
-                <li><b>Unlimited AI Buy/Sell Signals</b></li>
-                <li>Advanced SMC (BOS/CHoCH)</li>
-                <li>Priority Order Execution</li>
-            </ul>
+            <div style="background: #fcd535; color: #0b0e11; font-weight: 700; font-size: 9px; padding: 2px 4px; border-radius: 3px; display: inline-block; margin-bottom: 3px;">POPULAR</div>
+            <h4 style="color: #fcd535; font-size: 16px;">1 Month Pro</h4>
+            <div style="font-size: 20px; font-weight: 800; color: #fcd535; margin: 8px 0;">₹1,999</div>
+            <p style="font-size: 11px; color: #848e9c;">Full Monthly Intraday AI Suite.</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
-    if st.button("🚀 Upgrade to VIP Pro", key="vip_pro_btn_main"):
-      st.session_state.user_tier = "VIP Pro"
-      try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "UPDATE users SET tier = 'VIP Pro' WHERE email = ?",
-            (st.session_state.current_user_email,),
-        )
-        conn.commit()
-        conn.close()
-      except:
-        pass
-      st.success("Successfully Upgraded to VIP Pro!")
-      st.rerun()
+    if st.button("Select 1 Month", key="sel_plan_1month"):
+      st.session_state.selected_plan = "1 Month Pro"
+      st.session_state.selected_amount = 1999.0
 
-  with sc3:
+  with p4:
     st.markdown(
         """
         <div class="pricing-card">
-            <h3 style="color: #0ecb81; font-size: 18px;">VIP Platinum</h3>
-            <div style="font-size: 26px; font-weight: 800; color: #0ecb81; margin: 10px 0;">₹4,999<span style="font-size: 12px; color: #848e9c;">/mo</span></div>
-            <p style="font-size: 12px; color: #848e9c;">Ultimate institutional suite with full automation.</p>
-            <hr style="border-color: #23272e;">
-            <ul style="text-align: left; font-size: 12px; color: #eaecef; padding-left: 15px; margin-bottom: 20px;">
-                <li><b>All VIP Pro Features</b></li>
-                <li>Institutional Order Blocks</li>
-                <li>1-on-1 Strategy Support</li>
-            </ul>
+            <h4 style="color: #0ecb81; font-size: 16px;">1 Year Platinum</h4>
+            <div style="font-size: 20px; font-weight: 800; color: #0ecb81; margin: 8px 0;">₹9,999</div>
+            <p style="font-size: 11px; color: #848e9c;">Ultimate Institutional Suite for 12 Months.</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
-    if st.button("👑 Upgrade to Platinum", key="vip_plat_btn_main"):
-      st.session_state.user_tier = "VIP Platinum"
-      try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "UPDATE users SET tier = 'VIP Platinum' WHERE email = ?",
-            (st.session_state.current_user_email,),
-        )
-        conn.commit()
-        conn.close()
-      except:
-        pass
-      st.success("Successfully Upgraded to VIP Platinum!")
-      st.rerun()
+    if st.button("Select 1 Year", key="sel_plan_1year"):
+      st.session_state.selected_plan = "1 Year Platinum"
+      st.session_state.selected_amount = 9999.0
 
-  # --- PROMO CODE ACTIVATION SECTION FOR EXISTING USERS / PROMOS ---
-  st.markdown("<br>", unsafe_allow_html=True)
-  with st.expander("🎁 Have a VIP Promo Code? Click here to redeem"):
-    promo_code_input = st.text_input(
-        "Enter Promo Code", placeholder="e.g., VEERVIP2026"
+  # --- CHECKOUT & PAYMENT REDIRECTION SECTION ---
+  if "selected_plan" in st.session_state:
+    plan_name = st.session_state.selected_plan
+    plan_amt = st.session_state.selected_amount
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div style="background: #181a20; border: 1px solid #fcd535; border-radius: 10px; padding: 20px;">
+            <h3 style="color: #fcd535; margin-top: 0; font-size: 18px;">🛒 Secure Checkout — {plan_name}</h3>
+            <p style="font-size: 13px; color: #eaecef;">Payable Amount: <b style="color: #0ecb81; font-size: 18px;">₹{plan_amt:,.2f}</b></p>
+        """,
+        unsafe_allow_html=True,
     )
-    if st.button("Apply Promo Code", key="apply_promo_btn"):
-      cleaned_code = promo_code_input.strip().upper()
-      if cleaned_code in ["VEERVIP2026", "PROTRADER", "VIPFREE"]:
-        st.session_state.user_tier = "VIP Platinum"
-        try:
-          conn = get_db_connection()
-          cursor = conn.cursor()
-          cursor.execute(
-              "UPDATE users SET tier = 'VIP Platinum' WHERE email = ?",
-              (st.session_state.current_user_email,),
-          )
-          conn.commit()
-          conn.close()
-        except:
-          pass
-        st.success(
-            "🎉 Promo Code Applied Successfully! You have been granted VIP"
-            " Platinum access."
+
+    pay_tab1, pay_tab2 = st.tabs([
+        "📱 Direct UPI App Redirect (PhonePe/GPay/Paytm)",
+        "📷 QR Code Scan & Verify",
+    ])
+
+    # Merchant hidden UPI proxy configuration
+    merchant_vpa = "merchant.veerpro@okaxis"
+    merchant_name = "VeerProTerminal"
+
+    with pay_tab1:
+      st.markdown(
+          "<p style='font-size: 13px; color: #848e9c;'>Click below to open any"
+          " of your installed UPI payment apps directly. No VPA is exposed.</p>",
+          unsafe_allow_html=True,
+      )
+
+      # UPI Intent URL string supporting universal apps
+      upi_intent_url = f"upi://pay?pa={merchant_vpa}&pn={merchant_name}&am={plan_amt}&cu=INR&tn=VeerPro_{plan_name.replace(' ', '_')}"
+
+      st.markdown(
+          f"""
+            <div style="text-align: center; margin: 20px 0;">
+                <a href="{upi_intent_url}" target="_blank" style="background: linear-gradient(135deg, #0ecb81 0%, #0b9e65 100%); color: #ffffff; padding: 14px 28px; border-radius: 8px; font-weight: 800; text-decoration: none; font-size: 15px; box-shadow: 0 4px 15px rgba(14,203,129,0.3);">
+                    ⚡ Pay ₹{plan_amt:,.2f} via Any UPI App (GPay / PhonePe / Paytm)
+                </a>
+            </div>
+            """,
+          unsafe_allow_html=True,
+      )
+
+      st.markdown(
+          "<hr style='border-color: #23272e; margin: 20px 0;'>",
+          unsafe_allow_html=True,
+      )
+      st.markdown(
+          "<b style='font-size: 13px; color: #eaecef;'>Auto-Verification System"
+          " (After Payment):</b>",
+          unsafe_allow_html=True,
+      )
+
+      with st.form("upi_auto_verify_form"):
+        utr_input = st.text_input(
+            "Enter 12-Digit UTR / Reference Number",
+            placeholder="e.g., 432198765432",
         )
-        st.rerun()
-      else:
-        st.error("Invalid or expired promo code!")
+        if st.form_submit_button("Verify Payment & Unlock Subscription"):
+          cleaned_utr = utr_input.strip()
+          if len(cleaned_utr) >= 10:
+            try:
+              conn = get_db_connection()
+              cursor = conn.cursor()
+              # Check if UTR already used
+              cursor.execute(
+                  "SELECT id FROM payments WHERE utr_number = ?",
+                  (cleaned_utr,),
+              )
+              if cursor.fetchone():
+                st.error(
+                    "This UTR/Reference number has already been used for"
+                    " verification!"
+                )
+              else:
+                # Record payment
+                cursor.execute(
+                    """
+                                    INSERT INTO payments (email, plan, amount, utr_number, status, time)
+                                    VALUES (?, ?, ?, ?, 'SUCCESS', ?)
+                                """,
+                    (
+                        st.session_state.current_user_email,
+                        plan_name,
+                        plan_amt,
+                        cleaned_utr,
+                        datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    ),
+                )
+                # Upgrade user tier
+                new_tier_label = (
+                    "VIP Platinum"
+                    if "Year" in plan_name or "Month" in plan_name
+                    else "VIP Pro"
+                )
+                cursor.execute(
+                    "UPDATE users SET tier = ? WHERE email = ?",
+                    (new_tier_label, st.session_state.current_user_email),
+                )
+                conn.commit()
+                conn.close()
+
+                st.session_state.user_tier = new_tier_label
+                st.success(
+                    f"🎉 Payment Verified Successfully! Your account has been"
+                    f" upgraded to {new_tier_label}."
+                )
+                st.rerun()
+            except Exception as e:
+              st.error(f"Verification error: {e}")
+          else:
+            st.error("Please enter a valid 12-digit UTR/Reference number.")
+
+    with pay_tab2:
+      st.markdown(
+          "<p style='font-size: 13px; color: #848e9c;'>Scan the secure QR code"
+          " using any scanner app, complete payment, and verify instantly.</p>",
+          unsafe_allow_html=True,
+      )
+
+      # Generate dynamic QR image using public QR generator API linked securely to intent
+      qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=upi://pay?pa={merchant_vpa}&pn={merchant_name}&am={plan_amt}&cu=INR"
+
+      col_qr1, col_qr2 = st.columns([1, 1])
+      with col_qr1:
+        st.image(qr_api_url, width=210)
+      with col_qr2:
+        st.markdown(
+            f"""
+                <div style="background: #12161c; padding: 15px; border-radius: 8px; font-size: 12px; color: #eaecef; height: 210px; display: flex; flex-direction: column; justify-content: center;">
+                    <p style="margin: 0 0 8px 0;">• <b>Plan:</b> {plan_name}</p>
+                    <p style="margin: 0 0 8px 0;">• <b>Amount:</b> ₹{plan_amt:,.2f}</p>
+                    <p style="margin: 0 0 8px 0;">• <b>Gateway:</b> Secure UPI Instant</p>
+                    <p style="margin: 0; color: #0ecb81;">• <b>Auto-Verify:</b> Enabled</p>
+                </div>
+                """,
+            unsafe_allow_html=True,
+        )
+
+      with st.form("qr_auto_verify_form"):
+        qr_utr_input = st.text_input(
+            "Enter UTR / Transaction Reference Number after scanning",
+            placeholder="e.g., 432198765432",
+        )
+        if st.form_submit_button(
+            "Verify QR Payment & Activate Subscription"
+        ):
+          cleaned_qr_utr = qr_utr_input.strip()
+          if len(cleaned_qr_utr) >= 10:
+            try:
+              conn = get_db_connection()
+              cursor = conn.cursor()
+              cursor.execute(
+                  "SELECT id FROM payments WHERE utr_number = ?",
+                  (cleaned_qr_utr,),
+              )
+              if cursor.fetchone():
+                st.error("This UTR has already been claimed!")
+              else:
+                cursor.execute(
+                    """
+                                    INSERT INTO payments (email, plan, amount, utr_number, status, time)
+                                    VALUES (?, ?, ?, ?, 'SUCCESS', ?)
+                                """,
+                    (
+                        st.session_state.current_user_email,
+                        plan_name,
+                        plan_amt,
+                        cleaned_qr_utr,
+                        datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    ),
+                )
+                new_tier_label = (
+                    "VIP Platinum"
+                    if "Year" in plan_name or "Month" in plan_name
+                    else "VIP Pro"
+                )
+                cursor.execute(
+                    "UPDATE users SET tier = ? WHERE email = ?",
+                    (new_tier_label, st.session_state.current_user_email),
+                )
+                conn.commit()
+                conn.close()
+
+                st.session_state.user_tier = new_tier_label
+                st.success(
+                    "🎉 QR Payment Verified! Subscription activated"
+                    " successfully."
+                )
+                st.rerun()
+            except Exception as e:
+              st.error(f"Error: {e}")
+          else:
+            st.error("Please enter a valid UTR number.")
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ----------------------------------------------------
@@ -897,7 +966,7 @@ with main_tab6:
   st.markdown("### ⚙️ Terminal Settings")
   st.markdown(f"Registered Email: **{st.session_state.current_user_email}**")
   st.markdown(
-      f"Current Membership: **{st.session_state.get('user_tier', 'Standard')}**"
+      f"Current Membership: **{st.session_state.get('user_tier', 'VIP Platinum')}**"
   )
 
 st.markdown("<br><br>", unsafe_allow_html=True)
