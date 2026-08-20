@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# --- ADVANCED INSTITUTIONAL UI CSS ---
+# --- INSTITUTIONAL EXCHANGE UI CSS ---
 st.markdown(
     """
     <style>
@@ -122,49 +122,88 @@ def init_db():
         )
     """)
   conn.commit()
+
+  # Ensure Admin Exists
+  cursor.execute("SELECT email FROM users WHERE email = ?", ("admin@gmail.com",))
+  if not cursor.fetchone():
+    cursor.execute(
+        "INSERT INTO users (email, password, name, username, tier,"
+        " demo_balance) VALUES (?, ?, ?, ?, ?, ?)",
+        (
+            "admin@gmail.com",
+            "admin123",
+            "Veer Trader",
+            "veer_pro",
+            "VIP Platinum",
+            10000.0,
+        ),
+    )
+    conn.commit()
   conn.close()
 
 
 init_db()
 
 
-def get_user_full(email):
+# --- AUTHENTICATION HELPERS ---
+def verify_user_credentials(email, password):
   try:
     conn = get_db_connection()
     cursor = conn.cursor()
+    clean_email = email.strip().lower()
     cursor.execute(
         "SELECT password, name, username, tier, demo_balance FROM users WHERE"
-        " email = ?",
-        (email.strip().lower(),),
+        " LOWER(email) = ?",
+        (clean_email,),
     )
     res = cursor.fetchone()
     conn.close()
-    return res
-  except Exception:
-    return None
+
+    if res:
+      stored_pass = res[0]
+      if stored_pass == password:
+        return {
+            "success": True,
+            "email": clean_email,
+            "name": res[1],
+            "username": res[2] if res[2] else "trader",
+            "tier": res[3] if res[3] else "VIP Platinum",
+            "balance": res[4] if res[4] is not None else 10000.0,
+        }
+    return {"success": False}
+  except Exception as e:
+    return {"success": False, "error": str(e)}
 
 
-def register_user(email, password, name, username):
+def register_new_user(email, password, name, username):
   try:
     conn = get_db_connection()
     cursor = conn.cursor()
+    clean_email = email.strip().lower()
+    cursor.execute(
+        "SELECT email FROM users WHERE LOWER(email) = ?", (clean_email,)
+    )
+    if cursor.fetchone():
+      conn.close()
+      return {"success": False, "msg": "Email ID already registered!"}
+
     cursor.execute(
         "INSERT INTO users (email, password, name, username, tier,"
         " demo_balance) VALUES (?, ?, ?, ?, ?, ?)",
         (
-            email.strip().lower(),
+            clean_email,
             password,
             name.strip(),
-            username.strip(),
+            username.strip() if username else "trader",
             "VIP Platinum",
             10000.0,
         ),
     )
     conn.commit()
     conn.close()
-    return True
-  except Exception:
-    return False
+    return {"success": True}
+  except Exception as e:
+    return {"success": False, "msg": str(e)}
 
 
 # --- REAL-TIME MARKET PRICES API ---
@@ -199,26 +238,33 @@ def fetch_global_prices():
     }
 
 
-# --- SESSION MANAGEMENT ---
+# --- SESSION MANAGEMENT (STABLE RESTORATION) ---
+if "logged_in" not in st.session_state:
+  st.session_state.logged_in = False
+
+# Check query parameters for session persistence without forcing logout bugs
 query_params = st.query_params
 saved_email = query_params.get("session_user", "")
 
-if "logged_in" not in st.session_state:
-  if saved_email:
-    u_data = get_user_full(saved_email)
-    if u_data:
-      st.session_state.logged_in = True
-      st.session_state.current_user_email = saved_email
-      st.session_state.current_user_name = u_data[1]
-      st.session_state.username = u_data[2] if u_data[2] else "trader"
-      st.session_state.user_tier = u_data[3] if u_data[3] else "VIP Platinum"
-      st.session_state.demo_balance = (
-          u_data[4] if u_data[4] is not None else 10000.0
-      )
-    else:
-      st.session_state.logged_in = False
-  else:
-    st.session_state.logged_in = False
+if not st.session_state.logged_in and saved_email:
+  conn = get_db_connection()
+  cursor = conn.cursor()
+  cursor.execute(
+      "SELECT name, username, tier, demo_balance FROM users WHERE LOWER(email)"
+      " = ?",
+      (saved_email.strip().lower(),),
+  )
+  user_row = cursor.fetchone()
+  conn.close()
+  if user_row:
+    st.session_state.logged_in = True
+    st.session_state.current_user_email = saved_email.strip().lower()
+    st.session_state.current_user_name = user_row[0]
+    st.session_state.username = user_row[1] if user_row[1] else "trader"
+    st.session_state.user_tier = user_row[2] if user_row[2] else "VIP Platinum"
+    st.session_state.demo_balance = (
+        user_row[3] if user_row[3] is not None else 10000.0
+    )
 
 
 # --- AUTHENTICATION INTERFACE ---
@@ -237,51 +283,66 @@ if not st.session_state.logged_in:
         unsafe_allow_html=True,
     )
     t1, t2 = st.tabs(["🔑 Sign In", "📝 Register"])
+
     with t1:
-      with st.form("login_form"):
-        login_email = st.text_input("Email ID", placeholder="name@example.com")
-        login_pass = st.text_input(
-            "Password", type="password", placeholder="••••••••"
+      with st.form("login_form_secure"):
+        login_email = st.text_input(
+            "Email ID", value="", placeholder="name@example.com"
         )
-        if st.form_submit_button("Access Terminal"):
-          cleaned_email = login_email.strip().lower()
-          u_data = get_user_full(cleaned_email)
-          if u_data and u_data[0] == login_pass:
-            st.session_state.logged_in = True
-            st.session_state.current_user_email = cleaned_email
-            st.session_state.current_user_name = u_data[1]
-            st.session_state.username = u_data[2] if u_data[2] else "trader"
-            st.session_state.user_tier = u_data[3] if u_data[3] else "VIP Platinum"
-            st.session_state.demo_balance = (
-                u_data[4] if u_data[4] is not None else 10000.0
-            )
-            st.query_params["session_user"] = cleaned_email
-            st.rerun()
+        login_pass = st.text_input(
+            "Password", value="", type="password", placeholder="••••••••"
+        )
+        login_btn = st.form_submit_button("Access Terminal")
+
+        if login_btn:
+          if not login_email or not login_pass:
+            st.error("Please fill in both Email and Password!")
           else:
-            st.error("Invalid Credentials!")
+            auth_res = verify_user_credentials(login_email, login_pass)
+            if auth_res.get("success"):
+              st.session_state.logged_in = True
+              st.session_state.current_user_email = auth_res["email"]
+              st.session_state.current_user_name = auth_res["name"]
+              st.session_state.username = auth_res["username"]
+              st.session_state.user_tier = auth_res["tier"]
+              st.session_state.demo_balance = auth_res["balance"]
+              st.query_params["session_user"] = auth_res["email"]
+              st.rerun()
+            else:
+              st.error(
+                  "Invalid Credentials! Please check your registered Email and"
+                  " Password."
+              )
+
     with t2:
-      with st.form("register_form"):
+      with st.form("register_form_secure"):
         reg_name = st.text_input("Full Name", placeholder="John Doe")
         reg_uname = st.text_input("Username", placeholder="trader_alpha")
         reg_email = st.text_input("Email ID", placeholder="john@example.com")
         reg_pass = st.text_input(
             "Password", type="password", placeholder="••••••••"
         )
-        if st.form_submit_button("Create Account"):
-          cleaned_reg_email = reg_email.strip().lower()
-          if register_user(
-              cleaned_reg_email, reg_pass, reg_name, reg_uname
-          ):
-            st.session_state.logged_in = True
-            st.session_state.current_user_email = cleaned_reg_email
-            st.session_state.current_user_name = reg_name
-            st.session_state.username = reg_uname
-            st.session_state.user_tier = "VIP Platinum"
-            st.session_state.demo_balance = 10000.0
-            st.query_params["session_user"] = cleaned_reg_email
-            st.rerun()
+        reg_btn = st.form_submit_button("Create Account")
+
+        if reg_btn:
+          if not reg_email or not reg_pass or not reg_name:
+            st.error("Please fill in all required fields!")
           else:
-            st.error("Email ID already registered!")
+            reg_res = register_new_user(reg_email, reg_pass, reg_name, reg_uname)
+            if reg_res.get("success"):
+              st.session_state.logged_in = True
+              st.session_state.current_user_email = reg_email.strip().lower()
+              st.session_state.current_user_name = reg_name
+              st.session_state.username = (
+                  reg_uname if reg_uname else "trader"
+              )
+              st.session_state.user_tier = "VIP Platinum"
+              st.session_state.demo_balance = 10000.0
+              st.query_params["session_user"] = reg_email.strip().lower()
+              st.rerun()
+            else:
+              st.error(reg_res.get("msg", "Registration failed!"))
+
     st.markdown("</div>", unsafe_allow_html=True)
   st.stop()
 
@@ -293,6 +354,7 @@ with st.sidebar:
       f"""
         <div style="background: rgba(252, 213, 53, 0.1); border: 1px solid #fcd535; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
             <span style="color: #fcd535; font-weight: 800; font-size: 12px;">👑 {current_tier.upper()}</span>
+            <div style="font-size: 11px; color: #848e9c; margin-top: 4px; word-break: break-all;">{st.session_state.get('current_user_email', '')}</div>
         </div>
         """,
       unsafe_allow_html=True,
@@ -324,6 +386,17 @@ with st.sidebar:
   st.markdown(f"**Wallet:** `${demo_bal:,.2f}`")
   if st.button("🔄 Reset Balance"):
     st.session_state.demo_balance = 10000.0
+    try:
+      conn = get_db_connection()
+      cursor = conn.cursor()
+      cursor.execute(
+          "UPDATE users SET demo_balance = 10000.0 WHERE LOWER(email) = ?",
+          (st.session_state.current_user_email,),
+      )
+      conn.commit()
+      conn.close()
+    except:
+      pass
     st.rerun()
 
   if st.button("🚪 Sign Out"):
@@ -381,7 +454,7 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
         f"""<div class="ticker-card" style="text-align: left;">
             <div style="font-size:11px; color:#848e9c;">Total Balance</div>
             <div style="font-size:18px; font-weight:800; color:#eaecef; margin: 4px 0;">${st.session_state.get('demo_balance', 10000.0):,.2f}</div>
-            <div style="font-size:11px; color:#848e9c;">≈ 10,000 USDT</div>
+            <div style="font-size:11px; color:#848e9c;">≈ USDT Wallet</div>
         </div>""",
         unsafe_allow_html=True,
     )
@@ -487,17 +560,11 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
             """,
           unsafe_allow_html=True,
       )
-      order_mode = st.radio(
-          "Order Mode", ["Manual", "Advanced"], horizontal=True, key="ord_mode"
-      )
       st.markdown(
           f"<div style='font-size:12px; color:#848e9c; margin-bottom:10px;'>Wallet Balance: <b style='color:#0ecb81;'>${st.session_state.demo_balance:,.2f} USDT</b></div>",
           unsafe_allow_html=True,
       )
 
-      order_type = st.radio(
-          "Order Type", ["Market", "Limit", "Stop"], horizontal=True, key="o_type"
-      )
       trade_side = st.radio(
           "Side", ["🟢 Buy / Long", "🔴 Sell / Short"], horizontal=True, key="t_side"
       )
@@ -515,7 +582,7 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
             conn = get_db_connection()
             cursor = conn.cursor()
             cursor.execute(
-                "UPDATE users SET demo_balance = ? WHERE email = ?",
+                "UPDATE users SET demo_balance = ? WHERE LOWER(email) = ?",
                 (
                     st.session_state.demo_balance,
                     st.session_state.current_user_email,
@@ -556,7 +623,7 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
       )
       st.markdown("</div>", unsafe_allow_html=True)
 
-    # 3. LOWER GRID: Market Overview, Open Positions, Recent Trades
+    # 3. LOWER GRID
     st.markdown("<br>", unsafe_allow_html=True)
     grid_c1, grid_c2, grid_c3 = st.columns([1.5, 1.3, 1])
 
@@ -566,7 +633,7 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
             <div style="background: #181a20; border: 1px solid #23272e; padding: 20px; border-radius: 12px; height: 340px;">
                 <h4 style="margin: 0 0 10px 0; font-size: 15px; color: #fcd535;">Market Overview</h4>
                 <div style="font-size: 12px; color: #848e9c; margin-bottom: 10px;">
-                    <span style="color: #fcd535; font-weight: bold; border-bottom: 2px solid #fcd535; padding-bottom: 3px;">Crypto</span> &nbsp;&nbsp; Forex &nbsp;&nbsp; Stocks &nbsp;&nbsp; Commodities
+                    <span style="color: #fcd535; font-weight: bold; border-bottom: 2px solid #fcd535; padding-bottom: 3px;">Crypto</span> &nbsp;&nbsp; Forex &nbsp;&nbsp; Stocks
                 </div>
             """,
           unsafe_allow_html=True,
@@ -584,103 +651,40 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
       st.markdown(
           """
             <div style="background: #181a20; border: 1px solid #23272e; padding: 20px; border-radius: 12px; height: 340px;">
-                <h4 style="margin: 0 0 10px 0; font-size: 15px; color: #fcd535;">Open Positions (3) <span style="float: right; font-size: 11px; color: #0ecb81; cursor: pointer;">View All</span></h4>
+                <h4 style="margin: 0 0 10px 0; font-size: 15px; color: #fcd535;">Active Positions</h4>
             """,
           unsafe_allow_html=True,
       )
-      pos_df = pd.DataFrame([
-          ["BTCUSDT (Long 10x)", "0.05 BTC", "$68,200.00", "+$21.75 (+4.35%)"],
-          ["ETHUSDT (Long 10x)", "0.50 ETH", "$3,480.00", "+$30.25 (+1.73%)"],
-          ["SOLUSDT (Short 10x)", "10.00 SOL", "$150.50", "-$12.50 (-2.45%)"],
-      ], columns=["Pair / Side", "Size", "Entry Price", "PnL"])
-      st.dataframe(pos_df, hide_index=True, use_container_width=True)
-      st.markdown(
-          "<p style='font-size: 13px; color: #0ecb81; font-weight: bold; margin-top: 10px;'>Total PnL: +$39.50 USDT</p>",
-          unsafe_allow_html=True,
-      )
+      try:
+        conn = get_db_connection()
+        pos_df = pd.read_sql_query(
+            "SELECT symbol, action, entry_price, amount, leverage FROM paper_trades"
+            " WHERE LOWER(email) = ? AND status='OPEN'",
+            conn,
+            params=(st.session_state.current_user_email,),
+        )
+        conn.close()
+        if not pos_df.empty:
+          st.dataframe(pos_df, hide_index=True, use_container_width=True)
+        else:
+          st.info(
+              "No open positions. Execute a trade from the Quick Order panel."
+          )
+      except:
+        st.info("Loading positions...")
       st.markdown("</div>", unsafe_allow_html=True)
 
     with grid_c3:
       st.markdown(
           """
             <div style="background: #181a20; border: 1px solid #23272e; padding: 20px; border-radius: 12px; height: 340px;">
-                <h4 style="margin: 0 0 10px 0; font-size: 15px; color: #fcd535;">Recent Trades</h4>
+                <h4 style="margin: 0 0 10px 0; font-size: 15px; color: #fcd535;">Terminal Status</h4>
             """,
           unsafe_allow_html=True,
       )
-      trades_df = pd.DataFrame([
-          ["18:25:43", "BTCUSDT", "Buy", "$72,441.01", "0.01"],
-          ["18:25:21", "ETHUSDT", "Sell", "$3,540.49", "0.10"],
-          ["18:24:58", "SOLUSDT", "Buy", "$145.06", "1.00"],
-      ], columns=["Time", "Pair", "Side", "Price", "Amount"])
-      st.dataframe(trades_df, hide_index=True, use_container_width=True)
-      st.markdown("</div>", unsafe_allow_html=True)
-
-    # 4. BOTTOM SECTION: AI Market Insights, Top Gainers, News Feed & VIP Upgrade
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown(
-        "<h3 style='font-size:16px; color:#fcd535;'>⚡ AI Market Insights</h3>",
-        unsafe_allow_html=True,
-    )
-    aic1, aic2, aic3, aic4, aic5 = st.columns([1, 1, 1, 1, 1.2])
-
-    with aic1:
-      st.markdown(
-          """
-            <div style="background: #181a20; border: 1px solid #23272e; padding: 15px; border-radius: 10px; height: 180px;">
-                <div style="font-size:11px; color:#848e9c;">Market Sentiment</div>
-                <div style="font-size:16px; font-weight:800; color:#0ecb81; margin: 8px 0;">Bullish 75%</div>
-                <div style="font-size:10px; color:#848e9c;">Strong buying pressure in the market</div>
-            </div>
-            """,
-          unsafe_allow_html=True,
-      )
-    with aic2:
-      st.markdown(
-          """
-            <div style="background: #181a20; border: 1px solid #23272e; padding: 15px; border-radius: 10px; height: 180px;">
-                <div style="font-size:11px; color:#848e9c;">AI Prediction</div>
-                <div style="font-size:14px; font-weight:800; color:#eaecef; margin: 4px 0;">BTCUSDT</div>
-                <div style="font-size:15px; font-weight:800; color:#0ecb81;">72,800.00</div>
-                <div style="font-size:10px; color:#0ecb81;">+2.45% Next 24h Prediction</div>
-            </div>
-            """,
-          unsafe_allow_html=True,
-      )
-    with aic3:
-      st.markdown(
-          """
-            <div style="background: #181a20; border: 1px solid #23272e; padding: 15px; border-radius: 10px; height: 180px;">
-                <div style="font-size:11px; color:#848e9c; margin-bottom: 5px;">Top Gainers</div>
-                <div style="font-size:11px; color:#eaecef;">🟢 SOLUSDT <span style="color:#0ecb81; float:right;">+5.24%</span></div>
-                <div style="font-size:11px; color:#eaecef; margin-top:6px;">🟢 DOGEUSDT <span style="color:#0ecb81; float:right;">+4.35%</span></div>
-                <div style="font-size:11px; color:#eaecef; margin-top:6px;">🟢 AVAXUSDT <span style="color:#0ecb81; float:right;">+3.21%</span></div>
-            </div>
-            """,
-          unsafe_allow_html=True,
-      )
-    with aic4:
-      st.markdown(
-          """
-            <div style="background: #181a20; border: 1px solid #23272e; padding: 15px; border-radius: 10px; height: 180px;">
-                <div style="font-size:11px; color:#848e9c; margin-bottom: 5px;">News Feed</div>
-                <div style="font-size:11px; color:#eaecef;">Bitcoin ETF inflows reach $200M <span style="display:block; font-size:9px; color:#848e9c;">2 minutes ago</span></div>
-                <div style="font-size:11px; color:#eaecef; margin-top:4px;">ETH 2.0 staking hits new high <span style="display:block; font-size:9px; color:#848e9c;">15 minutes ago</span></div>
-            </div>
-            """,
-          unsafe_allow_html=True,
-      )
-    with aic5:
-      st.markdown(
-          """
-            <div style="background: linear-gradient(135deg, #181a20 0%, #12161c 100%); border: 1px solid #fcd535; padding: 15px; border-radius: 10px; text-align: center; height: 180px;">
-                <div style="font-size:14px; font-weight:800; color:#fcd535;">👑 Upgrade to VIP</div>
-                <div style="font-size:10px; color:#848e9c; margin: 5px 0;">Get access to exclusive AI signals, lower fees and priority support.</div>
-            """,
-          unsafe_allow_html=True,
-      )
-      if st.button("Upgrade Now", key="vip_up_btn"):
-        st.success("Redirecting to VIP Checkout...")
+      st.success("Database Connected Successfully")
+      st.success("Authentication Engine Active")
+      st.info(f"Logged in as: {st.session_state.current_user_email}")
       st.markdown("</div>", unsafe_allow_html=True)
 
   with main_tab2:
@@ -702,11 +706,11 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
     st.write("Configure stop-loss limits and leverage restrictions.")
 
   with main_tab5:
-    st.markdown("### 📊 Market Analytics & History")
+    st.markdown("### 📊 Market Analytics & Trade History")
     try:
       conn = get_db_connection()
       df_h = pd.read_sql_query(
-          "SELECT * FROM paper_trades WHERE email = ?",
+          "SELECT * FROM paper_trades WHERE LOWER(email) = ?",
           conn,
           params=(st.session_state.current_user_email,),
       )
@@ -714,7 +718,7 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
       if not df_h.empty:
         st.dataframe(df_h, use_container_width=True)
       else:
-        st.info("No active trade history found.")
+        st.info("No trade history found.")
     except:
       st.info("Loading analytics...")
 
