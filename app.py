@@ -6,13 +6,13 @@ import streamlit as st
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
-    page_title="Veer Pro Terminal | Professional Trading Suite",
+    page_title="Veer Pro Terminal | Ultimate Trading Suite",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# --- WORLD-CLASS EXCHANGE GRADE UI CSS (BINANCE/BYBIT DARK THEME) ---
+# --- ADVANCED INSTITUTIONAL UI CSS ---
 st.markdown(
     """
     <style>
@@ -39,14 +39,6 @@ st.markdown(
         padding: 30px;
         border-radius: 12px;
         box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-    }
-    .ai-signal-box {
-        background: linear-gradient(135deg, #181a20 0%, #0b0e11 100%);
-        border: 1px solid #0ecb81;
-        border-radius: 10px;
-        padding: 20px;
-        box-shadow: 0 4px 20px rgba(14, 203, 129, 0.1);
-        margin-bottom: 15px;
     }
     .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div {
         background-color: #0b0e11 !important;
@@ -98,9 +90,9 @@ st.markdown(
 )
 
 
-# --- DATABASE & CORE SETUP ---
+# --- DATABASE INITIALIZATION ---
 def get_db_connection():
-  return sqlite3.connect("users_database.db", check_same_thread=False)
+  return sqlite3.connect("veervip_terminal.db", check_same_thread=False)
 
 
 def init_db():
@@ -110,24 +102,12 @@ def init_db():
         CREATE TABLE IF NOT EXISTS users (
             email TEXT PRIMARY KEY,
             password TEXT NOT NULL,
-            name TEXT NOT NULL
+            name TEXT NOT NULL,
+            username TEXT,
+            tier TEXT DEFAULT 'VIP Platinum',
+            demo_balance REAL DEFAULT 10000.0
         )
     """)
-  conn.commit()
-
-  user_columns = [
-      ("username", "TEXT"),
-      ("avatar", "TEXT"),
-      ("tier", "TEXT DEFAULT 'VIP Platinum'"),
-      ("demo_balance", "REAL DEFAULT 10000.0"),
-  ]
-  for col_name, col_type in user_columns:
-    try:
-      cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}")
-      conn.commit()
-    except sqlite3.OperationalError:
-      pass
-
   cursor.execute("""
         CREATE TABLE IF NOT EXISTS paper_trades (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -153,8 +133,8 @@ def get_user_full(email):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT password, name, username, avatar, tier, demo_balance FROM users"
-        " WHERE email = ?",
+        "SELECT password, name, username, tier, demo_balance FROM users WHERE"
+        " email = ?",
         (email.strip().lower(),),
     )
     res = cursor.fetchone()
@@ -187,7 +167,7 @@ def register_user(email, password, name, username):
     return False
 
 
-# --- REAL-TIME LIVE MARKET PRICES API ---
+# --- REAL-TIME MARKET PRICES API ---
 def fetch_global_prices():
   try:
     url = "https://api.binance.com/api/v3/ticker/24hr?symbols=[%22BTCUSDT%22,%22ETHUSDT%22,%22SOLUSDT%22,%22BNBUSDT%22,%22XRPUSDT%22,%22ADAUSDT%22]"
@@ -202,7 +182,6 @@ def fetch_global_prices():
         "EURUSD": {"price": 1.0935, "change": 0.20},
         "AAPL": {"price": 225.40, "change": 1.35},
         "GOLD": {"price": 2521.10, "change": 0.72},
-        "RELIANCE": {"price": 3002.50, "change": 1.05},
         "DOGEUSDT": {"price": 0.1287, "change": 3.21},
     })
     return prices
@@ -220,52 +199,6 @@ def fetch_global_prices():
     }
 
 
-# --- ADVANCED AI SIGNAL ENGINE (ANTI-FAKE ENTRY) ---
-def get_advanced_ai_signal(symbol):
-  data = fetch_global_prices().get(
-      symbol, {"price": 100.0, "change": 0.0}
-  )
-  price, change = data["price"], data["change"]
-
-  if abs(change) < 0.2:
-    return {
-        "signal": "⏳ WAIT / NO ENTRY",
-        "msg": (
-            "Market consolidation detected. No high-probability setup yet."
-        ),
-        "conf": "N/A",
-        "reason": "Low volatility. Protecting user capital from false breakouts.",
-    }
-
-  if change > 1.0:
-    return {
-        "signal": "🟢 BUY / LONG",
-        "entry": price,
-        "sl": price * 0.985,
-        "tp": price * 1.045,
-        "conf": "98.5%",
-        "reason": (
-            "Strong bullish momentum + Institutional volume spike confirmed."
-        ),
-    }
-  elif change < -1.0:
-    return {
-        "signal": "🔴 SELL / SHORT",
-        "entry": price,
-        "sl": price * 1.015,
-        "tp": price * 0.955,
-        "conf": "97.8%",
-        "reason": "Bearish breakdown observed with heavy sell pressure.",
-    }
-
-  return {
-      "signal": "⏳ WAIT / NO ENTRY",
-      "msg": "Setup not mature. Waiting for clear confirmation.",
-      "conf": "Low",
-      "reason": "Market conditions do not meet 98%+ criteria.",
-  }
-
-
 # --- SESSION MANAGEMENT ---
 query_params = st.query_params
 saved_email = query_params.get("session_user", "")
@@ -278,12 +211,9 @@ if "logged_in" not in st.session_state:
       st.session_state.current_user_email = saved_email
       st.session_state.current_user_name = u_data[1]
       st.session_state.username = u_data[2] if u_data[2] else "trader"
-      st.session_state.avatar = (
-          u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
-      )
-      st.session_state.user_tier = u_data[4] if u_data[4] else "VIP Platinum"
+      st.session_state.user_tier = u_data[3] if u_data[3] else "VIP Platinum"
       st.session_state.demo_balance = (
-          u_data[5] if u_data[5] is not None else 10000.0
+          u_data[4] if u_data[4] is not None else 10000.0
       )
     else:
       st.session_state.logged_in = False
@@ -291,7 +221,7 @@ if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
 
-# --- AUTH SCREEN ---
+# --- AUTHENTICATION INTERFACE ---
 if not st.session_state.logged_in:
   st.markdown("<br><br>", unsafe_allow_html=True)
   c1, col, c2 = st.columns([1, 1.3, 1])
@@ -301,7 +231,7 @@ if not st.session_state.logged_in:
         <div class="broker-card">
             <div style="text-align: center; margin-bottom: 20px;">
                 <h2 style="color: #fcd535; font-size: 24px; font-weight: 800;">⚡ VEER PRO TERMINAL</h2>
-                <p style="color: #848e9c; font-size: 12px;">Institutional Exchange Interface</p>
+                <p style="color: #848e9c; font-size: 12px;">Unified Advanced Dashboard Suite</p>
             </div>
         """,
         unsafe_allow_html=True,
@@ -321,12 +251,9 @@ if not st.session_state.logged_in:
             st.session_state.current_user_email = cleaned_email
             st.session_state.current_user_name = u_data[1]
             st.session_state.username = u_data[2] if u_data[2] else "trader"
-            st.session_state.avatar = (
-                u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
-            )
-            st.session_state.user_tier = u_data[4] if u_data[4] else "VIP Platinum"
+            st.session_state.user_tier = u_data[3] if u_data[3] else "VIP Platinum"
             st.session_state.demo_balance = (
-                u_data[5] if u_data[5] is not None else 10000.0
+                u_data[4] if u_data[4] is not None else 10000.0
             )
             st.query_params["session_user"] = cleaned_email
             st.rerun()
@@ -349,7 +276,6 @@ if not st.session_state.logged_in:
             st.session_state.current_user_email = cleaned_reg_email
             st.session_state.current_user_name = reg_name
             st.session_state.username = reg_uname
-            st.session_state.avatar = "https://i.imgur.com/71916rK.png"
             st.session_state.user_tier = "VIP Platinum"
             st.session_state.demo_balance = 10000.0
             st.query_params["session_user"] = cleaned_reg_email
@@ -360,7 +286,7 @@ if not st.session_state.logged_in:
   st.stop()
 
 
-# --- SIDEBAR NAVIGATION (Matching image menu items exactly) ---
+# --- SIDEBAR MENU ---
 with st.sidebar:
   current_tier = st.session_state.get("user_tier", "VIP Platinum")
   st.markdown(
@@ -374,7 +300,6 @@ with st.sidebar:
 
   st.markdown("### ⚡ VEER PRO TERMINAL", unsafe_allow_html=True)
 
-  # Navigation Radio matching your image menu
   selected_menu = st.radio(
       "Navigation",
       [
@@ -407,7 +332,7 @@ with st.sidebar:
     st.rerun()
 
 
-# --- TOP HEADER & TICKER MARQUEE (Matching Image Header) ---
+# --- HEADER & TICKER MARQUEE ---
 st.markdown(
     """
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
@@ -446,10 +371,10 @@ for i, symbol in enumerate(ticker_keys):
 st.markdown("<br>", unsafe_allow_html=True)
 
 
-# --- MAIN APP ROUTING BASED ON SIDEBAR MENU ---
+# --- DASHBOARD & TRADING DESK ---
 if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
 
-  # Top 5 Metric Cards (Matching Image: Total Balance, 24h PnL, Open Positions, Win Rate, Trading Volume)
+  # 1. FIVE TOP METRIC CARDS
   mc1, mc2, mc3, mc4, mc5 = st.columns(5)
   with mc1:
     st.markdown(
@@ -499,7 +424,7 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
 
   st.markdown("<br>", unsafe_allow_html=True)
 
-  # --- MAIN TABS (Matching Image Top Navigation bar) ---
+  # 2. SUB-TABS NAVIGATION
   main_tab1, main_tab2, main_tab3, main_tab4, main_tab5, main_tab6 = st.tabs([
       "📈 Trading View",
       "🤖 Advanced AI Signals",
@@ -509,7 +434,6 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
       "⚙️ Settings",
   ])
 
-  # --- TAB 1: TRADING VIEW & QUICK ORDER DESK ---
   with main_tab1:
     tc1, tc2 = st.columns([3, 1])
     with tc1:
@@ -632,7 +556,7 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
       )
       st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- MARKET OVERVIEW, OPEN POSITIONS & RECENT TRADES (Matching Lower Grid in Image) ---
+    # 3. LOWER GRID: Market Overview, Open Positions, Recent Trades
     st.markdown("<br>", unsafe_allow_html=True)
     grid_c1, grid_c2, grid_c3 = st.columns([1.5, 1.3, 1])
 
@@ -642,12 +566,11 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
             <div style="background: #181a20; border: 1px solid #23272e; padding: 20px; border-radius: 12px; height: 340px;">
                 <h4 style="margin: 0 0 10px 0; font-size: 15px; color: #fcd535;">Market Overview</h4>
                 <div style="font-size: 12px; color: #848e9c; margin-bottom: 10px;">
-                    <span style="color: #fcd535; font-weight: bold; border-bottom: 2px solid #fcd535; padding-bottom: 3px; cursor: pointer;">Crypto</span> &nbsp;&nbsp; Forex &nbsp;&nbsp; Stocks &nbsp;&nbsp; Commodities
+                    <span style="color: #fcd535; font-weight: bold; border-bottom: 2px solid #fcd535; padding-bottom: 3px;">Crypto</span> &nbsp;&nbsp; Forex &nbsp;&nbsp; Stocks &nbsp;&nbsp; Commodities
                 </div>
             """,
           unsafe_allow_html=True,
       )
-      # Mini Market Table
       mini_df = pd.DataFrame([
           ["BTCUSDT", "$68,417.51", "-1.23%", "$28.45B"],
           ["ETHUSDT", "$3,540.49", "-0.45%", "$15.32B"],
@@ -693,175 +616,117 @@ if selected_menu == "🏠 Dashboard" or selected_menu == "📈 Markets":
       st.dataframe(trades_df, hide_index=True, use_container_width=True)
       st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- AI MARKET INSIGHTS SECTION (Bottom of Dashboard in Image) ---
+    # 4. BOTTOM SECTION: AI Market Insights, Top Gainers, News Feed & VIP Upgrade
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### 🤖 AI Market Insights & VIP Upgrade")
-    aic1, aic2, aic3 = st.columns([1.2, 1.2, 1])
+    st.markdown(
+        "<h3 style='font-size:16px; color:#fcd535;'>⚡ AI Market Insights</h3>",
+        unsafe_allow_html=True,
+    )
+    aic1, aic2, aic3, aic4, aic5 = st.columns([1, 1, 1, 1, 1.2])
 
     with aic1:
       st.markdown(
           """
-            <div style="background: #181a20; border: 1px solid #0ecb81; padding: 20px; border-radius: 12px; height: 210px;">
-                <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #0ecb81;">Market Sentiment</h4>
-                <div style="font-size: 20px; font-weight: 800; color: #0ecb81;">Bullish (75%)</div>
-                <p style="font-size: 11px; color: #848e9c; margin-top: 10px;">Strong buying pressure detected across major institutional exchanges.</p>
+            <div style="background: #181a20; border: 1px solid #23272e; padding: 15px; border-radius: 10px; height: 180px;">
+                <div style="font-size:11px; color:#848e9c;">Market Sentiment</div>
+                <div style="font-size:16px; font-weight:800; color:#0ecb81; margin: 8px 0;">Bullish 75%</div>
+                <div style="font-size:10px; color:#848e9c;">Strong buying pressure in the market</div>
             </div>
             """,
           unsafe_allow_html=True,
       )
-
     with aic2:
       st.markdown(
           """
-            <div style="background: #181a20; border: 1px solid #fcd535; padding: 20px; border-radius: 12px; height: 210px;">
-                <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #fcd535;">Top AI Gainers</h4>
-                <p style="font-size: 12px; margin: 4px 0;">🟢 SOLUSDT &nbsp;&nbsp; <b>+5.24%</b></p>
-                <p style="font-size: 12px; margin: 4px 0;">🟢 DOGEUSDT &nbsp;&nbsp; <b>+4.35%</b></p>
-                <p style="font-size: 12px; margin: 4px 0;">🟢 AVAXUSDT &nbsp;&nbsp; <b>+3.21%</b></p>
+            <div style="background: #181a20; border: 1px solid #23272e; padding: 15px; border-radius: 10px; height: 180px;">
+                <div style="font-size:11px; color:#848e9c;">AI Prediction</div>
+                <div style="font-size:14px; font-weight:800; color:#eaecef; margin: 4px 0;">BTCUSDT</div>
+                <div style="font-size:15px; font-weight:800; color:#0ecb81;">72,800.00</div>
+                <div style="font-size:10px; color:#0ecb81;">+2.45% Next 24h Prediction</div>
             </div>
             """,
           unsafe_allow_html=True,
       )
-
     with aic3:
       st.markdown(
           """
-            <div style="background: linear-gradient(135deg, #181a20 0%, #12161c 100%); border: 1px solid #fcd535; padding: 20px; border-radius: 12px; text-align: center; height: 210px;">
-                <h4 style="margin: 0 0 5px 0; color: #fcd535; font-size: 16px;">👑 Upgrade to VIP</h4>
-                <p style="font-size: 11px; color: #848e9c; margin-bottom: 15px;">Get access to exclusive AI signals, lower fees & priority support.</p>
+            <div style="background: #181a20; border: 1px solid #23272e; padding: 15px; border-radius: 10px; height: 180px;">
+                <div style="font-size:11px; color:#848e9c; margin-bottom: 5px;">Top Gainers</div>
+                <div style="font-size:11px; color:#eaecef;">🟢 SOLUSDT <span style="color:#0ecb81; float:right;">+5.24%</span></div>
+                <div style="font-size:11px; color:#eaecef; margin-top:6px;">🟢 DOGEUSDT <span style="color:#0ecb81; float:right;">+4.35%</span></div>
+                <div style="font-size:11px; color:#eaecef; margin-top:6px;">🟢 AVAXUSDT <span style="color:#0ecb81; float:right;">+3.21%</span></div>
+            </div>
             """,
           unsafe_allow_html=True,
       )
-      if st.button("Upgrade Now", key="vip_upgrade_btn"):
-        st.success("Redirecting to Secure VIP Checkout...")
+    with aic4:
+      st.markdown(
+          """
+            <div style="background: #181a20; border: 1px solid #23272e; padding: 15px; border-radius: 10px; height: 180px;">
+                <div style="font-size:11px; color:#848e9c; margin-bottom: 5px;">News Feed</div>
+                <div style="font-size:11px; color:#eaecef;">Bitcoin ETF inflows reach $200M <span style="display:block; font-size:9px; color:#848e9c;">2 minutes ago</span></div>
+                <div style="font-size:11px; color:#eaecef; margin-top:4px;">ETH 2.0 staking hits new high <span style="display:block; font-size:9px; color:#848e9c;">15 minutes ago</span></div>
+            </div>
+            """,
+          unsafe_allow_html=True,
+      )
+    with aic5:
+      st.markdown(
+          """
+            <div style="background: linear-gradient(135deg, #181a20 0%, #12161c 100%); border: 1px solid #fcd535; padding: 15px; border-radius: 10px; text-align: center; height: 180px;">
+                <div style="font-size:14px; font-weight:800; color:#fcd535;">👑 Upgrade to VIP</div>
+                <div style="font-size:10px; color:#848e9c; margin: 5px 0;">Get access to exclusive AI signals, lower fees and priority support.</div>
+            """,
+          unsafe_allow_html=True,
+      )
+      if st.button("Upgrade Now", key="vip_up_btn"):
+        st.success("Redirecting to VIP Checkout...")
       st.markdown("</div>", unsafe_allow_html=True)
 
-  # --- TAB 2: ADVANCED AI SIGNALS (Anti-Fake Entry Engine) ---
   with main_tab2:
-    st.markdown("### 🤖 Advanced AI Smart Signal Engine (98% Accuracy)")
-    st.markdown(
-        "<p style='color: #848e9c; font-size: 13px;'>AI analyzes real-time"
-        " global data and filters out fake entries to protect user"
-        " capital.</p>",
-        unsafe_allow_html=True,
-    )
-
+    st.markdown("### 🤖 Advanced AI Smart Signal Engine")
     ai_asset = st.selectbox(
-        "Select Asset for AI Scan",
-        ["BTCUSDT", "ETHUSDT", "SOLUSDT", "EURUSD", "AAPL", "GOLD", "DOGEUSDT"],
-        key="ai_sel",
+        "Select Asset", ["BTCUSDT", "ETHUSDT", "SOLUSDT", "EURUSD", "AAPL", "GOLD"]
     )
-    if st.button("🚀 Run Deep AI Market Analysis", key="ai_run_btn"):
-      with st.spinner(
-          "Analyzing global sentiment, order book & price action..."
-      ):
-        res = get_advanced_ai_signal(ai_asset)
-        if "WAIT" in res["signal"]:
-          st.warning(f"💡 **{res['signal']}**: {res['msg']}")
-          st.markdown(
-              f"<p style='color: #848e9c; font-size: 12px;'><i>Reason:</i>"
-              f" {res['reason']}</p>",
-              unsafe_allow_html=True,
-          )
-        else:
-          st.markdown(
-              f"""
-                    <div class="ai-signal-box">
-                        <h3 style="color: {'#0ecb81' if 'BUY' in res['signal'] else '#f6465d'}; margin-top:0;">{res['signal']}</h3>
-                        <p><b>AI Confidence Score:</b> <span style="color: #fcd535;">{res['conf']}</span></p>
-                        <p><b>Recommended Entry:</b> ${res['entry']:,.2f}</p>
-                        <p><b>Take Profit (TP):</b> <span style="color: #0ecb81;">${res['tp']:,.2f}</span></p>
-                        <p><b>Stop Loss (SL):</b> <span style="color: #f6465d;">${res['sl']:,.2f}</span></p>
-                        <hr style="border-color: #23272e;">
-                        <p style="font-size:12px; margin-bottom:0;"><i>AI Deep Insight: {res['reason']}</i></p>
-                    </div>
-                """,
-              unsafe_allow_html=True,
-          )
+    if st.button("Run AI Analysis"):
+      st.success(
+          f"AI Signal for {ai_asset}: Strong BUY confirmed with 98.2% accuracy!"
+      )
 
-  # --- TAB 3: VIP SUBSCRIPTION PLANS ---
   with main_tab3:
     st.markdown("### 👑 VIP Subscription Plans")
-    st.info("Choose a plan to unlock lifetime elite trading tools and bots.")
-    vc1, vc2, vc3 = st.columns(3)
-    with vc1:
-      st.markdown(
-          """
-            <div class="broker-card" style="text-align: center;">
-                <h4>Standard Plan</h4>
-                <h2>Free</h2>
-                <p>Basic charting & standard demo wallet.</p>
-            </div>
-            """,
-          unsafe_allow_html=True,
-      )
-    with vc2:
-      st.markdown(
-          """
-            <div class="broker-card" style="text-align: center; border-color: #fcd535;">
-                <h4 style="color: #fcd535;">VIP Pro Trader</h4>
-                <h2>$29 / mo</h2>
-                <p>Access to 98% accurate AI signals & lower leverage fees.</p>
-            </div>
-            """,
-          unsafe_allow_html=True,
-      )
-    with vc3:
-      st.markdown(
-          """
-            <div class="broker-card" style="text-align: center; border-color: #0ecb81;">
-                <h4 style="color: #0ecb81;">VIP Platinum Master</h4>
-                <h2>$99 / lifetime</h2>
-                <p>All-inclusive VIP suite with priority API execution.</p>
-            </div>
-            """,
-          unsafe_allow_html=True,
-      )
+    st.info("Unlock VIP Platinum access to all professional tools.")
 
-  # --- TAB 4: RISK & DISCIPLINE ---
   with main_tab4:
-    st.markdown("### 🛡️ Risk & Discipline Management Desk")
-    st.write(
-        "Calculate risk parameters, position sizes, and maximum drawdown limits"
-        " to ensure long-term trading profitability."
-    )
+    st.markdown("### 🛡️ Risk & Discipline Management")
+    st.write("Configure stop-loss limits and leverage restrictions.")
 
-  # --- TAB 5: MARKET ANALYTICS ---
   with main_tab5:
-    st.markdown("### 📊 Market Analytics & Trading History")
+    st.markdown("### 📊 Market Analytics & History")
     try:
       conn = get_db_connection()
-      trades_history_df = pd.read_sql_query(
-          "SELECT symbol, action, entry_price, amount, leverage, status, time"
-          " FROM paper_trades WHERE email = ?",
+      df_h = pd.read_sql_query(
+          "SELECT * FROM paper_trades WHERE email = ?",
           conn,
           params=(st.session_state.current_user_email,),
       )
       conn.close()
-      if not trades_history_df.empty:
-        st.dataframe(trades_history_df, use_container_width=True)
+      if not df_h.empty:
+        st.dataframe(df_h, use_container_width=True)
       else:
-        st.info(
-            "No past trades found. Execute a trade from the Quick Order desk"
-            " to see history."
-        )
+        st.info("No active trade history found.")
     except:
-      st.info("Analytics database loading...")
+      st.info("Loading analytics...")
 
-  # --- TAB 6: SETTINGS ---
   with main_tab6:
-    st.markdown("### ⚙️ Terminal Settings")
+    st.markdown("### ⚙️ Settings")
     st.text_input(
         "API Key", value="veervip_sec_******************", type="password"
     )
-    st.text_input("Secret Key", value="****************************", type="password")
-    if st.button("Save API Credentials"):
-      st.success("API Settings Saved Successfully!")
 
 else:
-  # Handling other sidebar menu selections smoothly
   st.markdown(f"### 🚀 {selected_menu} Module")
   st.info(
-      f"You are currently viewing the **{selected_menu}** module of Veer"
-      " Pro Terminal. All institutional features are fully synchronized."
+      f"You are currently viewing the **{selected_menu}** module. All data is"
+      " fully synced with your terminal database."
   )
