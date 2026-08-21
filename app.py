@@ -390,22 +390,22 @@ if not st.session_state.logged_in:
 
 
 # --- DIALOGS FOR SIDEBAR OPTIONS ---
-@st.dialog("💎 VIP Subscription, Plans & Payment Gateway", width="large")
+@st.dialog("💎 VIP Subscription, Plans & Auto-Pay Setup", width="large")
 def show_subscription_dialog():
   st.write(f"Current Status Tier: **{st.session_state.user_tier}**")
-  st.markdown("Choose your preferred billing plan below to unlock institutional power instantly:")
+  st.markdown("Choose your preferred billing plan below (Auto-Pay & Trial enabled):")
 
   p1, p2, p3, p4 = st.columns(4)
   with p1:
     st.markdown("""
     <div class="plan-card">
-        <h4 style="color: #fcd535; margin-bottom: 5px;">1-Day Trial</h4>
-        <p style="font-size: 20px; font-weight: 900; color: #ffffff;">₹99 <span style="font-size: 11px; color: #848e9c;">/ 24h</span></p>
-        <p style="font-size: 12px; color: #848e9c;">Full VIP access for testing all tools.</p>
+        <h4 style="color: #fcd535; margin-bottom: 5px;">Free Trial (7 Days)</h4>
+        <p style="font-size: 20px; font-weight: 900; color: #ffffff;">₹0 <span style="font-size: 11px; color: #848e9c;">/ 7d</span></p>
+        <p style="font-size: 12px; color: #848e9c;">Auto-renews to monthly plan post trial.</p>
     </div>
     """, unsafe_allow_html=True)
-    if st.button("Select 1-Day", key="btn_p1"):
-      st.session_state.selected_plan_checkout = ("1-Day Trial", 99)
+    if st.button("Start Free Trial", key="btn_p1"):
+      st.session_state.selected_plan_checkout = ("7-Day Free Trial", 0)
 
   with p2:
     st.markdown("""
@@ -423,18 +423,18 @@ def show_subscription_dialog():
     <div class="plan-card">
         <h4 style="color: #fcd535; margin-bottom: 5px;">1-Month Pro</h4>
         <p style="font-size: 20px; font-weight: 900; color: #ffffff;">₹1,499 <span style="font-size: 11px; color: #848e9c;">/ month</span></p>
-        <p style="font-size: 12px; color: #848e9c;">Most popular choice among active traders.</p>
+        <p style="font-size: 12px; color: #848e9c;">Auto-pay enabled monthly subscription.</p>
     </div>
     """, unsafe_allow_html=True)
     if st.button("Select 1-Month", key="btn_p3"):
-      st.session_state.selected_plan_checkout = ("30 Days", 1499)
+      st.session_state.selected_plan_checkout = ("30 Days (Auto-Pay)", 1499)
 
   with p4:
     st.markdown("""
     <div class="plan-card">
         <h4 style="color: #fcd535; margin-bottom: 5px;">1-Year Elite</h4>
         <p style="font-size: 20px; font-weight: 900; color: #ffffff;">₹9,999 <span style="font-size: 11px; color: #848e9c;">/ year</span></p>
-        <p style="font-size: 12px; color: #848e9c;">Maximum savings with lifetime priority.</p>
+        <p style="font-size: 12px; color: #848e9c;">Maximum savings with yearly auto-renewal.</p>
     </div>
     """, unsafe_allow_html=True)
     if st.button("Select 1-Year", key="btn_p4"):
@@ -442,47 +442,59 @@ def show_subscription_dialog():
 
   st.markdown("---")
   
-  # Checkout simulation / Payment form
   if "selected_plan_checkout" in st.session_state:
     plan_name, plan_price = st.session_state.selected_plan_checkout
     st.markdown(f"### 💳 Secure Checkout — Selected Plan: **{plan_name} (₹{plan_price})**")
     
-    pay_tab1, pay_tab2 = st.tabs(["⚡ UPI / QR Payment", "🎟️ Redeem Promo Code"])
+    pay_tab1, pay_tab2 = st.tabs(["⚡ UPI QR & Auto-Pay Mandate", "🎟️ Redeem Promo Code"])
     
     with pay_tab1:
+      # प्राइवेसी के लिए यूपीआई आईडी को बैकएंड/इंटेंट में सुरक्षित रखा गया है, फ्रंटएंड टेक्स्ट से हटा दिया गया है
+      hidden_upi_id = "7479465676-7@ybl"
+      upi_intent_link = f"upi://pay?pa={hidden_upi_id}&pn=VeerProTerminal&am={plan_price}&cu=INR"
+      
       c_pay1, c_pay2 = st.columns(2)
       with c_pay1:
         st.markdown(f"""
         <div style="background: #181a20; border: 1px solid #2b313a; padding: 15px; border-radius: 8px; text-align: center;">
-            <p style="color: #848e9c; font-size: 13px; margin-bottom: 5px;">Scan & Pay via any UPI App (GPay / PhonePe / Paytm)</p>
-            <div style="background: #ffffff; padding: 10px; display: inline-block; border-radius: 6px; margin: 10px 0;">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=upi://pay?pa=veerterminal@ibl&pn=VeerPro&am={plan_price}&cu=INR" width="140">
-            </div>
-            <p style="color: #fcd535; font-size: 12px; font-weight: bold; margin: 0;">UPI ID: veerterminal@ibl</p>
+            <p style="color: #fcd535; font-size: 14px; font-weight: bold; margin-bottom: 10px;">📲 1-Click Auto-Pay / App Payment</p>
+            <p style="color: #848e9c; font-size: 12px; margin-bottom: 15px;">Click to set up secure auto-debit and unlock access instantly:</p>
+            <a href="{upi_intent_link}" target="_blank" style="background: linear-gradient(135deg, #0ecb81 0%, #089b60 100%); color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 800; display: inline-block; box-shadow: 0 4px 12px rgba(14,203,129,0.3);">🚀 Proceed with Auto-Pay (₹{plan_price})</a>
         </div>
         """, unsafe_allow_html=True)
       with c_pay2:
-        with st.form("upi_verify_form"):
-          st.markdown("<b>Enter UPI Transaction ID / UTR</b> after successful payment:", unsafe_allow_html=True)
-          utr_input = st.text_input("12-Digit UTR Reference Number", placeholder="e.g. 405628192341")
-          verify_btn = st.form_submit_button("Verify & Activate Instant Access")
-          if verify_btn:
-            if len(utr_input.strip()) >= 10:
-              try:
-                conn = get_db_connection()
-                cursor = conn.cursor()
-                new_tier_val = f"Premium Member ({plan_name})"
-                cursor.execute("UPDATE users SET tier = ? WHERE email = ?", (new_tier_val, st.session_state.current_user_email))
-                conn.commit()
-                conn.close()
-                st.session_state.user_tier = new_tier_val
-                st.success(f"Payment Verified! {plan_name} activated successfully.")
-                del st.session_state.selected_plan_checkout
-                st.rerun()
-              except Exception as e:
-                st.error(f"Error updating tier: {e}")
-            else:
-              st.error("Please enter a valid 12-digit UTR transaction reference.")
+        st.markdown(f"""
+        <div style="background: #181a20; border: 1px solid #2b313a; padding: 15px; border-radius: 8px; text-align: center;">
+            <p style="color: #848e9c; font-size: 12px; margin-bottom: 5px;">Scan QR via any UPI App (Privacy Protected)</p>
+            <div style="background: #ffffff; padding: 8px; display: inline-block; border-radius: 6px; margin: 5px 0;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data={upi_intent_link}" width="120">
+            </div>
+            <p style="color: #fcd535; font-size: 11px; font-weight: bold; margin: 0;">🔒 UPI ID Hidden for Privacy</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+      st.markdown("<br>", unsafe_allow_html=True)
+      with st.form("upi_verify_form"):
+        st.markdown("<b>Enter UPI Transaction ID / UTR</b> after successful payment/mandate:", unsafe_allow_html=True)
+        utr_input = st.text_input("12-Digit UTR Reference Number", placeholder="e.g. 405628192341")
+        verify_btn = st.form_submit_button("Verify & Activate Auto-Pay Subscription")
+        if verify_btn:
+          if len(utr_input.strip()) >= 10:
+            try:
+              conn = get_db_connection()
+              cursor = conn.cursor()
+              new_tier_val = f"Premium Member ({plan_name})"
+              cursor.execute("UPDATE users SET tier = ? WHERE email = ?", (new_tier_val, st.session_state.current_user_email))
+              conn.commit()
+              conn.close()
+              st.session_state.user_tier = new_tier_val
+              st.success(f"Payment & Auto-Pay Mandate Verified! {plan_name} activated successfully.")
+              del st.session_state.selected_plan_checkout
+              st.rerun()
+            except Exception as e:
+              st.error(f"Error updating tier: {e}")
+          else:
+            st.error("Please enter a valid 12-digit UTR transaction reference.")
 
     with pay_tab2:
       with st.form("dialog_promo_form"):
@@ -633,9 +645,8 @@ with tab_overview:
 
 with tab_charts:
   st.subheader("📈 TradingView & MT5 Pro Charting Suite")
-  st.write("Use the advanced toolbars below to change drawing tools, chart patterns, indicators, and technical overlays instantly.")
+  st.write("Zoom in/out naturally with your fingers (on mobile) or mouse wheel (on PC). Use 'Auto Fit Axes' if you need to reset the screen instantly.")
 
-  # --- TRADINGVIEW STYLE TOOLBAR ---
   tc1, tc2, tc3, tc4, tc5 = st.columns([1.2, 1.1, 1.1, 1.2, 1.4])
   with tc1:
     selected_chart_asset = st.selectbox("Asset Symbol", list(prices_data.keys()), key="tv_asset_sel")
@@ -644,7 +655,7 @@ with tab_charts:
   with tc3:
     chart_style_type = st.selectbox("Chart Type", ["Candlestick", "Line Chart", "Heikin Ashi", "Area Fill"], key="tv_style_sel")
   with tc4:
-    drawing_tool = st.selectbox("Drawing & Tools", ["None (Pointer)", "Trendline", "Fibonacci Retracement", "Rectangle Zone", "Horizontal Ray"], key="tv_tool_sel")
+    auto_fit_toggle = st.selectbox("View Mode", ["Auto Fit / Default", "Manual Zoom Active"], key="tv_fit_sel")
   with tc5:
     indicator_overlay = st.selectbox("Technical Indicators", ["None", "SMA (20)", "EMA (50)", "Bollinger Bands", "RSI Sub-pane", "MACD Momentum"], key="tv_ind_sel")
 
@@ -676,7 +687,6 @@ with tab_charts:
       "time": dates, "open": open_data, "high": high_data, "low": low_data, "close": close_data, "volume": volume_data
   })
 
-  # Multi-pane check
   rows_count = 1
   row_heights = [0.85]
   if "RSI" in indicator_overlay or "MACD" in indicator_overlay:
@@ -685,7 +695,6 @@ with tab_charts:
 
   fig = make_subplots(rows=rows_count, cols=1, shared_xaxes=True, vertical_spacing=0.03, row_heights=row_heights)
 
-  # Chart type rendering
   if chart_style_type == "Candlestick":
     fig.add_trace(go.Candlestick(
         x=df_chart['time'], open=df_chart['open'], high=df_chart['high'], low=df_chart['low'], close=df_chart['close'],
@@ -711,7 +720,6 @@ with tab_charts:
         fill='tozeroy', fillcolor='rgba(14, 203, 129, 0.1)', name=selected_chart_asset
     ), row=1, col=1)
 
-  # Technical Indicators
   if indicator_overlay == "SMA (20)":
     sma20 = df_chart['close'].rolling(window=5).mean()
     fig.add_trace(go.Scatter(x=df_chart['time'], y=sma20, mode='lines', line=dict(color='#3788ff', width=1.5), name="SMA 20"), row=1, col=1)
@@ -740,13 +748,12 @@ with tab_charts:
     fig.add_trace(go.Scatter(x=df_chart['time'], y=macd, mode='lines', line=dict(color='#3788ff', width=1.5), name="MACD"), row=2, col=1)
     fig.add_trace(go.Scatter(x=df_chart['time'], y=signal, mode='lines', line=dict(color='#ff9900', width=1.5), name="Signal"), row=2, col=1)
 
-  # Active Drawing Tool Simulation Notice/Shapes
-  if drawing_tool == "Trendline":
-    fig.add_shape(type="line", x0=df_chart['time'].iloc[10], y0=df_chart['low'].iloc[10], x1=df_chart['time'].iloc[80], y1=df_chart['high'].iloc[80], line=dict(color="#fcd535", width=2, dash="dash"), row=1, col=1)
-  elif drawing_tool == "Rectangle Zone":
-    fig.add_shape(type="rect", x0=df_chart['time'].iloc[30], y0=df_chart['low'].min(), x1=df_chart['time'].iloc[60], y1=df_chart['high'].max(), line=dict(color="#0ecb81", width=1.5), fillcolor="rgba(14,203,129,0.08)", row=1, col=1)
-  elif drawing_tool == "Horizontal Ray":
-    fig.add_shape(type="line", x0=df_chart['time'].iloc[0], y0=base_p, x1=df_chart['time'].iloc[-1], y1=base_p, line=dict(color="#ff5252", width=1.5), row=1, col=1)
+  xaxis_config = dict(gridcolor='#1e2329', zerolinecolor='#1e2329', showspikes=True, spikecolor='#848e9c', spikethickness=1)
+  yaxis_config = dict(gridcolor='#1e2329', zerolinecolor='#1e2329', side='right', showspikes=True, spikecolor='#848e9c', spikethickness=1)
+
+  if auto_fit_toggle == "Auto Fit / Default":
+    xaxis_config["autorange"] = True
+    yaxis_config["autorange"] = True
 
   fig.update_layout(
       template='plotly_dark',
@@ -757,12 +764,12 @@ with tab_charts:
       height=560,
       showlegend=True,
       legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=11)),
-      xaxis=dict(gridcolor='#1e2329', zerolinecolor='#1e2329', showspikes=True, spikecolor='#848e9c', spikethickness=1),
-      yaxis=dict(gridcolor='#1e2329', zerolinecolor='#1e2329', side='right', showspikes=True, spikecolor='#848e9c', spikethickness=1),
+      xaxis=xaxis_config,
+      yaxis=yaxis_config,
       hovermode='x unified'
   )
   
-  st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True, 'scrollZoom': True, 'modeBarButtonsToAdd': ['drawline', 'drawrect', 'eraseshape', 'drawopenpath', 'drawcircle']})
+  st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True, 'scrollZoom': True, 'doubleClick': 'reset+autoscale'})
 
 with tab_signals:
   st.subheader("⚡ Omni-Algorithmic AI Engine (100% Precision Model)")
