@@ -449,7 +449,6 @@ def show_subscription_dialog():
     pay_tab1, pay_tab2 = st.tabs(["⚡ UPI QR & Auto-Pay Mandate", "🎟️ Redeem Promo Code"])
     
     with pay_tab1:
-      # प्राइवेसी के लिए यूपीआई आईडी को बैकएंड/इंटेंट में सुरक्षित रखा गया है, फ्रंटएंड टेक्स्ट से हटा दिया गया है
       hidden_upi_id = "7479465676-7@ybl"
       upi_intent_link = f"upi://pay?pa={hidden_upi_id}&pn=VeerProTerminal&am={plan_price}&cu=INR"
       
@@ -644,24 +643,26 @@ with tab_overview:
   st.dataframe(market_df, use_container_width=True, hide_index=True)
 
 with tab_charts:
-  st.subheader("📈 TradingView & MT5 Pro Charting Suite")
-  st.write("Zoom in/out naturally with your fingers (on mobile) or mouse wheel (on PC). Use 'Auto Fit Axes' if you need to reset the screen instantly.")
+  st.subheader("📈 TradingView Pro Advanced Charting Suite")
+  st.write("Clean, fast, and institutional-grade layout. Zoom or scroll natively, or click 'Reset / Auto-Fit' to instantly re-align axes.")
 
+  # --- TRADINGVIEW LIKE SIMPLIFIED CLEAN TOOLBAR ---
   tc1, tc2, tc3, tc4, tc5 = st.columns([1.2, 1.1, 1.1, 1.2, 1.4])
   with tc1:
-    selected_chart_asset = st.selectbox("Asset Symbol", list(prices_data.keys()), key="tv_asset_sel")
+    selected_chart_asset = st.selectbox("Symbol", list(prices_data.keys()), key="tv_asset_sel")
   with tc2:
-    chart_timeframe = st.selectbox("Timeframe", ["1m", "5m", "15m", "1H", "4H", "1D", "1W"], key="tv_tf_sel")
+    chart_timeframe = st.selectbox("Interval", ["1m", "5m", "15m", "1H", "4H", "1D", "1W"], key="tv_tf_sel")
   with tc3:
-    chart_style_type = st.selectbox("Chart Type", ["Candlestick", "Line Chart", "Heikin Ashi", "Area Fill"], key="tv_style_sel")
+    chart_style_type = st.selectbox("Style", ["Candlestick", "Line", "Area"], key="tv_style_sel")
   with tc4:
-    auto_fit_toggle = st.selectbox("View Mode", ["Auto Fit / Default", "Manual Zoom Active"], key="tv_fit_sel")
+    # फिक्स: ऑटो-फिक्स और रिसेट अब पूरी तरह काम करेगा
+    view_action = st.selectbox("Chart View", ["Default / Live Fit", "Reset Auto-Scale"], key="tv_fit_sel")
   with tc5:
-    indicator_overlay = st.selectbox("Technical Indicators", ["None", "SMA (20)", "EMA (50)", "Bollinger Bands", "RSI Sub-pane", "MACD Momentum"], key="tv_ind_sel")
+    indicator_overlay = st.selectbox("Indicators", ["None", "SMA (20)", "EMA (50)", "Bollinger Bands", "RSI Sub-pane"], key="tv_ind_sel")
 
   base_p = prices_data[selected_chart_asset]["price"]
   np.random.seed(int(base_p * 10) % 1000)
-  num_candles = 100
+  num_candles = 120
   import datetime as dt
   dates = [dt.datetime.now() - dt.timedelta(minutes=i*15) for i in range(num_candles)]
   dates.reverse()
@@ -689,7 +690,7 @@ with tab_charts:
 
   rows_count = 1
   row_heights = [0.85]
-  if "RSI" in indicator_overlay or "MACD" in indicator_overlay:
+  if "RSI" in indicator_overlay:
     rows_count = 2
     row_heights = [0.70, 0.30]
 
@@ -701,18 +702,9 @@ with tab_charts:
         increasing_line_color='#0ecb81', increasing_fillcolor='#0ecb81',
         decreasing_line_color='#f6465d', decreasing_fillcolor='#f6465d', name=selected_chart_asset
     ), row=1, col=1)
-  elif chart_style_type == "Line Chart":
+  elif chart_style_type == "Line":
     fig.add_trace(go.Scatter(
         x=df_chart['time'], y=df_chart['close'], mode='lines', line=dict(color='#fcd535', width=2), name=selected_chart_asset
-    ), row=1, col=1)
-  elif chart_style_type == "Heikin Ashi":
-    ha_close = (df_chart['open'] + df_chart['high'] + df_chart['low'] + df_chart['close']) / 4
-    ha_open = (df_chart['open'].shift(1) + df_chart['close'].shift(1)) / 2
-    ha_open.fillna(df_chart['open'], inplace=True)
-    fig.add_trace(go.Candlestick(
-        x=df_chart['time'], open=ha_open, high=df_chart['high'], low=df_chart['low'], close=ha_close,
-        increasing_line_color='#0ecb81', increasing_fillcolor='#0ecb81',
-        decreasing_line_color='#f6465d', decreasing_fillcolor='#f6465d', name="Heikin Ashi"
     ), row=1, col=1)
   else:
     fig.add_trace(go.Scatter(
@@ -740,28 +732,37 @@ with tab_charts:
     rs = gain / loss
     rsi = 100 - (100 / (1 + rs))
     fig.add_trace(go.Scatter(x=df_chart['time'], y=rsi, mode='lines', line=dict(color='#a259ff', width=1.5), name="RSI (14)"), row=2, col=1)
-  elif indicator_overlay == "MACD Momentum" and rows_count > 1:
-    exp1 = df_chart['close'].ewm(span=12, adjust=False).mean()
-    exp2 = df_chart['close'].ewm(span=26, adjust=False).mean()
-    macd = exp1 - exp2
-    signal = macd.ewm(span=9, adjust=False).mean()
-    fig.add_trace(go.Scatter(x=df_chart['time'], y=macd, mode='lines', line=dict(color='#3788ff', width=1.5), name="MACD"), row=2, col=1)
-    fig.add_trace(go.Scatter(x=df_chart['time'], y=signal, mode='lines', line=dict(color='#ff9900', width=1.5), name="Signal"), row=2, col=1)
 
-  xaxis_config = dict(gridcolor='#1e2329', zerolinecolor='#1e2329', showspikes=True, spikecolor='#848e9c', spikethickness=1)
-  yaxis_config = dict(gridcolor='#1e2329', zerolinecolor='#1e2329', side='right', showspikes=True, spikecolor='#848e9c', spikethickness=1)
+  # क्लीन और प्रोफेशनल ट्रेडिंगव्यू जैसी ग्रिड स्टाइल
+  xaxis_config = dict(
+      gridcolor='#1e2329', 
+      zerolinecolor='#1e2329', 
+      showspikes=True, 
+      spikecolor='#848e9c', 
+      spikethickness=1,
+      rangesanger=dict(visible=False)
+  )
+  yaxis_config = dict(
+      gridcolor='#1e2329', 
+      zerolinecolor='#1e2329', 
+      side='right', 
+      showspikes=True, 
+      spikecolor='#848e9c', 
+      spikethickness=1
+  )
 
-  if auto_fit_toggle == "Auto Fit / Default":
+  # ऑटो-फिक्स और रिसेट हैंडलिंग
+  if view_action == "Reset Auto-Scale":
     xaxis_config["autorange"] = True
     yaxis_config["autorange"] = True
 
   fig.update_layout(
       template='plotly_dark',
       paper_bgcolor='#0b0e11',
-      plot_bgcolor='#11151c',
+      plot_bgcolor='#0b0e11',
       margin=dict(l=10, r=10, t=10, b=10),
       xaxis_rangeslider_visible=False,
-      height=560,
+      height=540,
       showlegend=True,
       legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=11)),
       xaxis=xaxis_config,
