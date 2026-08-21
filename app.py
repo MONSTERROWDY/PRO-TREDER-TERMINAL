@@ -655,7 +655,6 @@ with tab_charts:
   with tc3:
     chart_style_type = st.selectbox("Style", ["Candlestick", "Line", "Area"], key="tv_style_sel")
   with tc4:
-    # फिक्स: ऑटो-फिक्स और रिसेट अब पूरी तरह काम करेगा
     view_action = st.selectbox("Chart View", ["Default / Live Fit", "Reset Auto-Scale"], key="tv_fit_sel")
   with tc5:
     indicator_overlay = st.selectbox("Indicators", ["None", "SMA (20)", "EMA (50)", "Bollinger Bands", "RSI Sub-pane"], key="tv_ind_sel")
@@ -733,14 +732,14 @@ with tab_charts:
     rsi = 100 - (100 / (1 + rs))
     fig.add_trace(go.Scatter(x=df_chart['time'], y=rsi, mode='lines', line=dict(color='#a259ff', width=1.5), name="RSI (14)"), row=2, col=1)
 
-  # क्लीन और प्रोफेशनल ट्रेडिंगव्यू जैसी ग्रिड स्टाइल
+  # त्रुटि सुधार: सही डिक्शनरी पैरामीटर (rangeslider के साथ)
   xaxis_config = dict(
       gridcolor='#1e2329', 
       zerolinecolor='#1e2329', 
       showspikes=True, 
       spikecolor='#848e9c', 
       spikethickness=1,
-      rangesanger=dict(visible=False)
+      rangeslider=dict(visible=False)
   )
   yaxis_config = dict(
       gridcolor='#1e2329', 
@@ -751,7 +750,6 @@ with tab_charts:
       spikethickness=1
   )
 
-  # ऑटो-फिक्स और रिसेट हैंडलिंग
   if view_action == "Reset Auto-Scale":
     xaxis_config["autorange"] = True
     yaxis_config["autorange"] = True
@@ -761,7 +759,6 @@ with tab_charts:
       paper_bgcolor='#0b0e11',
       plot_bgcolor='#0b0e11',
       margin=dict(l=10, r=10, t=10, b=10),
-      xaxis_rangeslider_visible=False,
       height=540,
       showlegend=True,
       legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=11)),
