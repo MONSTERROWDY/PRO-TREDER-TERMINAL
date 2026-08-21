@@ -139,41 +139,54 @@ st.markdown(
         padding: 15px;
         text-align: center;
     }
+    .plan-card {
+        background: #181a20;
+        border: 1px solid #2b313a;
+        border-radius: 10px;
+        padding: 18px;
+        text-align: center;
+        margin-bottom: 15px;
+        transition: all 0.3s;
+    }
+    .plan-card:hover {
+        border-color: #fcd535;
+    }
     </style>
 """,
     unsafe_allow_html=True,
 )
 
+
 # --- DATABASE SETUP & AUTO MIGRATION ---
 def get_db_connection():
-    return sqlite3.connect("users_database.db", check_same_thread=False)
+  return sqlite3.connect("users_database.db", check_same_thread=False)
 
 def init_db():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
+  conn = get_db_connection()
+  cursor = conn.cursor()
+  cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             email TEXT PRIMARY KEY,
             password TEXT NOT NULL,
             name TEXT NOT NULL
         )
     """)
-    conn.commit()
+  conn.commit()
 
-    user_columns = [
-        ("username", "TEXT"),
-        ("avatar", "TEXT"),
-        ("tier", "TEXT DEFAULT 'Free User'"),
-        ("expiry", "TEXT"),
-    ]
-    for col_name, col_type in user_columns:
-        try:
-            cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}")
-            conn.commit()
-        except sqlite3.OperationalError:
-            pass
+  user_columns = [
+      ("username", "TEXT"),
+      ("avatar", "TEXT"),
+      ("tier", "TEXT DEFAULT 'Free User'"),
+      ("expiry", "TEXT"),
+  ]
+  for col_name, col_type in user_columns:
+    try:
+      cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}")
+      conn.commit()
+    except sqlite3.OperationalError:
+      pass
 
-    cursor.execute("""
+  cursor.execute("""
         CREATE TABLE IF NOT EXISTS promo_codes (
             code TEXT PRIMARY KEY,
             duration_type TEXT,
@@ -181,302 +194,331 @@ def init_db():
             used_by TEXT DEFAULT NULL
         )
     """)
-    conn.commit()
+  conn.commit()
 
-    cursor.execute("SELECT * FROM users WHERE email = ?", ("admin@gmail.com",))
-    if not cursor.fetchone():
-        cursor.execute(
-            "INSERT INTO users (email, password, name, username, tier) VALUES (?, ?, ?, ?, ?)",
-            (
-                "admin@gmail.com",
-                "password123",
-                "Pro Master",
-                "admin_master",
-                "Premium Member (Lifetime)",
-            ),
-        )
-        conn.commit()
-    conn.close()
+  cursor.execute("SELECT * FROM users WHERE email = ?", ("admin@gmail.com",))
+  if not cursor.fetchone():
+    cursor.execute(
+        "INSERT INTO users (email, password, name, username, tier) VALUES (?, ?, ?, ?, ?)",
+        (
+            "admin@gmail.com",
+            "password123",
+            "Pro Master",
+            "admin_master",
+            "Premium Member (Lifetime)",
+        ),
+    )
+    conn.commit()
+  conn.close()
 
 init_db()
 
 def get_user_full(email):
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT password, name, username, avatar, tier FROM users WHERE email = ?",
-            (email.strip().lower(),),
-        )
-        res = cursor.fetchone()
-        conn.close()
-        return res
-    except Exception:
-        return None
+  try:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT password, name, username, avatar, tier FROM users WHERE email = ?",
+        (email.strip().lower(),),
+    )
+    res = cursor.fetchone()
+    conn.close()
+    return res
+  except Exception:
+    return None
 
 def register_user(email, password, name, username):
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO users (email, password, name, username, tier) VALUES (?, ?, ?, ?, ?)",
-            (
-                email.strip().lower(),
-                password,
-                name.strip(),
-                username.strip(),
-                "Free User",
-            ),
-        )
-        conn.commit()
-        conn.close()
-        return True
-    except Exception:
-        return False
+  try:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO users (email, password, name, username, tier) VALUES (?, ?, ?, ?, ?)",
+        (
+            email.strip().lower(),
+            password,
+            name.strip(),
+            username.strip(),
+            "Free User",
+        ),
+    )
+    conn.commit()
+    conn.close()
+    return True
+  except Exception:
+    return False
 
 # --- REAL-TIME LIVE MARKET PRICES ---
 def fetch_global_prices():
-    try:
-        url = "https://api.binance.com/api/v3/ticker/24hr?symbols=[%22BTCUSDT%22,%22ETHUSDT%22,%22SOLUSDT%22,%22BNBUSDT%22,%22XRPUSDT%22,%22ADAUSDT%22,%22DOGEUSDT%22]"
-        response = requests.get(url, timeout=2).json()
-        prices = {}
-        for item in response:
-            prices[item["symbol"]] = {
-                "price": float(item["lastPrice"]),
-                "change": float(item["priceChangePercent"]),
-            }
-        prices.update({
-            "EURUSD": {"price": 1.0924, "change": 0.15},
-            "GBPUSD": {"price": 1.3012, "change": -0.22},
-            "USDJPY": {"price": 147.50, "change": 0.45},
-            "AAPL": {"price": 224.50, "change": 1.12},
-            "RELIANCE": {"price": 2980.50, "change": 0.85},
-            "NIFTY": {"price": 24780.00, "change": 0.62},
-            "GOLD": {"price": 2512.40, "change": 0.50},
-        })
-        return prices
-    except Exception:
-        return {
-            "BTCUSDT": {"price": 68417.51, "change": 1.23},
-            "ETHUSDT": {"price": 3540.49, "change": -0.45},
-            "SOLUSDT": {"price": 145.06, "change": 2.45},
-            "EURUSD": {"price": 1.0924, "change": 0.15},
-            "AAPL": {"price": 224.50, "change": 1.12},
-            "RELIANCE": {"price": 2980.50, "change": 0.85},
-            "GOLD": {"price": 2512.40, "change": 0.50},
-        }
+  try:
+    url = "https://api.binance.com/api/v3/ticker/24hr?symbols=[%22BTCUSDT%22,%22ETHUSDT%22,%22SOLUSDT%22,%22BNBUSDT%22,%22XRPUSDT%22,%22ADAUSDT%22,%22DOGEUSDT%22]"
+    response = requests.get(url, timeout=2).json()
+    prices = {}
+    for item in response:
+      prices[item["symbol"]] = {
+          "price": float(item["lastPrice"]),
+          "change": float(item["priceChangePercent"]),
+      }
+    prices.update({
+        "EURUSD": {"price": 1.0924, "change": 0.15},
+        "GBPUSD": {"price": 1.3012, "change": -0.22},
+        "USDJPY": {"price": 147.50, "change": 0.45},
+        "AAPL": {"price": 224.50, "change": 1.12},
+        "RELIANCE": {"price": 2980.50, "change": 0.85},
+        "NIFTY": {"price": 24780.00, "change": 0.62},
+        "GOLD": {"price": 2512.40, "change": 0.50},
+    })
+    return prices
+  except Exception:
+    return {
+        "BTCUSDT": {"price": 68417.51, "change": 1.23},
+        "ETHUSDT": {"price": 3540.49, "change": -0.45},
+        "SOLUSDT": {"price": 145.06, "change": 2.45},
+        "EURUSD": {"price": 1.0924, "change": 0.15},
+        "AAPL": {"price": 224.50, "change": 1.12},
+        "RELIANCE": {"price": 2980.50, "change": 0.85},
+        "GOLD": {"price": 2512.40, "change": 0.50},
+    }
 
 # --- SESSION LOGIC ---
 query_params = st.query_params
 saved_email = query_params.get("session_user", "")
 
 if "logged_in" not in st.session_state:
-    if saved_email:
-        u_data = get_user_full(saved_email)
-        if u_data:
-            st.session_state.logged_in = True
-            st.session_state.current_user_email = saved_email
-            st.session_state.current_user_name = u_data[1]
-            st.session_state.username = u_data[2] if u_data[2] else "trader"
-            st.session_state.avatar = u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
-            st.session_state.user_tier = u_data[4] if u_data[4] else "Free User"
-        else:
-            st.session_state.logged_in = False
+  if saved_email:
+    u_data = get_user_full(saved_email)
+    if u_data:
+      st.session_state.logged_in = True
+      st.session_state.current_user_email = saved_email
+      st.session_state.current_user_name = u_data[1]
+      st.session_state.username = u_data[2] if u_data[2] else "trader"
+      st.session_state.avatar = (
+          u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
+      )
+      st.session_state.user_tier = u_data[4] if u_data[4] else "Free User"
     else:
-        st.session_state.logged_in = False
+      st.session_state.logged_in = False
+  else:
+    st.session_state.logged_in = False
+
 
 # --- BROKER-GRADE AUTH SCREEN ---
 def show_auth_screen():
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    c1, col, c2 = st.columns([1, 1.4, 1])
+  st.markdown("<br><br>", unsafe_allow_html=True)
+  c1, col, c2 = st.columns([1, 1.4, 1])
 
-    with col:
-        st.markdown(
-            """
-            <div class="broker-auth-container">
-                <div style="text-align: center; margin-bottom: 25px;">
-                    <h1 style="color: #fcd535; font-size: 28px; font-weight: 900; margin-bottom: 0;">⚡ VEER PRO TERMINAL</h1>
-                    <p style="color: #848e9c; font-size: 13px; margin-top: 5px;">Institutional Grade Multi-Market Exchange & AI Suite</p>
-                </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        t1, t2 = st.tabs(["🔑 Secure Sign In", "📝 Open Account"])
-
-        with t1:
-            with st.form("login_form", clear_on_submit=False):
-                login_email = st.text_input("Registered Email", placeholder="name@example.com")
-                login_pass = st.text_input("Account Password", type="password", placeholder="••••••••")
-                st.markdown("<br>", unsafe_allow_html=True)
-                if st.form_submit_button("Access Terminal"):
-                    cleaned_email = login_email.strip().lower()
-                    u_data = get_user_full(cleaned_email)
-                    if u_data and u_data[0] == login_pass:
-                        st.session_state.logged_in = True
-                        st.session_state.current_user_email = cleaned_email
-                        st.session_state.current_user_name = u_data[1]
-                        st.session_state.username = u_data[2] if u_data[2] else "trader"
-                        st.session_state.avatar = u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
-                        st.session_state.user_tier = u_data[4] if u_data[4] else "Free User"
-                        st.query_params["session_user"] = cleaned_email
-                        st.rerun()
-                    else:
-                        st.error("Invalid Credentials!")
-
-        with t2:
-            with st.form("register_form", clear_on_submit=False):
-                reg_name = st.text_input("Full Name", placeholder="John Doe")
-                reg_uname = st.text_input("Username", placeholder="trader_alpha")
-                reg_email = st.text_input("Email ID", placeholder="john@example.com")
-                reg_pass = st.text_input("Secure Password", type="password", placeholder="••••••••")
-                st.markdown("<br>", unsafe_allow_html=True)
-                if st.form_submit_button("Create Free Account"):
-                    cleaned_reg_email = reg_email.strip().lower()
-                    cleaned_name = reg_name.strip()
-                    cleaned_uname = reg_uname.strip()
-                    if cleaned_name and cleaned_reg_email and len(reg_pass) >= 6:
-                        if register_user(cleaned_reg_email, reg_pass, cleaned_name, cleaned_uname):
-                            st.session_state.logged_in = True
-                            st.session_state.current_user_email = cleaned_reg_email
-                            st.session_state.current_user_name = cleaned_name
-                            st.session_state.username = cleaned_uname
-                            st.session_state.avatar = "https://i.imgur.com/71916rK.png"
-                            st.session_state.user_tier = "Free User"
-                            st.query_params["session_user"] = cleaned_reg_email
-                            st.rerun()
-                        else:
-                            st.error("Email ID is already registered!")
-                    else:
-                        st.warning("Please fill all details correctly.")
-
-        st.markdown(
-            """
-                <div style="text-align: center; margin-top: 25px; border-top: 1px solid #2b313a; padding-top: 15px;">
-                    <span style="color: #848e9c; font-size: 11px;">🔒 256-Bit SSL Encrypted Broker Protocol • 0% Loss Protection</span>
-                </div>
+  with col:
+    st.markdown(
+        """
+        <div class="broker-auth-container">
+            <div style="text-align: center; margin-bottom: 25px;">
+                <h1 style="color: #fcd535; font-size: 28px; font-weight: 900; margin-bottom: 0;">⚡ VEER PRO TERMINAL</h1>
+                <p style="color: #848e9c; font-size: 13px; margin-top: 5px;">Institutional Grade Multi-Market Exchange & AI Suite</p>
             </div>
-            """,
-            unsafe_allow_html=True,
+        """,
+        unsafe_allow_html=True,
+    )
+
+    t1, t2 = st.tabs(["🔑 Secure Sign In", "📝 Open Account"])
+
+    with t1:
+      with st.form("login_form", clear_on_submit=False):
+        login_email = st.text_input(
+            "Registered Email", placeholder="name@example.com"
         )
+        login_pass = st.text_input(
+            "Account Password", type="password", placeholder="••••••••"
+        )
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.form_submit_button("Access Terminal"):
+          cleaned_email = login_email.strip().lower()
+          u_data = get_user_full(cleaned_email)
+          if u_data and u_data[0] == login_pass:
+            st.session_state.logged_in = True
+            st.session_state.current_user_email = cleaned_email
+            st.session_state.current_user_name = u_data[1]
+            st.session_state.username = u_data[2] if u_data[2] else "trader"
+            st.session_state.avatar = (
+                u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
+            )
+            st.session_state.user_tier = u_data[4] if u_data[4] else "Free User"
+            st.query_params["session_user"] = cleaned_email
+            st.rerun()
+          else:
+            st.error("Invalid Credentials!")
+
+    with t2:
+      with st.form("register_form", clear_on_submit=False):
+        reg_name = st.text_input("Full Name", placeholder="John Doe")
+        reg_uname = st.text_input("Username", placeholder="trader_alpha")
+        reg_email = st.text_input("Email ID", placeholder="john@example.com")
+        reg_pass = st.text_input(
+            "Secure Password", type="password", placeholder="••••••••"
+        )
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.form_submit_button("Create Free Account"):
+          cleaned_reg_email = reg_email.strip().lower()
+          cleaned_name = reg_name.strip()
+          cleaned_uname = reg_uname.strip()
+          if cleaned_name and cleaned_reg_email and len(reg_pass) >= 6:
+            if register_user(cleaned_reg_email, reg_pass, cleaned_name, cleaned_uname):
+              st.session_state.logged_in = True
+              st.session_state.current_user_email = cleaned_reg_email
+              st.session_state.current_user_name = cleaned_name
+              st.session_state.username = cleaned_uname
+              st.session_state.avatar = "https://i.imgur.com/71916rK.png"
+              st.session_state.user_tier = "Free User"
+              st.query_params["session_user"] = cleaned_reg_email
+              st.rerun()
+            else:
+              st.error("Email ID is already registered!")
+          else:
+            st.warning("Please fill all details correctly.")
+
+    st.markdown(
+        """
+            <div style="text-align: center; margin-top: 25px; border-top: 1px solid #2b313a; padding-top: 15px;">
+                <span style="color: #848e9c; font-size: 11px;">🔒 256-Bit SSL Encrypted Broker Protocol • 0% Loss Protection</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 if not st.session_state.logged_in:
-    show_auth_screen()
-    st.stop()
+  show_auth_screen()
+  st.stop()
 
-# --- SIDEBAR NAVIGATION ---
-st.sidebar.markdown(f"### ⚡ Veer Pro Terminal")
-st.sidebar.write(f"User: **{st.session_state.current_user_name}**")
-st.sidebar.write(f"Tier: **{st.session_state.user_tier}**")
-st.sidebar.markdown("---")
 
-app_mode = st.sidebar.radio("Navigation", ["📈 Live Charts & Suite", "🤖 AI Trading Signals", "📐 Risk Calculator"])
+# --- DIALOGS FOR SIDEBAR OPTIONS ---
+@st.dialog("💎 VIP Subscription, Plans & Auto-Pay Setup", width="large")
+def show_subscription_dialog():
+  st.write(f"Current Status Tier: **{st.session_state.user_tier}**")
+  st.markdown("Choose your preferred billing plan below (Auto-Pay & Trial enabled):")
 
-if st.sidebar.button("Log Out"):
-    st.query_params.clear()
-    st.session_state.logged_in = False
-    st.rerun()
+  p1, p2, p3, p4 = st.columns(4)
+  with p1:
+    st.markdown("""
+    <div class="plan-card">
+        <h4 style="color: #fcd535; margin-bottom: 5px;">Free Trial (7 Days)</h4>
+        <p style="font-size: 20px; font-weight: 900; color: #ffffff;">₹0 <span style="font-size: 11px; color: #848e9c;">/ 7d</span></p>
+        <p style="font-size: 12px; color: #848e9c;">Auto-renews to monthly plan post trial.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("Start Free Trial", key="btn_p1"):
+      st.session_state.selected_plan_checkout = ("7-Day Free Trial", 0)
 
-# --- MAIN DASHBOARD APP MODES ---
-prices_data = fetch_global_prices()
+  with p2:
+    st.markdown("""
+    <div class="plan-card">
+        <h4 style="color: #fcd535; margin-bottom: 5px;">7-Day Plan</h4>
+        <p style="font-size: 20px; font-weight: 900; color: #ffffff;">₹499 <span style="font-size: 11px; color: #848e9c;">/ 7 days</span></p>
+        <p style="font-size: 12px; color: #848e9c;">Ideal for weekly swing trading cycles.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("Select 7-Day", key="btn_p2"):
+      st.session_state.selected_plan_checkout = ("7 Days", 499)
 
-if app_mode == "📈 Live Charts & Suite":
-    st.markdown("## 📈 Institutional Multi-Market Charting Suite")
+  with p3:
+    st.markdown("""
+    <div class="plan-card">
+        <h4 style="color: #fcd535; margin-bottom: 5px;">1-Month Pro</h4>
+        <p style="font-size: 20px; font-weight: 900; color: #ffffff;">₹1,499 <span style="font-size: 11px; color: #848e9c;">/ month</span></p>
+        <p style="font-size: 12px; color: #848e9c;">Auto-pay enabled monthly subscription.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("Select 1-Month", key="btn_p3"):
+      st.session_state.selected_plan_checkout = ("30 Days (Auto-Pay)", 1499)
+
+  with p4:
+    st.markdown("""
+    <div class="plan-card">
+        <h4 style="color: #fcd535; margin-bottom: 5px;">1-Year Elite</h4>
+        <p style="font-size: 20px; font-weight: 900; color: #ffffff;">₹9,999 <span style="font-size: 11px; color: #848e9c;">/ year</span></p>
+        <p style="font-size: 12px; color: #848e9c;">Maximum savings with yearly auto-renewal.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("Select 1-Year", key="btn_p4"):
+      st.session_state.selected_plan_checkout = ("1 Year", 9999)
+
+  st.markdown("---")
+  
+  if "selected_plan_checkout" in st.session_state:
+    plan_name, plan_price = st.session_state.selected_plan_checkout
+    st.markdown(f"### 💳 Secure Checkout — Selected Plan: **{plan_name} (₹{plan_price})**")
     
-    # Ticker summary row
-    cols = st.columns(4)
-    idx = 0
-    for symbol, info in list(prices_data.items())[:4]:
-        with cols[idx]:
-            ch_class = "ticker-change-green" if info["change"] >= 0 else "ticker-change-red"
-            st.markdown(f"""
-                <div class="ticker-card">
-                    <div class="ticker-symbol">{symbol}</div>
-                    <div class="ticker-price">${info['price']:,.2f}</div>
-                    <div class="{ch_class}">{info['change']:+.2f}%</div>
-                </div>
-            """, unsafe_allow_html=True)
-        idx += 1
-
-    st.markdown("<br>", unsafe_allow_html=True)
+    pay_tab1, pay_tab2 = st.tabs(["⚡ UPI QR & Auto-Pay Mandate", "🎟️ Redeem Promo Code"])
     
-    # Interactive Chart generator
-    selected_symbol = st.selectbox("Select Asset for Advanced Analysis", list(prices_data.keys()))
-    base_price = prices_data[selected_symbol]["price"]
-    
-    # Generate mock historical candlestick/line chart data
-    np.random.seed(42)
-    dates = pd.date_range(end=datetime.datetime.now(), periods=100, freq='H')
-    price_series = base_price + np.cumsum(np.random.randn(100) * (base_price * 0.002))
-    
-    fig = go.Figure(data=[go.Scatter(x=dates, y=price_series, mode='lines', name=selected_symbol, line=dict(color='#fcd535', width=2))])
-    fig.update_layout(
-        paper_bgcolor='#11151c',
-        plot_bgcolor='#181a20',
-        font=dict(color='#eaecef'),
-        height=450,
-        margin=dict(l=20, r=20, t=20, b=20),
-        xaxis=dict(showgrid=True, gridcolor='#2b313a'),
-        yaxis=dict(showgrid=True, gridcolor='#2b313a')
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-elif app_mode == "🤖 AI Trading Signals":
-    st.markdown("## 🤖 AI Neural Network Market Predictions")
-    st.markdown("Advanced machine learning algorithm analyzing order books and volatility momentum.")
-    
-    signal_symbol = st.selectbox("Choose Asset for AI Signal", list(prices_data.keys()))
-    current_p = prices_data[signal_symbol]["price"]
-    
-    col1, col2 = st.columns(2)
-    with col1:
+    with pay_tab1:
+      hidden_upi_id = "7479465676-7@ybl"
+      upi_intent_link = f"upi://pay?pa={hidden_upi_id}&pn=VeerProTerminal&am={plan_price}&cu=INR"
+      
+      c_pay1, c_pay2 = st.columns(2)
+      with c_pay1:
         st.markdown(f"""
-            <div class="signal-box">
-                <h3 style="color: #fcd535; margin-top:0;">⚡ AI Prediction: BULLISH LONG</h3>
-                <p><b>Target Asset:</b> {signal_symbol}</p>
-                <p><b>Current Price:</b> ${current_p:,.2f}</p>
-                <p><b>Entry Zone:</b> ${current_p * 0.995:,.2f} - ${current_p:,.2f}</p>
-                <p><b>Take Profit 1:</b> <span style="color: #0ecb81; font-weight:bold;">${current_p * 1.02:,.2f}</span></p>
-                <p><b>Stop Loss:</b> <span style="color: #f6465d; font-weight:bold;">${current_p * 0.985:,.2f}</span></p>
-            </div>
+        <div style="background: #181a20; border: 1px solid #2b313a; padding: 15px; border-radius: 8px; text-align: center;">
+            <p style="color: #fcd535; font-size: 14px; font-weight: bold; margin-bottom: 10px;">📲 1-Click Auto-Pay / App Payment</p>
+            <p style="color: #848e9c; font-size: 12px; margin-bottom: 15px;">Click to set up secure auto-debit and unlock access instantly:</p>
+            <a href="{upi_intent_link}" target="_blank" style="background: linear-gradient(135deg, #0ecb81 0%, #089b60 100%); color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 800; display: inline-block; box-shadow: 0 4px 12px rgba(14,203,129,0.3);">🚀 Proceed with Auto-Pay (₹{plan_price})</a>
+        </div>
         """, unsafe_allow_html=True)
-    with col2:
-        st.markdown("""
-            <div class="signal-box">
-                <h3 style="color: #fcd535; margin-top:0;">📊 Technical Confluence</h3>
-                <p><b>RSI (14):</b> 58.4 (Neutral / Bullish Momentum)</p>
-                <p><b>MACD Histogram:</b> Positive Crossover</p>
-                <p><b>Order Book Imbalance:</b> 64% Buyers vs 36% Sellers</p>
-                <p><b>Confidence Rating:</b> <span style="color: #0ecb81; font-weight:bold;">89.4% (High Probability)</span></p>
+      with c_pay2:
+        st.markdown(f"""
+        <div style="background: #181a20; border: 1px solid #2b313a; padding: 15px; border-radius: 8px; text-align: center;">
+            <p style="color: #848e9c; font-size: 12px; margin-bottom: 5px;">Scan QR via any UPI App (Privacy Protected)</p>
+            <div style="background: #ffffff; padding: 8px; display: inline-block; border-radius: 6px; margin: 5px 0;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data={upi_intent_link}" width="120">
             </div>
+            <p style="color: #fcd535; font-size: 11px; font-weight: bold; margin: 0;">🔒 UPI ID Hidden for Privacy</p>
+        </div>
         """, unsafe_allow_html=True)
 
-elif app_mode == "📐 Risk Calculator":
-    st.markdown("## 📐 Professional Risk & Position Size Calculator")
-    st.markdown("Calculate precise position sizing based on your capital and risk tolerance.")
-    
-    col_c1, col_c2 = st.columns(2)
-    with col_c1:
-        account_bal = st.number_input("Account Balance ($)", value=10000.0, step=500.0)
-        risk_pct = st.slider("Risk Percentage per Trade (%)", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
-    with col_c2:
-        entry_p = st.number_input("Entry Price ($)", value=68000.0, step=100.0)
-        stop_loss_p = st.number_input("Stop Loss Price ($)", value=67000.0, step=100.0)
-        
-    if st.button("Calculate Position Size"):
-        risk_amount = account_bal * (risk_pct / 100.0)
-        price_risk_per_unit = abs(entry_p - stop_loss_p)
-        if price_risk_per_unit > 0:
-            position_size = risk_amount / price_risk_per_unit
-            total_position_value = position_size * entry_p
+      st.markdown("<br>", unsafe_allow_html=True)
+      with st.form("upi_verify_form"):
+        st.markdown("<b>Enter UPI Transaction ID / UTR</b> after successful payment/mandate:", unsafe_allow_html=True)
+        utr_input = st.text_input("12-Digit UTR Reference Number", placeholder="e.g. 405628192341")
+        verify_btn = st.form_submit_button("Verify & Activate Auto-Pay Subscription")
+        if verify_btn:
+          if len(utr_input.strip()) >= 10:
+            try:
+              conn = get_db_connection()
+              cursor = conn.cursor()
+              new_tier_val = f"Premium Member ({plan_name})"
+              cursor.execute("UPDATE users SET tier = ? WHERE email = ?", (new_tier_val, st.session_state.current_user_email))
+              conn.commit()
+              conn.close()
+              st.session_state.user_tier = new_tier_val
+              st.success(f"Payment & Auto-Pay Mandate Verified! {plan_name} activated successfully.")
+              del st.session_state.selected_plan_checkout
+              st.rerun()
+            except Exception as e:
+              st.error(f"Error updating tier: {e}")
+          else:
+            st.error("Please enter a valid 12-digit UTR transaction reference.")
+
+    with pay_tab2:
+      with st.form("dialog_promo_form"):
+        promo_code_input = st.text_input("Enter Unique Promo Code", placeholder="ENTER-CODE-HERE")
+        redeem_btn = st.form_submit_button("Apply Code")
+        if redeem_btn:
+          code_clean = promo_code_input.strip().upper()
+          if code_clean:
+            try:
+              conn = get_db_connection()
+              cursor = conn.cursor()
+              cursor.execute("SELECT duration_type, is_used FROM promo_codes WHERE code = ?", (code_clean,))
+              p_res = cursor.fetchone()
+              if p_res:
+                duration_type, is_used = p_res[0], p_res[1]
+                if is_used == 1:
+                  st.error("This promo code has already been used by someone else!")
+                else:
+                  new_tier_val = f"Premium Member ({duration_type})"
+                  cursor.execute("UPDATE promo_codes SET is_used = 1, used_by = ? WHERE code = ?", (st.session_state.current_user_email, code_clean))
+                  cursor.execute("UPDATE users SET tier = ? WHERE email = ?", (new_tier_val, st.session_state.current_user_email))
+                  conn.commit()
+                  st.session_state.user_tier = new_tier_val
+                  st.success(f"Successfully activated! Enjoy {duration_type} Access.")
+                  del st.session_state.selected_plan_checkout
+                  st.rerun()
+              else:
             
-            st.markdown("<br>", unsafe_allow_html=True)
-            res1, res2, res3 = st.columns(3)
-            with res1:
-                st.markdown(f'<div class="calc-metric-box"><h4>Risk Amount</h4><h3>${risk_amount:,.2f}</h3></div>', unsafe_allow_html=True)
-            with res2:
-                st.markdown(f'<div class="calc-metric-box"><h4>Units to Trade</h4><h3>{position_size:,.4f}</h3></div>', unsafe_allow_html=True)
-            with res3:
-                st.markdown(f'<div class="calc-metric-box"><h4>Position Value</h4><h3>${total_position_value:,.2f}</h3></div>', unsafe_allow_html=True)
-        else:
-            st.error("Entry price and Stop loss price cannot be identical.")
