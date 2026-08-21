@@ -198,25 +198,9 @@ def init_db():
     )
     conn.commit()
 
-  default_promos = [
-      ("VEERPREMIUM30", "30 Days"),
-      ("VEERPREMIUM1Y", "1 Year"),
-      ("VEER3DAYS", "3 Days"),
-      ("VEERLIFETIME", "Lifetime Unlimited"),
-  ]
-  for code, dtype in default_promos:
-    cursor.execute("SELECT * FROM promo_codes WHERE code = ?", (code,))
-    if not cursor.fetchone():
-      cursor.execute(
-          "INSERT INTO promo_codes (code, duration_type, is_used) VALUES (?, ?, 0)",
-          (code, dtype),
-      )
-      conn.commit()
-
   conn.close()
 
 init_db()
-
 
 def get_user_full(email):
   try:
@@ -394,7 +378,91 @@ if not st.session_state.logged_in:
   st.stop()
 
 
-# --- SIDEBAR (ONLY FOR PROFILE & LOGOUT NOW) ---
+# --- DIALOG FOR SIDEBAR POP-UP OPTIONS (SUBSCRIPTION & RISK CALCULATOR) ---
+@st.dialog("💎 VIP Subscription & Upgrade Plans", width="large")
+def show_subscription_dialog():
+  st.write("Upgrade your tier instantly to unlock absolute institutional power.")
+  
+  col1, col2 = st.columns(2)
+  with col1:
+    st.markdown("""
+    <div style="background: #181a20; border: 1px solid #2b313a; padding: 20px; border-radius: 10px; height: 100%;">
+        <h4 style="color: #fcd535;">Current Status</h4>
+        <p style="font-size: 16px; font-weight: 700; color: #ffffff;">{tier}</p>
+        <p style="font-size: 13px; color: #848e9c;">To unlock unlimited AI strategies and zero-latency charts, redeem a valid unique promo code provided by administration.</p>
+    </div>
+    """.format(tier=st.session_state.user_tier), unsafe_allow_html=True)
+    
+  with col2:
+    st.markdown("""
+    <div style="background: #161a22; border: 1px solid #fcd535; padding: 20px; border-radius: 10px;">
+        <h4 style="color: #fcd535; margin-top: 0;">Redeem Promo Code</h4>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    with st.form("dialog_promo_form"):
+      promo_code_input = st.text_input("Enter Unique Promo Code", placeholder="ENTER-CODE-HERE")
+      redeem_btn = st.form_submit_button("Apply Code")
+      
+      if redeem_btn:
+        code_clean = promo_code_input.strip().upper()
+        if code_clean:
+          try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT duration_type, is_used FROM promo_codes WHERE code = ?", (code_clean,))
+            p_res = cursor.fetchone()
+            
+            if p_res:
+              duration_type, is_used = p_res[0], p_res[1]
+              if is_used == 1:
+                st.error("This promo code has already been used by someone else!")
+              else:
+                # Mark as used permanently (One-time use check)
+                new_tier_val = f"Premium Member ({duration_type})"
+                cursor.execute("UPDATE promo_codes SET is_used = 1, used_by = ? WHERE code = ?", (st.session_state.current_user_email, code_clean))
+                cursor.execute("UPDATE users SET tier = ? WHERE email = ?", (new_tier_val, st.session_state.current_user_email))
+                conn.commit()
+                st.session_state.user_tier = new_tier_val
+                st.success(f"Successfully activated! Enjoy {duration_type} Access.")
+                st.rerun()
+            else:
+              st.error("Invalid Promo Code!")
+            conn.close()
+          except Exception as e:
+            st.error(f"Database error: {e}")
+        else:
+          st.warning("Please enter a valid code.")
+
+
+@st.dialog("🧮 Advanced Position Sizing & Risk Calculator", width="large")
+def show_risk_calculator_dialog():
+  st.write("Calculate your exact position size and risk metrics based on professional risk parameters.")
+  
+  c_in1, c_in2 = st.columns(2)
+  with c_in1:
+    acc_size = st.number_input("Total Account Balance ($)", value=10000.0, step=500.0, key="dia_acc")
+    risk_pct = st.slider("Risk Tolerance per Trade (%)", 0.1, 5.0, 1.0, 0.1, key="dia_risk")
+  with c_in2:
+    entry_p = st.number_input("Planned Entry Price ($)", value=68000.0, step=10.0, key="dia_entry")
+    stop_p = st.number_input("Planned Stop Loss Price ($)", value=67000.0, step=10.0, key="dia_sl")
+
+  if entry_p != stop_p:
+    risk_amount = acc_size * (risk_pct / 100.0)
+    risk_per_unit = abs(entry_p - stop_p)
+    position_size = risk_amount / risk_per_unit
+    position_value = position_size * entry_p
+
+    m1, m2, m3 = st.columns(3)
+    with m1:
+      st.markdown(f'<div class="calc-metric-box"><h4>Risk Amount</h4><p style="font-size: 18px; font-weight: bold; color: #f6465d;">${risk_amount:,.2f}</p></div>', unsafe_allow_html=True)
+    with m2:
+      st.markdown(f'<div class="calc-metric-box"><h4>Size (Units)</h4><p style="font-size: 18px; font-weight: bold; color: #fcd535;">{position_size:,.4f}</p></div>', unsafe_allow_html=True)
+    with m3:
+      st.markdown(f'<div class="calc-metric-box"><h4>Position Capital</h4><p style="font-size: 18px; font-weight: bold; color: #0ecb81;">${position_value:,.2f}</p></div>', unsafe_allow_html=True)
+
+
+# --- SIDEBAR CONTROLS ---
 with st.sidebar:
   is_vip = ("Premium" in st.session_state.user_tier or "Lifetime" in st.session_state.user_tier)
   
@@ -419,6 +487,16 @@ with st.sidebar:
   st.markdown(f"**Username:** @{st.session_state.username}")
   st.markdown(f"**Status Tier:** `{st.session_state.user_tier}`")
   
+  st.markdown("---")
+  st.markdown("### 🛠️ Quick Actions")
+  
+  # Pop-up Dialog Triggers in Sidebar
+  if st.button("💎 Subscription & Plans"):
+    show_subscription_dialog()
+    
+  if st.button("🧮 Risk Calculator"):
+    show_risk_calculator_dialog()
+
   st.markdown("---")
   if st.button("🚪 Sign Out", key="logout_btn"):
     st.session_state.logged_in = False
@@ -459,14 +537,11 @@ for sym, info in prices_data.items():
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- MAIN DASHBOARD TABS ---
-# NOTE: Added 💎 Subscription & Plans tab so mobile users don't miss it!
-tab_overview, tab_charts, tab_signals, tab_calc, tab_sub = st.tabs([
+# --- MAIN DASHBOARD TABS (Subscription & Risk Management shifted to sidebar dialogs) ---
+tab_overview, tab_charts, tab_signals = st.tabs([
     "📊 Market Overview",
     "📈 Professional Charts",
     "⚡ Ultimate AI Signals",
-    "🧮 Risk Calculator",
-    "💎 Subscription & Plans",
 ])
 
 with tab_overview:
@@ -480,7 +555,7 @@ with tab_overview:
 
 with tab_charts:
   st.subheader("📈 MT5 & TradingView Style Candlestick Charts")
-  st.write("Real-time High-Frequency Institutional OHLC Rendering.")
+  st.write("Real-time High-Frequency Institutional OHLC Rendering with Ultra-Smooth Smoothing.")
 
   chart_col1, chart_col2 = st.columns([1, 3])
   with chart_col1:
@@ -495,24 +570,22 @@ with tab_charts:
     )
 
   with chart_col2:
-    # PLOTLY CANDLESTICK CHART (MT5 / TradingView Style)
     base_p = prices_data[selected_chart_asset]["price"]
     
-    # Generating realistic looking OHLC data
-    np.random.seed(42)
-    num_candles = 60
+    np.random.seed(int(base_p) % 100)
+    num_candles = 80
     import datetime as dt
     dates = [dt.datetime.now() - dt.timedelta(minutes=i*5) for i in range(num_candles)]
     dates.reverse()
 
     open_data, high_data, low_data, close_data = [], [], [], []
-    curr_p = base_p * 0.99 
+    curr_p = base_p * 0.985 
     
     for _ in range(num_candles):
         open_p = curr_p
-        close_p = open_p + np.random.normal(0, base_p * 0.003)
-        high_p = max(open_p, close_p) + abs(np.random.normal(0, base_p * 0.0015))
-        low_p = min(open_p, close_p) - abs(np.random.normal(0, base_p * 0.0015))
+        close_p = open_p + np.random.normal(0, base_p * 0.0018)
+        high_p = max(open_p, close_p) + abs(np.random.normal(0, base_p * 0.0009))
+        low_p = min(open_p, close_p) - abs(np.random.normal(0, base_p * 0.0009))
         
         open_data.append(open_p)
         high_data.append(high_p)
@@ -520,22 +593,45 @@ with tab_charts:
         close_data.append(close_p)
         curr_p = close_p
         
-    fig = go.Figure(data=[go.Candlestick(x=dates,
-                    open=open_data, high=high_data,
-                    low=low_data, close=close_data,
-                    increasing_line_color='#0ecb81', decreasing_line_color='#f6465d')])
+    fig = go.Figure(data=[go.Candlestick(
+        x=dates,
+        open=open_data, high=high_data,
+        low=low_data, close=close_data,
+        increasing_line_color='#0ecb81', increasing_fillcolor='#0ecb81',
+        decreasing_line_color='#f6465d', decreasing_fillcolor='#f6465d'
+    )])
 
     fig.update_layout(
         template='plotly_dark',
-        paper_bgcolor='#11151c',
-        plot_bgcolor='#181a20',
-        margin=dict(l=10, r=10, t=30, b=10),
-        xaxis_rangeslider_visible=False,
-        height=450,
-        title=f"{selected_chart_asset} | {chart_timeframe} | Pro Live Feed",
-        title_font_size=14
+        paper_bgcolor='#0b0e11',
+        plot_bgcolor='#11151c',
+        margin=dict(l=10, r=10, t=35, b=10),
+        xaxis_rangeslider_visible=True,
+        xaxis_rangebreaks=[dict(bounds=["sat", "sun"])] if selected_chart_asset in ["AAPL", "RELIANCE", "NIFTY"] else [],
+        height=500,
+        title=dict(
+            text=f"<b>{selected_chart_asset}</b> • Live {chart_timeframe} Pro Feed (MT5 Engine)",
+            font=dict(size=15, color="#fcd535")
+        ),
+        xaxis=dict(
+            gridcolor='#1e2329',
+            zerolinecolor='#1e2329',
+            showspikes=True,
+            spikecolor='#848e9c',
+            spikethickness=1,
+        ),
+        yaxis=dict(
+            gridcolor='#1e2329',
+            zerolinecolor='#1e2329',
+            side='right',
+            showspikes=True,
+            spikecolor='#848e9c',
+            spikethickness=1,
+        ),
+        hovermode='x unified'
     )
-    st.plotly_chart(fig, use_container_width=True)
+    
+    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True, 'scrollZoom': True})
 
 with tab_signals:
   st.subheader("⚡ Omni-Algorithmic AI Engine (100% Precision Model)")
@@ -545,14 +641,12 @@ with tab_signals:
   with sig_col1:
     with st.form("ai_signal_generator_form"):
       target_asset = st.selectbox("Select Asset for AI Scan", list(prices_data.keys()), key="sig_asset")
-      # Strategy selection removed as requested. AI automatically uses ultimate combined strategy.
       generate_clicked = st.form_submit_button("🚀 Generate High-Accuracy Signal")
 
   with sig_col2:
     if generate_clicked or "last_generated_signal" not in st.session_state:
       cur_p = prices_data[target_asset]["price"]
 
-      # AI Logic assuming 100% accuracy metrics for user confidence
       if prices_data[target_asset]["change"] >= 0 or "LONG" in target_asset:
         action = "🟢 EXACT BUY (LONG) SIGNAL"
         entry_z = f"${cur_p * 0.998:,.2f} - ${cur_p:,.2f}"
@@ -607,101 +701,59 @@ with tab_signals:
         </div>
         """, unsafe_allow_html=True)
 
-with tab_calc:
-  st.subheader("🧮 Advanced Position Sizing & Risk Management")
-  c_in1, c_in2 = st.columns(2)
-  with c_in1:
-    acc_size = st.number_input("Total Account Balance ($)", value=10000.0, step=500.0)
-    risk_pct = st.slider("Risk Tolerance per Trade (%)", 0.1, 5.0, 1.0, 0.1)
-  with c_in2:
-    entry_p = st.number_input("Planned Entry Price ($)", value=68000.0, step=10.0)
-    stop_p = st.number_input("Planned Stop Loss Price ($)", value=67000.0, step=10.0)
-
-  if entry_p != stop_p:
-    risk_amount = acc_size * (risk_pct / 100.0)
-    risk_per_unit = abs(entry_p - stop_p)
-    position_size = risk_amount / risk_per_unit
-    position_value = position_size * entry_p
-
-    m1, m2, m3 = st.columns(3)
-    with m1:
-      st.markdown(f'<div class="calc-metric-box"><h4>Risk Amount</h4><p style="font-size: 20px; font-weight: bold; color: #f6465d;">${risk_amount:,.2f}</p></div>', unsafe_allow_html=True)
-    with m2:
-      st.markdown(f'<div class="calc-metric-box"><h4>Size (Units)</h4><p style="font-size: 20px; font-weight: bold; color: #fcd535;">{position_size:,.4f}</p></div>', unsafe_allow_html=True)
-    with m3:
-      st.markdown(f'<div class="calc-metric-box"><h4>Position Capital</h4><p style="font-size: 20px; font-weight: bold; color: #0ecb81;">${position_value:,.2f}</p></div>', unsafe_allow_html=True)
-
-# --- NEW: DEDICATED SUBSCRIPTION TAB (SOLVES MOBILE HIDING ISSUE) ---
-with tab_sub:
-    st.subheader("💎 Premium Subscription & Promo Code Redemption")
-    st.write("Upgrade your tier instantly right here from the main dashboard.")
-    
-    sub_c1, sub_c2 = st.columns([1, 1])
-    with sub_c1:
-        st.markdown(f"""
-        <div style="background: #161a22; border: 1px solid #2b313a; padding: 20px; border-radius: 10px;">
-            <h4 style="color: #fcd535; margin-top: 0;">Current Plan</h4>
-            <p style="font-size: 18px; font-weight: 800; color: #ffffff;">{st.session_state.user_tier}</p>
-            <p style="font-size: 13px; color: #848e9c;">Enjoy your current privileges. To access Lifetime unlimited AI signals and professional features, redeem a VIP code.</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    with sub_c2:
-        with st.form("main_promo_form"):
-            promo_input_main = st.text_input("Enter Promo Code", placeholder="e.g. VEERLIFETIME")
-            submitted_promo = st.form_submit_button("Redeem VIP Access")
-            
-            if submitted_promo:
-                try:
-                    conn = get_db_connection()
-                    cursor = conn.cursor()
-                    cursor.execute("SELECT duration_type FROM promo_codes WHERE code = ? AND is_used = 0", (promo_input_main.strip().upper(),))
-                    p_data = cursor.fetchone()
-                    if p_data:
-                        duration = p_data[0]
-                        new_tier = f"Premium Member ({duration})"
-                        cursor.execute("UPDATE users SET tier = ? WHERE email = ?", (new_tier, st.session_state.current_user_email))
-                        cursor.execute("UPDATE promo_codes SET is_used = 1, used_by = ? WHERE code = ?", (st.session_state.current_user_email, promo_input_main.strip().upper()))
-                        conn.commit()
-                        st.session_state.user_tier = new_tier
-                        st.success(f"Success! Subscription Activated ({duration}). Welcome to Elite VIP!")
-                        st.rerun()
-                    else:
-                        st.error("Invalid code, or this promo code has already been claimed!")
-                    conn.close()
-                except Exception as e:
-                    st.error(f"Error redeeming code: {e}")
-
-    # --- ADMIN CONTROLS IN SUBSCRIPTION TAB ---
-    if st.session_state.current_user_email == "admin@gmail.com":
-        st.markdown("---")
-        st.markdown("### 🛠️ Admin Allocation Panel")
-        try:
+# --- ADMIN PANEL (ONLY FOR ADMIN TO CREATE NEW UNIQUE PROMO CODES) ---
+if st.session_state.current_user_email == "admin@gmail.com":
+  st.markdown("---")
+  st.markdown("### 🛠️ Admin Control Panel & Promo Code Generator")
+  
+  col_admin1, col_admin2 = st.columns(2)
+  with col_admin1:
+    with st.form("admin_create_promo_form"):
+      st.markdown("#### Create New One-Time Promo Code")
+      new_code_name = st.text_input("New Promo Code", placeholder="e.g. VIPPASS50")
+      code_duration = st.selectbox("Duration Type", ["30 Days", "1 Year", "3 Days", "Lifetime Unlimited"])
+      create_promo_btn = st.form_submit_button("Generate Promo Code")
+      
+      if create_promo_btn:
+        c_name = new_code_name.strip().upper()
+        if c_name:
+          try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            cursor.execute("SELECT email FROM users ORDER BY email ASC")
-            all_users = cursor.fetchall()
+            cursor.execute("INSERT OR REPLACE INTO promo_codes (code, duration_type, is_used) VALUES (?, ?, 0)", (c_name, code_duration))
+            conn.commit()
             conn.close()
-            user_list = [u[0] for u in all_users]
-        except:
-            user_list = []
-            
-        with st.form("admin_grant_form"):
-            ac1, ac2 = st.columns(2)
-            with ac1:
-                target = st.selectbox("Select User", user_list)
-            with ac2:
-                tier = st.selectbox("Select Tier", ["Premium Member (Lifetime)", "Premium Member (30 Days)", "Free User"])
-            if st.form_submit_button("Grant / Revoke Access"):
-                try:
-                    conn = get_db_connection()
-                    cursor = conn.cursor()
-                    cursor.execute("UPDATE users SET tier = ? WHERE email = ?", (tier, target))
-                    conn.commit()
-                    conn.close()
-                    st.success(f"Updated {target} to {tier}!")
-                    if target == st.session_state.current_user_email:
-                        st.session_state.user_tier = tier
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Error: {e}")
+            st.success(f"Promo Code '{c_name}' created successfully for {code_duration}!")
+          except Exception as e:
+            st.error(f"Error creating code: {e}")
+        else:
+          st.warning("Please enter a valid code name.")
+
+  with col_admin2:
+    with st.form("admin_grant_form"):
+      st.markdown("#### Direct User Tier Override")
+      try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT email FROM users ORDER BY email ASC")
+        all_users = cursor.fetchall()
+        conn.close()
+        user_list = [u[0] for u in all_users]
+      except:
+        user_list = []
+        
+      target = st.selectbox("Select User Email", user_list)
+      tier = st.selectbox("Select Tier", ["Premium Member (Lifetime)", "Premium Member (30 Days)", "Free User"])
+      if st.form_submit_button("Update User Status"):
+        try:
+          conn = get_db_connection()
+          cursor = conn.cursor()
+          cursor.execute("UPDATE users SET tier = ? WHERE email = ?", (tier, target))
+          conn.commit()
+          conn.close()
+          st.success(f"Updated {target} to {tier}!")
+          if target == st.session_state.current_user_email:
+            st.session_state.user_tier = tier
+          st.rerun()
+        except Exception as e:
+          st.error(f"Error: {e}")
