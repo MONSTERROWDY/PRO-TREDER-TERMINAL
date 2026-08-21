@@ -241,16 +241,16 @@ def init_db():
 init_db()
 
 
-def get_user_full(email):
+def get_user_full(identifier):
   try:
     conn = get_db_connection()
     cursor = conn.cursor()
-    # Flexible lookup handling lower/upper/whitespace spacing issues in legacy emails
-    cleaned_email = email.strip().lower()
+    cleaned_id = identifier.strip().lower()
+    # Flexible lookup supporting both Email or Mobile Phone Number stored in primary key field
     cursor.execute(
         "SELECT password, name, username, avatar, tier FROM users WHERE lower(trim(email)) ="
         " ?",
-        (cleaned_email,),
+        (cleaned_id,),
     )
     res = cursor.fetchone()
     conn.close()
@@ -259,7 +259,7 @@ def get_user_full(email):
     return None
 
 
-def register_user(email, password, name, username):
+def register_user(identifier, password, name, username):
   try:
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -267,7 +267,7 @@ def register_user(email, password, name, username):
         "INSERT INTO users (email, password, name, username, tier) VALUES (?,"
         " ?, ?, ?, ?)",
         (
-            email.strip().lower(),
+            identifier.strip().lower(),
             password,
             name.strip(),
             username.strip(),
@@ -281,13 +281,13 @@ def register_user(email, password, name, username):
     return False
 
 
-def update_user_profile(email, name, username, avatar):
+def update_user_profile(identifier, name, username, avatar):
   try:
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
         "UPDATE users SET name = ?, username = ?, avatar = ? WHERE lower(trim(email)) = lower(trim(?))",
-        (name, username, avatar, email),
+        (name, username, avatar, identifier),
     )
     conn.commit()
     conn.close()
@@ -295,13 +295,13 @@ def update_user_profile(email, name, username, avatar):
     pass
 
 
-def reset_user_password(email, new_password):
+def reset_user_password(identifier, new_password):
   try:
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
         "UPDATE users SET password = ? WHERE lower(trim(email)) = lower(trim(?))",
-        (new_password, email),
+        (new_password, identifier),
     )
     conn.commit()
     conn.close()
@@ -372,7 +372,7 @@ if "signals_used" not in st.session_state:
   st.session_state.signals_used = 0
 
 
-# --- BROKER-GRADE ELITE AUTH SCREEN WITH PASSWORD RECOVERY ---
+# --- BROKER-GRADE ELITE AUTH SCREEN WITH UNIVERSAL ID RECOVERY ---
 def show_auth_screen():
   st.markdown("<br><br>", unsafe_allow_html=True)
   c1, col, c2 = st.columns([1, 1.4, 1])
@@ -396,23 +396,25 @@ def show_auth_screen():
     with t1:
       st.markdown(
           "<p style='color:#848e9c; font-size:12px; text-align:center;"
-          " margin-bottom:20px;'>Enter your registered email and password.</p>",
+          " margin-bottom:20px;'>Enter your registered Phone Number or Email"
+          " ID and password.</p>",
           unsafe_allow_html=True,
       )
       with st.form("login_form", clear_on_submit=False):
-        login_email = st.text_input(
-            "Registered Email / Mobile ID", placeholder="name@example.com"
+        login_id = st.text_input(
+            "Registered Phone Number or Email",
+            placeholder="9876543210 or name@example.com",
         )
         login_pass = st.text_input(
             "Account Password", type="password", placeholder="••••••••"
         )
         st.markdown("<br>", unsafe_allow_html=True)
         if st.form_submit_button("Access Terminal"):
-          cleaned_email = login_email.strip().lower()
-          u_data = get_user_full(cleaned_email)
+          cleaned_id = login_id.strip().lower()
+          u_data = get_user_full(cleaned_id)
           if u_data and str(u_data[0]) == str(login_pass):
             st.session_state.logged_in = True
-            st.session_state.current_user_email = cleaned_email
+            st.session_state.current_user_email = cleaned_id
             st.session_state.current_user_name = (
                 u_data[1] if u_data[1] else "Trader"
             )
@@ -421,19 +423,19 @@ def show_auth_screen():
                 u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
             )
             st.session_state.user_tier = u_data[4] if u_data[4] else "Free User"
-            st.query_params["session_user"] = cleaned_email
+            st.query_params["session_user"] = cleaned_id
             st.rerun()
           else:
             st.error(
-                "Invalid Email or Password! Please check your details or use"
-                " 'Reset Password' tab if forgotten."
+                "Invalid ID or Password! Please check your details or use"
+                " 'Reset Password' tab."
             )
 
     with t2:
       st.markdown(
           "<p style='color:#848e9c; font-size:12px; text-align:center;"
-          " margin-bottom:20px;'>Register now to unlock free AI signal quotas"
-          " and advanced charting.</p>",
+          " margin-bottom:20px;'>Register now using Phone Number or Email to"
+          " unlock AI signal quotas.</p>",
           unsafe_allow_html=True,
       )
       with st.form("register_form", clear_on_submit=False):
@@ -441,8 +443,9 @@ def show_auth_screen():
         reg_uname = st.text_input(
             "Trading Handle / Username", placeholder="trader_alpha"
         )
-        reg_email = st.text_input(
-            "Email ID / Mobile Number", placeholder="john@example.com"
+        reg_id = st.text_input(
+            "Phone Number or Email ID",
+            placeholder="9876543210 or john@example.com",
         )
         reg_pass = st.text_input(
             "Secure Password (Min 6 Chars)",
@@ -451,29 +454,30 @@ def show_auth_screen():
         )
         st.markdown("<br>", unsafe_allow_html=True)
         if st.form_submit_button("Create Free Account"):
-          cleaned_reg_email = reg_email.strip().lower()
+          cleaned_reg_id = reg_id.strip().lower()
           cleaned_name = reg_name.strip()
           cleaned_uname = reg_uname.strip()
           if (
               cleaned_name
-              and cleaned_reg_email
+              and cleaned_reg_id
               and cleaned_uname
               and len(reg_pass) >= 6
           ):
             if register_user(
-                cleaned_reg_email, reg_pass, cleaned_name, cleaned_uname
+                cleaned_reg_id, reg_pass, cleaned_name, cleaned_uname
             ):
               st.session_state.logged_in = True
-              st.session_state.current_user_email = cleaned_reg_email
+              st.session_state.current_user_email = cleaned_reg_id
               st.session_state.current_user_name = cleaned_name
               st.session_state.username = cleaned_uname
               st.session_state.avatar = "https://i.imgur.com/71916rK.png"
               st.session_state.user_tier = "Free User"
-              st.query_params["session_user"] = cleaned_reg_email
+              st.query_params["session_user"] = cleaned_reg_id
               st.rerun()
             else:
               st.error(
-                  "Email ID is already registered! Please sign in directly."
+                  "This Phone Number or Email is already registered! Please"
+                  " sign in directly."
               )
           else:
             st.warning("Please fill all details correctly (Password >= 6).")
@@ -481,13 +485,14 @@ def show_auth_screen():
     with t3:
       st.markdown(
           "<p style='color:#848e9c; font-size:12px; text-align:center;"
-          " margin-bottom:20px;'>Purane users apna password yahan turant naya"
-          " set kar sakte hain.</p>",
+          " margin-bottom:20px;'>Purane users apna Phone Number ya Email daalkar"
+          " apna naya password turant set kar sakte hain.</p>",
           unsafe_allow_html=True,
       )
       with st.form("reset_form", clear_on_submit=False):
-        reset_email = st.text_input(
-            "Your Registered Email", placeholder="name@example.com"
+        reset_id = st.text_input(
+            "Your Registered Phone Number or Email",
+            placeholder="9876543210 or name@example.com",
         )
         new_pass_input = st.text_input(
             "Set New Password (Min 6 Chars)",
@@ -496,11 +501,11 @@ def show_auth_screen():
         )
         st.markdown("<br>", unsafe_allow_html=True)
         if st.form_submit_button("Update Password Now"):
-          target_email = reset_email.strip().lower()
-          existing_check = get_user_full(target_email)
+          target_id = reset_id.strip().lower()
+          existing_check = get_user_full(target_id)
           if existing_check:
             if len(new_pass_input) >= 6:
-              if reset_user_password(target_email, new_pass_input):
+              if reset_user_password(target_id, new_pass_input):
                 st.success(
                     "Password successfully updated! Now you can login with your"
                     " new password."
@@ -511,8 +516,8 @@ def show_auth_screen():
               st.warning("New password must be at least 6 characters long.")
           else:
             st.error(
-                "This email is not registered in our database. Please check the"
-                " email ID."
+                "This Phone Number or Email is not registered in our database."
+                " Please check your ID."
             )
 
     st.markdown(
@@ -558,7 +563,7 @@ with st.sidebar:
   st.image(avatar_url, width=80)
   st.markdown(f"**Name:** {st.session_state.current_user_name}")
   st.markdown(f"**Username:** @{st.session_state.get('username', 'trader')}")
-  st.markdown(f"**Email:** {st.session_state.current_user_email}")
+  st.markdown(f"**Login ID:** {st.session_state.current_user_email}")
   st.markdown(f"**Status Tier:** `{st.session_state.user_tier}`")
 
   with st.expander("✏️ Edit Profile"):
@@ -648,13 +653,13 @@ with st.sidebar:
 
     with st.expander("⚡ Direct User Subscription Allocator"):
       st.write(
-          "बिना प्रोमो कोड के सीधे किसी भी यूजर की आईडी/ईमेल चुनकर सब्सक्रिप्शन"
+          "बिना प्रोमो कोड के सीधे किसी भी यूजर की आईडी/फोन नंबर चुनकर सब्सक्रिप्शन"
           " दें।"
       )
       if all_registered_users:
         user_email_list = [u[0] for u in all_registered_users]
         selected_target_email = st.selectbox(
-            "Select User Email ID", user_email_list, key="admin_target_user"
+            "Select User ID / Phone", user_email_list, key="admin_target_user"
         )
         selected_tier_type = st.selectbox(
             "Select Subscription Tier to Grant",
