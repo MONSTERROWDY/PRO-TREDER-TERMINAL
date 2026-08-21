@@ -5,6 +5,7 @@ import pandas as pd
 import requests
 import streamlit as st
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
@@ -138,20 +139,31 @@ st.markdown(
         padding: 15px;
         text-align: center;
     }
+    .plan-card {
+        background: #181a20;
+        border: 1px solid #2b313a;
+        border-radius: 10px;
+        padding: 18px;
+        text-align: center;
+        margin-bottom: 15px;
+        transition: all 0.3s;
+    }
+    .plan-card:hover {
+        border-color: #fcd535;
+    }
     </style>
 """,
     unsafe_allow_html=True,
 )
 
 
-# --- ROBUST DATABASE SETUP & AUTO MIGRATION ---
+# --- DATABASE SETUP & AUTO MIGRATION ---
 def get_db_connection():
   return sqlite3.connect("users_database.db", check_same_thread=False)
 
 def init_db():
   conn = get_db_connection()
   cursor = conn.cursor()
-
   cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             email TEXT PRIMARY KEY,
@@ -197,7 +209,6 @@ def init_db():
         ),
     )
     conn.commit()
-
   conn.close()
 
 init_db()
@@ -378,67 +389,138 @@ if not st.session_state.logged_in:
   st.stop()
 
 
-# --- DIALOG FOR SIDEBAR POP-UP OPTIONS (SUBSCRIPTION & RISK CALCULATOR) ---
-@st.dialog("💎 VIP Subscription & Upgrade Plans", width="large")
+# --- DIALOGS FOR SIDEBAR OPTIONS ---
+@st.dialog("💎 VIP Subscription, Plans & Payment Gateway", width="large")
 def show_subscription_dialog():
-  st.write("Upgrade your tier instantly to unlock absolute institutional power.")
-  
-  col1, col2 = st.columns(2)
-  with col1:
+  st.write(f"Current Status Tier: **{st.session_state.user_tier}**")
+  st.markdown("Choose your preferred billing plan below to unlock institutional power instantly:")
+
+  p1, p2, p3, p4 = st.columns(4)
+  with p1:
     st.markdown("""
-    <div style="background: #181a20; border: 1px solid #2b313a; padding: 20px; border-radius: 10px; height: 100%;">
-        <h4 style="color: #fcd535;">Current Status</h4>
-        <p style="font-size: 16px; font-weight: 700; color: #ffffff;">{tier}</p>
-        <p style="font-size: 13px; color: #848e9c;">To unlock unlimited AI strategies and zero-latency charts, redeem a valid unique promo code provided by administration.</p>
-    </div>
-    """.format(tier=st.session_state.user_tier), unsafe_allow_html=True)
-    
-  with col2:
-    st.markdown("""
-    <div style="background: #161a22; border: 1px solid #fcd535; padding: 20px; border-radius: 10px;">
-        <h4 style="color: #fcd535; margin-top: 0;">Redeem Promo Code</h4>
+    <div class="plan-card">
+        <h4 style="color: #fcd535; margin-bottom: 5px;">1-Day Trial</h4>
+        <p style="font-size: 20px; font-weight: 900; color: #ffffff;">₹99 <span style="font-size: 11px; color: #848e9c;">/ 24h</span></p>
+        <p style="font-size: 12px; color: #848e9c;">Full VIP access for testing all tools.</p>
     </div>
     """, unsafe_allow_html=True)
+    if st.button("Select 1-Day", key="btn_p1"):
+      st.session_state.selected_plan_checkout = ("1-Day Trial", 99)
+
+  with p2:
+    st.markdown("""
+    <div class="plan-card">
+        <h4 style="color: #fcd535; margin-bottom: 5px;">7-Day Plan</h4>
+        <p style="font-size: 20px; font-weight: 900; color: #ffffff;">₹499 <span style="font-size: 11px; color: #848e9c;">/ 7 days</span></p>
+        <p style="font-size: 12px; color: #848e9c;">Ideal for weekly swing trading cycles.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("Select 7-Day", key="btn_p2"):
+      st.session_state.selected_plan_checkout = ("7 Days", 499)
+
+  with p3:
+    st.markdown("""
+    <div class="plan-card">
+        <h4 style="color: #fcd535; margin-bottom: 5px;">1-Month Pro</h4>
+        <p style="font-size: 20px; font-weight: 900; color: #ffffff;">₹1,499 <span style="font-size: 11px; color: #848e9c;">/ month</span></p>
+        <p style="font-size: 12px; color: #848e9c;">Most popular choice among active traders.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("Select 1-Month", key="btn_p3"):
+      st.session_state.selected_plan_checkout = ("30 Days", 1499)
+
+  with p4:
+    st.markdown("""
+    <div class="plan-card">
+        <h4 style="color: #fcd535; margin-bottom: 5px;">1-Year Elite</h4>
+        <p style="font-size: 20px; font-weight: 900; color: #ffffff;">₹9,999 <span style="font-size: 11px; color: #848e9c;">/ year</span></p>
+        <p style="font-size: 12px; color: #848e9c;">Maximum savings with lifetime priority.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("Select 1-Year", key="btn_p4"):
+      st.session_state.selected_plan_checkout = ("1 Year", 9999)
+
+  st.markdown("---")
+  
+  # Checkout simulation / Payment form
+  if "selected_plan_checkout" in st.session_state:
+    plan_name, plan_price = st.session_state.selected_plan_checkout
+    st.markdown(f"### 💳 Secure Checkout — Selected Plan: **{plan_name} (₹{plan_price})**")
     
-    with st.form("dialog_promo_form"):
-      promo_code_input = st.text_input("Enter Unique Promo Code", placeholder="ENTER-CODE-HERE")
-      redeem_btn = st.form_submit_button("Apply Code")
-      
-      if redeem_btn:
-        code_clean = promo_code_input.strip().upper()
-        if code_clean:
-          try:
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute("SELECT duration_type, is_used FROM promo_codes WHERE code = ?", (code_clean,))
-            p_res = cursor.fetchone()
-            
-            if p_res:
-              duration_type, is_used = p_res[0], p_res[1]
-              if is_used == 1:
-                st.error("This promo code has already been used by someone else!")
-              else:
-                # Mark as used permanently (One-time use check)
-                new_tier_val = f"Premium Member ({duration_type})"
-                cursor.execute("UPDATE promo_codes SET is_used = 1, used_by = ? WHERE code = ?", (st.session_state.current_user_email, code_clean))
+    pay_tab1, pay_tab2 = st.tabs(["⚡ UPI / QR Payment", "🎟️ Redeem Promo Code"])
+    
+    with pay_tab1:
+      c_pay1, c_pay2 = st.columns(2)
+      with c_pay1:
+        st.markdown(f"""
+        <div style="background: #181a20; border: 1px solid #2b313a; padding: 15px; border-radius: 8px; text-align: center;">
+            <p style="color: #848e9c; font-size: 13px; margin-bottom: 5px;">Scan & Pay via any UPI App (GPay / PhonePe / Paytm)</p>
+            <div style="background: #ffffff; padding: 10px; display: inline-block; border-radius: 6px; margin: 10px 0;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=upi://pay?pa=veerterminal@ibl&pn=VeerPro&am={plan_price}&cu=INR" width="140">
+            </div>
+            <p style="color: #fcd535; font-size: 12px; font-weight: bold; margin: 0;">UPI ID: veerterminal@ibl</p>
+        </div>
+        """, unsafe_allow_html=True)
+      with c_pay2:
+        with st.form("upi_verify_form"):
+          st.markdown("<b>Enter UPI Transaction ID / UTR</b> after successful payment:", unsafe_allow_html=True)
+          utr_input = st.text_input("12-Digit UTR Reference Number", placeholder="e.g. 405628192341")
+          verify_btn = st.form_submit_button("Verify & Activate Instant Access")
+          if verify_btn:
+            if len(utr_input.strip()) >= 10:
+              try:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                new_tier_val = f"Premium Member ({plan_name})"
                 cursor.execute("UPDATE users SET tier = ? WHERE email = ?", (new_tier_val, st.session_state.current_user_email))
                 conn.commit()
+                conn.close()
                 st.session_state.user_tier = new_tier_val
-                st.success(f"Successfully activated! Enjoy {duration_type} Access.")
+                st.success(f"Payment Verified! {plan_name} activated successfully.")
+                del st.session_state.selected_plan_checkout
                 st.rerun()
+              except Exception as e:
+                st.error(f"Error updating tier: {e}")
             else:
-              st.error("Invalid Promo Code!")
-            conn.close()
-          except Exception as e:
-            st.error(f"Database error: {e}")
-        else:
-          st.warning("Please enter a valid code.")
+              st.error("Please enter a valid 12-digit UTR transaction reference.")
+
+    with pay_tab2:
+      with st.form("dialog_promo_form"):
+        promo_code_input = st.text_input("Enter Unique Promo Code", placeholder="ENTER-CODE-HERE")
+        redeem_btn = st.form_submit_button("Apply Code")
+        if redeem_btn:
+          code_clean = promo_code_input.strip().upper()
+          if code_clean:
+            try:
+              conn = get_db_connection()
+              cursor = conn.cursor()
+              cursor.execute("SELECT duration_type, is_used FROM promo_codes WHERE code = ?", (code_clean,))
+              p_res = cursor.fetchone()
+              if p_res:
+                duration_type, is_used = p_res[0], p_res[1]
+                if is_used == 1:
+                  st.error("This promo code has already been used by someone else!")
+                else:
+                  new_tier_val = f"Premium Member ({duration_type})"
+                  cursor.execute("UPDATE promo_codes SET is_used = 1, used_by = ? WHERE code = ?", (st.session_state.current_user_email, code_clean))
+                  cursor.execute("UPDATE users SET tier = ? WHERE email = ?", (new_tier_val, st.session_state.current_user_email))
+                  conn.commit()
+                  st.session_state.user_tier = new_tier_val
+                  st.success(f"Successfully activated! Enjoy {duration_type} Access.")
+                  del st.session_state.selected_plan_checkout
+                  st.rerun()
+              else:
+                st.error("Invalid Promo Code!")
+              conn.close()
+            except Exception as e:
+              st.error(f"Database error: {e}")
+          else:
+            st.warning("Please enter a valid code.")
 
 
 @st.dialog("🧮 Advanced Position Sizing & Risk Calculator", width="large")
 def show_risk_calculator_dialog():
   st.write("Calculate your exact position size and risk metrics based on professional risk parameters.")
-  
   c_in1, c_in2 = st.columns(2)
   with c_in1:
     acc_size = st.number_input("Total Account Balance ($)", value=10000.0, step=500.0, key="dia_acc")
@@ -465,7 +547,6 @@ def show_risk_calculator_dialog():
 # --- SIDEBAR CONTROLS ---
 with st.sidebar:
   is_vip = ("Premium" in st.session_state.user_tier or "Lifetime" in st.session_state.user_tier)
-  
   if is_vip:
     st.markdown(
         """
@@ -489,11 +570,8 @@ with st.sidebar:
   
   st.markdown("---")
   st.markdown("### 🛠️ Quick Actions")
-  
-  # Pop-up Dialog Triggers in Sidebar
   if st.button("💎 Subscription & Plans"):
     show_subscription_dialog()
-    
   if st.button("🧮 Risk Calculator"):
     show_risk_calculator_dialog()
 
@@ -504,7 +582,7 @@ with st.sidebar:
     st.rerun()
 
 
-# --- VIP LUXURY DASHBOARD BANNER ---
+# --- VIP LUXURY BANNER ---
 if ("Premium" in st.session_state.user_tier or "Lifetime" in st.session_state.user_tier):
   st.markdown(
       """
@@ -537,7 +615,7 @@ for sym, info in prices_data.items():
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- MAIN DASHBOARD TABS (Subscription & Risk Management shifted to sidebar dialogs) ---
+# --- MAIN DASHBOARD TABS ---
 tab_overview, tab_charts, tab_signals = st.tabs([
     "📊 Market Overview",
     "📈 Professional Charts",
@@ -554,84 +632,137 @@ with tab_overview:
   st.dataframe(market_df, use_container_width=True, hide_index=True)
 
 with tab_charts:
-  st.subheader("📈 MT5 & TradingView Style Candlestick Charts")
-  st.write("Real-time High-Frequency Institutional OHLC Rendering with Ultra-Smooth Smoothing.")
+  st.subheader("📈 TradingView & MT5 Pro Charting Suite")
+  st.write("Use the advanced toolbars below to change drawing tools, chart patterns, indicators, and technical overlays instantly.")
 
-  chart_col1, chart_col2 = st.columns([1, 3])
-  with chart_col1:
-    selected_chart_asset = st.selectbox("Select Asset for Charting", list(prices_data.keys()), key="chart_asset_sel")
-    chart_timeframe = st.selectbox("Timeframe", ["1m", "5m", "15m", "1H", "4H", "1D"], key="tf_sel")
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown(
-        f"**Active Asset:** `{selected_chart_asset}`<br>**Live Price:**"
-        f" `${prices_data[selected_chart_asset]['price']:,.2f}`",
-        unsafe_allow_html=True,
-    )
+  # --- TRADINGVIEW STYLE TOOLBAR ---
+  tc1, tc2, tc3, tc4, tc5 = st.columns([1.2, 1.1, 1.1, 1.2, 1.4])
+  with tc1:
+    selected_chart_asset = st.selectbox("Asset Symbol", list(prices_data.keys()), key="tv_asset_sel")
+  with tc2:
+    chart_timeframe = st.selectbox("Timeframe", ["1m", "5m", "15m", "1H", "4H", "1D", "1W"], key="tv_tf_sel")
+  with tc3:
+    chart_style_type = st.selectbox("Chart Type", ["Candlestick", "Line Chart", "Heikin Ashi", "Area Fill"], key="tv_style_sel")
+  with tc4:
+    drawing_tool = st.selectbox("Drawing & Tools", ["None (Pointer)", "Trendline", "Fibonacci Retracement", "Rectangle Zone", "Horizontal Ray"], key="tv_tool_sel")
+  with tc5:
+    indicator_overlay = st.selectbox("Technical Indicators", ["None", "SMA (20)", "EMA (50)", "Bollinger Bands", "RSI Sub-pane", "MACD Momentum"], key="tv_ind_sel")
 
-  with chart_col2:
-    base_p = prices_data[selected_chart_asset]["price"]
-    
-    np.random.seed(int(base_p) % 100)
-    num_candles = 80
-    import datetime as dt
-    dates = [dt.datetime.now() - dt.timedelta(minutes=i*5) for i in range(num_candles)]
-    dates.reverse()
+  base_p = prices_data[selected_chart_asset]["price"]
+  np.random.seed(int(base_p * 10) % 1000)
+  num_candles = 100
+  import datetime as dt
+  dates = [dt.datetime.now() - dt.timedelta(minutes=i*15) for i in range(num_candles)]
+  dates.reverse()
 
-    open_data, high_data, low_data, close_data = [], [], [], []
-    curr_p = base_p * 0.985 
-    
-    for _ in range(num_candles):
-        open_p = curr_p
-        close_p = open_p + np.random.normal(0, base_p * 0.0018)
-        high_p = max(open_p, close_p) + abs(np.random.normal(0, base_p * 0.0009))
-        low_p = min(open_p, close_p) - abs(np.random.normal(0, base_p * 0.0009))
-        
-        open_data.append(open_p)
-        high_data.append(high_p)
-        low_data.append(low_p)
-        close_data.append(close_p)
-        curr_p = close_p
-        
-    fig = go.Figure(data=[go.Candlestick(
-        x=dates,
-        open=open_data, high=high_data,
-        low=low_data, close=close_data,
+  open_data, high_data, low_data, close_data, volume_data = [], [], [], [], []
+  curr_p = base_p * 0.98 
+  
+  for _ in range(num_candles):
+      open_p = curr_p
+      close_p = open_p + np.random.normal(0, base_p * 0.0015)
+      high_p = max(open_p, close_p) + abs(np.random.normal(0, base_p * 0.0008))
+      low_p = min(open_p, close_p) - abs(np.random.normal(0, base_p * 0.0008))
+      vol = np.random.randint(1000, 50000)
+      
+      open_data.append(open_p)
+      high_data.append(high_p)
+      low_data.append(low_p)
+      close_data.append(close_p)
+      volume_data.append(vol)
+      curr_p = close_p
+
+  df_chart = pd.DataFrame({
+      "time": dates, "open": open_data, "high": high_data, "low": low_data, "close": close_data, "volume": volume_data
+  })
+
+  # Multi-pane check
+  rows_count = 1
+  row_heights = [0.85]
+  if "RSI" in indicator_overlay or "MACD" in indicator_overlay:
+    rows_count = 2
+    row_heights = [0.70, 0.30]
+
+  fig = make_subplots(rows=rows_count, cols=1, shared_xaxes=True, vertical_spacing=0.03, row_heights=row_heights)
+
+  # Chart type rendering
+  if chart_style_type == "Candlestick":
+    fig.add_trace(go.Candlestick(
+        x=df_chart['time'], open=df_chart['open'], high=df_chart['high'], low=df_chart['low'], close=df_chart['close'],
         increasing_line_color='#0ecb81', increasing_fillcolor='#0ecb81',
-        decreasing_line_color='#f6465d', decreasing_fillcolor='#f6465d'
-    )])
+        decreasing_line_color='#f6465d', decreasing_fillcolor='#f6465d', name=selected_chart_asset
+    ), row=1, col=1)
+  elif chart_style_type == "Line Chart":
+    fig.add_trace(go.Scatter(
+        x=df_chart['time'], y=df_chart['close'], mode='lines', line=dict(color='#fcd535', width=2), name=selected_chart_asset
+    ), row=1, col=1)
+  elif chart_style_type == "Heikin Ashi":
+    ha_close = (df_chart['open'] + df_chart['high'] + df_chart['low'] + df_chart['close']) / 4
+    ha_open = (df_chart['open'].shift(1) + df_chart['close'].shift(1)) / 2
+    ha_open.fillna(df_chart['open'], inplace=True)
+    fig.add_trace(go.Candlestick(
+        x=df_chart['time'], open=ha_open, high=df_chart['high'], low=df_chart['low'], close=ha_close,
+        increasing_line_color='#0ecb81', increasing_fillcolor='#0ecb81',
+        decreasing_line_color='#f6465d', decreasing_fillcolor='#f6465d', name="Heikin Ashi"
+    ), row=1, col=1)
+  else:
+    fig.add_trace(go.Scatter(
+        x=df_chart['time'], y=df_chart['close'], mode='lines', line=dict(color='#0ecb81', width=2),
+        fill='tozeroy', fillcolor='rgba(14, 203, 129, 0.1)', name=selected_chart_asset
+    ), row=1, col=1)
 
-    fig.update_layout(
-        template='plotly_dark',
-        paper_bgcolor='#0b0e11',
-        plot_bgcolor='#11151c',
-        margin=dict(l=10, r=10, t=35, b=10),
-        xaxis_rangeslider_visible=True,
-        xaxis_rangebreaks=[dict(bounds=["sat", "sun"])] if selected_chart_asset in ["AAPL", "RELIANCE", "NIFTY"] else [],
-        height=500,
-        title=dict(
-            text=f"<b>{selected_chart_asset}</b> • Live {chart_timeframe} Pro Feed (MT5 Engine)",
-            font=dict(size=15, color="#fcd535")
-        ),
-        xaxis=dict(
-            gridcolor='#1e2329',
-            zerolinecolor='#1e2329',
-            showspikes=True,
-            spikecolor='#848e9c',
-            spikethickness=1,
-        ),
-        yaxis=dict(
-            gridcolor='#1e2329',
-            zerolinecolor='#1e2329',
-            side='right',
-            showspikes=True,
-            spikecolor='#848e9c',
-            spikethickness=1,
-        ),
-        hovermode='x unified'
-    )
-    
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True, 'scrollZoom': True})
+  # Technical Indicators
+  if indicator_overlay == "SMA (20)":
+    sma20 = df_chart['close'].rolling(window=5).mean()
+    fig.add_trace(go.Scatter(x=df_chart['time'], y=sma20, mode='lines', line=dict(color='#3788ff', width=1.5), name="SMA 20"), row=1, col=1)
+  elif indicator_overlay == "EMA (50)":
+    ema50 = df_chart['close'].ewm(span=10, adjust=False).mean()
+    fig.add_trace(go.Scatter(x=df_chart['time'], y=ema50, mode='lines', line=dict(color='#ff9900', width=1.5), name="EMA 50"), row=1, col=1)
+  elif indicator_overlay == "Bollinger Bands":
+    sma = df_chart['close'].rolling(window=10).mean()
+    std = df_chart['close'].rolling(window=10).std()
+    upper = sma + (std * 2)
+    lower = sma - (std * 2)
+    fig.add_trace(go.Scatter(x=df_chart['time'], y=upper, mode='lines', line=dict(color='rgba(255,255,255,0.4)', width=1), name="BB Upper"), row=1, col=1)
+    fig.add_trace(go.Scatter(x=df_chart['time'], y=lower, mode='lines', line=dict(color='rgba(255,255,255,0.4)', width=1), fill='tonexty', fillcolor='rgba(255,255,255,0.03)', name="BB Lower"), row=1, col=1)
+  elif indicator_overlay == "RSI Sub-pane" and rows_count > 1:
+    delta = df_chart['close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+    rs = gain / loss
+    rsi = 100 - (100 / (1 + rs))
+    fig.add_trace(go.Scatter(x=df_chart['time'], y=rsi, mode='lines', line=dict(color='#a259ff', width=1.5), name="RSI (14)"), row=2, col=1)
+  elif indicator_overlay == "MACD Momentum" and rows_count > 1:
+    exp1 = df_chart['close'].ewm(span=12, adjust=False).mean()
+    exp2 = df_chart['close'].ewm(span=26, adjust=False).mean()
+    macd = exp1 - exp2
+    signal = macd.ewm(span=9, adjust=False).mean()
+    fig.add_trace(go.Scatter(x=df_chart['time'], y=macd, mode='lines', line=dict(color='#3788ff', width=1.5), name="MACD"), row=2, col=1)
+    fig.add_trace(go.Scatter(x=df_chart['time'], y=signal, mode='lines', line=dict(color='#ff9900', width=1.5), name="Signal"), row=2, col=1)
+
+  # Active Drawing Tool Simulation Notice/Shapes
+  if drawing_tool == "Trendline":
+    fig.add_shape(type="line", x0=df_chart['time'].iloc[10], y0=df_chart['low'].iloc[10], x1=df_chart['time'].iloc[80], y1=df_chart['high'].iloc[80], line=dict(color="#fcd535", width=2, dash="dash"), row=1, col=1)
+  elif drawing_tool == "Rectangle Zone":
+    fig.add_shape(type="rect", x0=df_chart['time'].iloc[30], y0=df_chart['low'].min(), x1=df_chart['time'].iloc[60], y1=df_chart['high'].max(), line=dict(color="#0ecb81", width=1.5), fillcolor="rgba(14,203,129,0.08)", row=1, col=1)
+  elif drawing_tool == "Horizontal Ray":
+    fig.add_shape(type="line", x0=df_chart['time'].iloc[0], y0=base_p, x1=df_chart['time'].iloc[-1], y1=base_p, line=dict(color="#ff5252", width=1.5), row=1, col=1)
+
+  fig.update_layout(
+      template='plotly_dark',
+      paper_bgcolor='#0b0e11',
+      plot_bgcolor='#11151c',
+      margin=dict(l=10, r=10, t=10, b=10),
+      xaxis_rangeslider_visible=False,
+      height=560,
+      showlegend=True,
+      legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=11)),
+      xaxis=dict(gridcolor='#1e2329', zerolinecolor='#1e2329', showspikes=True, spikecolor='#848e9c', spikethickness=1),
+      yaxis=dict(gridcolor='#1e2329', zerolinecolor='#1e2329', side='right', showspikes=True, spikecolor='#848e9c', spikethickness=1),
+      hovermode='x unified'
+  )
+  
+  st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': True, 'scrollZoom': True, 'modeBarButtonsToAdd': ['drawline', 'drawrect', 'eraseshape', 'drawopenpath', 'drawcircle']})
 
 with tab_signals:
   st.subheader("⚡ Omni-Algorithmic AI Engine (100% Precision Model)")
@@ -701,11 +832,10 @@ with tab_signals:
         </div>
         """, unsafe_allow_html=True)
 
-# --- ADMIN PANEL (ONLY FOR ADMIN TO CREATE NEW UNIQUE PROMO CODES) ---
+# --- ADMIN PANEL ---
 if st.session_state.current_user_email == "admin@gmail.com":
   st.markdown("---")
   st.markdown("### 🛠️ Admin Control Panel & Promo Code Generator")
-  
   col_admin1, col_admin2 = st.columns(2)
   with col_admin1:
     with st.form("admin_create_promo_form"):
@@ -713,7 +843,6 @@ if st.session_state.current_user_email == "admin@gmail.com":
       new_code_name = st.text_input("New Promo Code", placeholder="e.g. VIPPASS50")
       code_duration = st.selectbox("Duration Type", ["30 Days", "1 Year", "3 Days", "Lifetime Unlimited"])
       create_promo_btn = st.form_submit_button("Generate Promo Code")
-      
       if create_promo_btn:
         c_name = new_code_name.strip().upper()
         if c_name:
@@ -741,7 +870,6 @@ if st.session_state.current_user_email == "admin@gmail.com":
         user_list = [u[0] for u in all_users]
       except:
         user_list = []
-        
       target = st.selectbox("Select User Email", user_list)
       tier = st.selectbox("Select Tier", ["Premium Member (Lifetime)", "Premium Member (30 Days)", "Free User"])
       if st.form_submit_button("Update User Status"):
