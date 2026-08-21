@@ -145,7 +145,7 @@ st.markdown(
 )
 
 
-# --- ROBUST DATABASE SETUP & AUTO MIGRATION ---
+# --- ROBUST DATABASE SETUP & AUTO MIGRATION FOR OLD USERS ---
 def get_db_connection():
   return sqlite3.connect("users_database.db", check_same_thread=False)
 
@@ -154,6 +154,7 @@ def init_db():
   conn = get_db_connection()
   cursor = conn.cursor()
 
+  # Base table creation
   cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             email TEXT PRIMARY KEY,
@@ -163,6 +164,7 @@ def init_db():
     """)
   conn.commit()
 
+  # Safe column addition for legacy/old users database structure
   user_columns = [
       ("username", "TEXT"),
       ("avatar", "TEXT"),
@@ -176,6 +178,22 @@ def init_db():
     except sqlite3.OperationalError:
       pass
 
+  # Ensure default values for legacy users who might have NULL in name, username, or tier
+  try:
+    cursor.execute(
+        "UPDATE users SET name = 'Trader' WHERE name IS NULL OR name = ''"
+    )
+    cursor.execute(
+        "UPDATE users SET username = 'trader' WHERE username IS NULL OR"
+        " username = ''"
+    )
+    cursor.execute(
+        "UPDATE users SET tier = 'Free User' WHERE tier IS NULL OR tier = ''"
+    )
+    conn.commit()
+  except:
+    pass
+
   cursor.execute("""
         CREATE TABLE IF NOT EXISTS promo_codes (
             code TEXT PRIMARY KEY,
@@ -186,6 +204,7 @@ def init_db():
     """)
   conn.commit()
 
+  # Admin account safety check
   cursor.execute("SELECT * FROM users WHERE email = ?", ("admin@gmail.com",))
   if not cursor.fetchone():
     cursor.execute(
@@ -199,13 +218,8 @@ def init_db():
         ),
     )
     conn.commit()
-  else:
-    cursor.execute(
-        "UPDATE users SET password = ? WHERE email = ?",
-        ("password123", "admin@gmail.com"),
-    )
-    conn.commit()
 
+  # Default promo codes
   default_promos = [
       ("VEERPREMIUM30", "30 Days"),
       ("VEERPREMIUM1Y", "1 Year"),
@@ -231,10 +245,12 @@ def get_user_full(email):
   try:
     conn = get_db_connection()
     cursor = conn.cursor()
+    # Flexible lookup handling lower/upper/whitespace spacing issues in legacy emails
+    cleaned_email = email.strip().lower()
     cursor.execute(
-        "SELECT password, name, username, avatar, tier FROM users WHERE email ="
+        "SELECT password, name, username, avatar, tier FROM users WHERE lower(trim(email)) ="
         " ?",
-        (email.strip().lower(),),
+        (cleaned_email,),
     )
     res = cursor.fetchone()
     conn.close()
@@ -270,13 +286,28 @@ def update_user_profile(email, name, username, avatar):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "UPDATE users SET name = ?, username = ?, avatar = ? WHERE email = ?",
+        "UPDATE users SET name = ?, username = ?, avatar = ? WHERE lower(trim(email)) = lower(trim(?))",
         (name, username, avatar, email),
     )
     conn.commit()
     conn.close()
   except Exception:
     pass
+
+
+def reset_user_password(email, new_password):
+  try:
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE users SET password = ? WHERE lower(trim(email)) = lower(trim(?))",
+        (new_password, email),
+    )
+    conn.commit()
+    conn.close()
+    return True
+  except:
+    return False
 
 
 # --- REAL-TIME LIVE MARKET PRICES (BINANCE API + FALLBACK) ---
@@ -326,7 +357,7 @@ if "logged_in" not in st.session_state:
     if u_data:
       st.session_state.logged_in = True
       st.session_state.current_user_email = saved_email
-      st.session_state.current_user_name = u_data[1]
+      st.session_state.current_user_name = u_data[1] if u_data[1] else "Trader"
       st.session_state.username = u_data[2] if u_data[2] else "trader"
       st.session_state.avatar = (
           u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
@@ -341,7 +372,7 @@ if "signals_used" not in st.session_state:
   st.session_state.signals_used = 0
 
 
-# --- BROKER-GRADE ELITE AUTH SCREEN ---
+# --- BROKER-GRADE ELITE AUTH SCREEN WITH PASSWORD RECOVERY ---
 def show_auth_screen():
   st.markdown("<br><br>", unsafe_allow_html=True)
   c1, col, c2 = st.columns([1, 1.4, 1])
@@ -358,13 +389,14 @@ def show_auth_screen():
         unsafe_allow_html=True,
     )
 
-    t1, t2 = st.tabs(["🔑 Secure Sign In", "📝 Open Account"])
+    t1, t2, t3 = st.tabs(
+        ["🔑 Sign In", "📝 Open Account", "🔄 Reset Password"]
+    )
 
     with t1:
       st.markdown(
           "<p style='color:#848e9c; font-size:12px; text-align:center;"
-          " margin-bottom:20px;'>Enter your credentials to access your live"
-          " trading dashboard.</p>",
+          " margin-bottom:20px;'>Enter your registered email and password.</p>",
           unsafe_allow_html=True,
       )
       with st.form("login_form", clear_on_submit=False):
@@ -378,11 +410,12 @@ def show_auth_screen():
         if st.form_submit_button("Access Terminal"):
           cleaned_email = login_email.strip().lower()
           u_data = get_user_full(cleaned_email)
-          # SECURED FIX: Removed admin credentials from the error message popup
-          if u_data and u_data[0] == login_pass:
+          if u_data and str(u_data[0]) == str(login_pass):
             st.session_state.logged_in = True
             st.session_state.current_user_email = cleaned_email
-            st.session_state.current_user_name = u_data[1]
+            st.session_state.current_user_name = (
+                u_data[1] if u_data[1] else "Trader"
+            )
             st.session_state.username = u_data[2] if u_data[2] else "trader"
             st.session_state.avatar = (
                 u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
@@ -391,7 +424,10 @@ def show_auth_screen():
             st.query_params["session_user"] = cleaned_email
             st.rerun()
           else:
-            st.error("Invalid Email or Password! Please try again.")
+            st.error(
+                "Invalid Email or Password! Please check your details or use"
+                " 'Reset Password' tab if forgotten."
+            )
 
     with t2:
       st.markdown(
@@ -436,9 +472,48 @@ def show_auth_screen():
               st.query_params["session_user"] = cleaned_reg_email
               st.rerun()
             else:
-              st.error("Email ID is already registered in our system!")
+              st.error(
+                  "Email ID is already registered! Please sign in directly."
+              )
           else:
             st.warning("Please fill all details correctly (Password >= 6).")
+
+    with t3:
+      st.markdown(
+          "<p style='color:#848e9c; font-size:12px; text-align:center;"
+          " margin-bottom:20px;'>Purane users apna password yahan turant naya"
+          " set kar sakte hain.</p>",
+          unsafe_allow_html=True,
+      )
+      with st.form("reset_form", clear_on_submit=False):
+        reset_email = st.text_input(
+            "Your Registered Email", placeholder="name@example.com"
+        )
+        new_pass_input = st.text_input(
+            "Set New Password (Min 6 Chars)",
+            type="password",
+            placeholder="••••••••",
+        )
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.form_submit_button("Update Password Now"):
+          target_email = reset_email.strip().lower()
+          existing_check = get_user_full(target_email)
+          if existing_check:
+            if len(new_pass_input) >= 6:
+              if reset_user_password(target_email, new_pass_input):
+                st.success(
+                    "Password successfully updated! Now you can login with your"
+                    " new password."
+                )
+              else:
+                st.error("Error updating password in database.")
+            else:
+              st.warning("New password must be at least 6 characters long.")
+          else:
+            st.error(
+                "This email is not registered in our database. Please check the"
+                " email ID."
+            )
 
     st.markdown(
         """
@@ -522,7 +597,7 @@ with st.sidebar:
         duration = p_data[0]
         new_tier = f"Premium Member ({duration})"
         cursor.execute(
-            "UPDATE users SET tier = ? WHERE email = ?",
+            "UPDATE users SET tier = ? WHERE lower(trim(email)) = lower(trim(?))",
             (new_tier, st.session_state.current_user_email),
         )
         cursor.execute(
@@ -598,7 +673,7 @@ with st.sidebar:
             conn = get_db_connection()
             cursor = conn.cursor()
             cursor.execute(
-                "UPDATE users SET tier = ? WHERE email = ?",
+                "UPDATE users SET tier = ? WHERE lower(trim(email)) = lower(trim(?))",
                 (selected_tier_type, selected_target_email),
             )
             conn.commit()
@@ -607,7 +682,10 @@ with st.sidebar:
                 f"Successfully updated {selected_target_email} to"
                 f" '{selected_tier_type}'!"
             )
-            if selected_target_email == st.session_state.current_user_email:
+            if (
+                selected_target_email.lower().strip()
+                == st.session_state.current_user_email.lower().strip()
+            ):
               st.session_state.user_tier = selected_tier_type
             st.rerun()
           except Exception as e:
@@ -1241,8 +1319,11 @@ with tab_plans:
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "UPDATE users SET tier = ? WHERE email = ?",
-            ("Premium Member (Paid)", st.session_state.current_user_email),
+            "UPDATE users SET tier = ? WHERE lower(trim(email)) = lower(trim(?))",
+            (
+                "Premium Member (Paid)",
+                st.session_state.current_user_email,
+            ),
         )
         conn.commit()
         conn.close()
