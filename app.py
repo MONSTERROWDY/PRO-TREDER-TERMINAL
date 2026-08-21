@@ -1,4 +1,5 @@
 import datetime
+import random
 import sqlite3
 import pandas as pd
 import requests
@@ -145,7 +146,7 @@ st.markdown(
 )
 
 
-# --- ROBUST DATABASE SETUP & AUTO MIGRATION FOR OLD USERS ---
+# --- ROBUST DATABASE SETUP ---
 def get_db_connection():
   return sqlite3.connect("users_database.db", check_same_thread=False)
 
@@ -154,46 +155,32 @@ def init_db():
   conn = get_db_connection()
   cursor = conn.cursor()
 
-  # Base table creation
   cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             email TEXT PRIMARY KEY,
-            password TEXT NOT NULL,
-            name TEXT NOT NULL
+            name TEXT NOT NULL,
+            username TEXT,
+            avatar TEXT,
+            tier TEXT DEFAULT 'Free User'
         )
     """)
   conn.commit()
 
-  # Safe column addition for legacy/old users database structure
-  user_columns = [
-      ("username", "TEXT"),
-      ("avatar", "TEXT"),
-      ("tier", "TEXT DEFAULT 'Free User'"),
-      ("expiry", "TEXT"),
-  ]
-  for col_name, col_type in user_columns:
-    try:
-      cursor.execute(f"ALTER TABLE users ADD COLUMN {col_name} {col_type}")
-      conn.commit()
-    except sqlite3.OperationalError:
-      pass
-
-  # Ensure default values for legacy users who might have NULL in name, username, or tier
-  try:
+  # Admin account safety check
+  cursor.execute("SELECT * FROM users WHERE email = ?", ("admin@gmail.com",))
+  if not cursor.fetchone():
     cursor.execute(
-        "UPDATE users SET name = 'Trader' WHERE name IS NULL OR name = ''"
-    )
-    cursor.execute(
-        "UPDATE users SET username = 'trader' WHERE username IS NULL OR"
-        " username = ''"
-    )
-    cursor.execute(
-        "UPDATE users SET tier = 'Free User' WHERE tier IS NULL OR tier = ''"
+        "INSERT INTO users (email, name, username, tier) VALUES (?, ?, ?, ?)",
+        (
+            "admin@gmail.com",
+            "Pro Master",
+            "admin_master",
+            "Premium Member (Lifetime)",
+        ),
     )
     conn.commit()
-  except:
-    pass
 
+  # Default promo codes
   cursor.execute("""
         CREATE TABLE IF NOT EXISTS promo_codes (
             code TEXT PRIMARY KEY,
@@ -204,22 +191,6 @@ def init_db():
     """)
   conn.commit()
 
-  # Admin account safety check
-  cursor.execute("SELECT * FROM users WHERE email = ?", ("admin@gmail.com",))
-  if not cursor.fetchone():
-    cursor.execute(
-        "INSERT INTO users (email, password, name, username, tier) VALUES (?, ?, ?, ?, ?)",
-        (
-            "admin@gmail.com",
-            "password123",
-            "Pro Master",
-            "admin_master",
-            "Premium Member (Lifetime)",
-        ),
-    )
-    conn.commit()
-
-  # Default promo codes
   default_promos = [
       ("VEERPREMIUM30", "30 Days"),
       ("VEERPREMIUM1Y", "1 Year"),
@@ -246,9 +217,8 @@ def get_user_full(identifier):
     conn = get_db_connection()
     cursor = conn.cursor()
     cleaned_id = identifier.strip().lower()
-    # Flexible lookup supporting both Email or Mobile Phone Number stored in primary key field
     cursor.execute(
-        "SELECT password, name, username, avatar, tier FROM users WHERE lower(trim(email)) ="
+        "SELECT name, username, avatar, tier FROM users WHERE lower(trim(email)) ="
         " ?",
         (cleaned_id,),
     )
@@ -259,25 +229,31 @@ def get_user_full(identifier):
     return None
 
 
-def register_user(identifier, password, name, username):
+def register_or_login_user(identifier, name, username):
   try:
     conn = get_db_connection()
     cursor = conn.cursor()
+    cleaned_id = identifier.strip().lower()
     cursor.execute(
-        "INSERT INTO users (email, password, name, username, tier) VALUES (?,"
-        " ?, ?, ?, ?)",
-        (
-            identifier.strip().lower(),
-            password,
-            name.strip(),
-            username.strip(),
-            "Free User",
-        ),
+        "SELECT * FROM users WHERE lower(trim(email)) = ?", (cleaned_id,)
     )
-    conn.commit()
+    exists = cursor.fetchone()
+
+    if not exists:
+      cursor.execute(
+          "INSERT INTO users (email, name, username, tier) VALUES (?, ?, ?,"
+          " ?)",
+          (
+              cleaned_id,
+              name.strip() if name else "Trader",
+              username.strip() if username else "trader",
+              "Free User",
+          ),
+      )
+      conn.commit()
     conn.close()
     return True
-  except Exception:
+  except Exception as e:
     return False
 
 
@@ -295,22 +271,7 @@ def update_user_profile(identifier, name, username, avatar):
     pass
 
 
-def reset_user_password(identifier, new_password):
-  try:
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "UPDATE users SET password = ? WHERE lower(trim(email)) = lower(trim(?))",
-        (new_password, identifier),
-    )
-    conn.commit()
-    conn.close()
-    return True
-  except:
-    return False
-
-
-# --- REAL-TIME LIVE MARKET PRICES (BINANCE API + FALLBACK) ---
+# --- REAL-TIME LIVE MARKET PRICES ---
 def fetch_global_prices():
   try:
     url = "https://api.binance.com/api/v3/ticker/24hr?symbols=[%22BTCUSDT%22,%22ETHUSDT%22,%22SOLUSDT%22,%22BNBUSDT%22,%22XRPUSDT%22,%22ADAUSDT%22,%22DOGEUSDT%22]"
@@ -357,12 +318,12 @@ if "logged_in" not in st.session_state:
     if u_data:
       st.session_state.logged_in = True
       st.session_state.current_user_email = saved_email
-      st.session_state.current_user_name = u_data[1] if u_data[1] else "Trader"
-      st.session_state.username = u_data[2] if u_data[2] else "trader"
+      st.session_state.current_user_name = u_data[0] if u_data[0] else "Trader"
+      st.session_state.username = u_data[1] if u_data[1] else "trader"
       st.session_state.avatar = (
-          u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
+          u_data[2] if u_data[2] else "https://i.imgur.com/71916rK.png"
       )
-      st.session_state.user_tier = u_data[4] if u_data[4] else "Free User"
+      st.session_state.user_tier = u_data[3] if u_data[3] else "Free User"
     else:
       st.session_state.logged_in = False
   else:
@@ -371,8 +332,14 @@ if "logged_in" not in st.session_state:
 if "signals_used" not in st.session_state:
   st.session_state.signals_used = 0
 
+if "generated_otp" not in st.session_state:
+  st.session_state.generated_otp = None
 
-# --- BROKER-GRADE ELITE AUTH SCREEN WITH UNIVERSAL ID RECOVERY ---
+if "otp_sent_to" not in st.session_state:
+  st.session_state.otp_sent_to = None
+
+
+# --- WHATSAPP STYLE PASSWORDLESS OTP AUTH SCREEN ---
 def show_auth_screen():
   st.markdown("<br><br>", unsafe_allow_html=True)
   c1, col, c2 = st.columns([1, 1.4, 1])
@@ -383,147 +350,99 @@ def show_auth_screen():
         <div class="broker-auth-container">
             <div style="text-align: center; margin-bottom: 25px;">
                 <h1 style="color: #fcd535; font-size: 28px; font-weight: 900; margin-bottom: 0;">⚡ VEER PRO TERMINAL</h1>
-                <p style="color: #848e9c; font-size: 13px; margin-top: 5px;">Institutional Grade Multi-Market Exchange & AI Suite</p>
+                <p style="color: #848e9c; font-size: 13px; margin-top: 5px;">WhatsApp Style Passwordless Instant Login</p>
             </div>
         """,
         unsafe_allow_html=True,
     )
 
-    t1, t2, t3 = st.tabs(
-        ["🔑 Sign In", "📝 Open Account", "🔄 Reset Password"]
+    st.markdown(
+        "<p style='color:#848e9c; font-size:13px; text-align:center;"
+        " margin-bottom:20px;'>Apna Mobile Number ya Email daalein, OTP ke"
+        " zariye bina password ke login karein.</p>",
+        unsafe_allow_html=True,
     )
 
-    with t1:
+    # Step 1: Request OTP
+    with st.form("otp_request_form"):
+      login_id = st.text_input(
+          "Mobile Number or Email ID",
+          placeholder="9876543210 or name@example.com",
+      )
+      user_name = st.text_input(
+          "Full Name (Optional for New Users)", placeholder="John Doe"
+      )
+      st.markdown("<br>", unsafe_allow_html=True)
+      send_otp_btn = st.form_submit_button("📩 Send OTP")
+
+      if send_otp_btn:
+        if login_id.strip():
+          # Generate 4 digit random OTP
+          otp = str(random.randint(1000, 9999))
+          st.session_state.generated_otp = otp
+          st.session_state.otp_sent_to = login_id.strip().lower()
+          st.session_state.temp_name = (
+              user_name.strip() if user_name.strip() else "Trader"
+          )
+          st.success(
+              f"✅ OTP sent successfully to {login_id.strip()}! (Demo OTP:"
+              f" **{otp}**)"
+          )
+        else:
+          st.warning("Kripya apna mobile number ya email darj karein.")
+
+    # Step 2: Verify OTP
+    if st.session_state.generated_otp:
+      st.markdown("---")
       st.markdown(
-          "<p style='color:#848e9c; font-size:12px; text-align:center;"
-          " margin-bottom:20px;'>Enter your registered Phone Number or Email"
-          " ID and password.</p>",
+          "<p style='color:#0ecb81; font-size:14px; text-align:center;"
+          " font-weight:700;'>4-Digit OTP Enter Karein:</p>",
           unsafe_allow_html=True,
       )
-      with st.form("login_form", clear_on_submit=False):
-        login_id = st.text_input(
-            "Registered Phone Number or Email",
-            placeholder="9876543210 or name@example.com",
-        )
-        login_pass = st.text_input(
-            "Account Password", type="password", placeholder="••••••••"
+      with st.form("otp_verify_form"):
+        entered_otp = st.text_input(
+            "Enter OTP", type="password", placeholder="••••"
         )
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.form_submit_button("Access Terminal"):
-          cleaned_id = login_id.strip().lower()
-          u_data = get_user_full(cleaned_id)
-          if u_data and str(u_data[0]) == str(login_pass):
+        verify_btn = st.form_submit_button("🚀 Verify & Login")
+
+        if verify_btn:
+          if entered_otp.strip() == st.session_state.generated_otp:
+            target_id = st.session_state.otp_sent_to
+            target_name = st.session_state.temp_name
+
+            register_or_login_user(target_id, target_name, "trader")
+            u_data = get_user_full(target_id)
+
             st.session_state.logged_in = True
-            st.session_state.current_user_email = cleaned_id
+            st.session_state.current_user_email = target_id
             st.session_state.current_user_name = (
-                u_data[1] if u_data[1] else "Trader"
+                u_data[0] if u_data and u_data[0] else target_name
             )
-            st.session_state.username = u_data[2] if u_data[2] else "trader"
+            st.session_state.username = (
+                u_data[1] if u_data and u_data[1] else "trader"
+            )
             st.session_state.avatar = (
-                u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
+                u_data[2]
+                if u_data and u_data[2]
+                else "https://i.imgur.com/71916rK.png"
             )
-            st.session_state.user_tier = u_data[4] if u_data[4] else "Free User"
-            st.query_params["session_user"] = cleaned_id
+            st.session_state.user_tier = (
+                u_data[3] if u_data and u_data[3] else "Free User"
+            )
+            st.query_params["session_user"] = target_id
+
+            # Clear OTP state
+            st.session_state.generated_otp = None
+            st.session_state.otp_sent_to = None
             st.rerun()
           else:
-            st.error(
-                "Invalid ID or Password! Please check your details or use"
-                " 'Reset Password' tab."
-            )
-
-    with t2:
-      st.markdown(
-          "<p style='color:#848e9c; font-size:12px; text-align:center;"
-          " margin-bottom:20px;'>Register now using Phone Number or Email to"
-          " unlock AI signal quotas.</p>",
-          unsafe_allow_html=True,
-      )
-      with st.form("register_form", clear_on_submit=False):
-        reg_name = st.text_input("Full Legal Name", placeholder="John Doe")
-        reg_uname = st.text_input(
-            "Trading Handle / Username", placeholder="trader_alpha"
-        )
-        reg_id = st.text_input(
-            "Phone Number or Email ID",
-            placeholder="9876543210 or john@example.com",
-        )
-        reg_pass = st.text_input(
-            "Secure Password (Min 6 Chars)",
-            type="password",
-            placeholder="••••••••",
-        )
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.form_submit_button("Create Free Account"):
-          cleaned_reg_id = reg_id.strip().lower()
-          cleaned_name = reg_name.strip()
-          cleaned_uname = reg_uname.strip()
-          if (
-              cleaned_name
-              and cleaned_reg_id
-              and cleaned_uname
-              and len(reg_pass) >= 6
-          ):
-            if register_user(
-                cleaned_reg_id, reg_pass, cleaned_name, cleaned_uname
-            ):
-              st.session_state.logged_in = True
-              st.session_state.current_user_email = cleaned_reg_id
-              st.session_state.current_user_name = cleaned_name
-              st.session_state.username = cleaned_uname
-              st.session_state.avatar = "https://i.imgur.com/71916rK.png"
-              st.session_state.user_tier = "Free User"
-              st.query_params["session_user"] = cleaned_reg_id
-              st.rerun()
-            else:
-              st.error(
-                  "This Phone Number or Email is already registered! Please"
-                  " sign in directly."
-              )
-          else:
-            st.warning("Please fill all details correctly (Password >= 6).")
-
-    with t3:
-      st.markdown(
-          "<p style='color:#848e9c; font-size:12px; text-align:center;"
-          " margin-bottom:20px;'>Purane users apna Phone Number ya Email daalkar"
-          " apna naya password turant set kar sakte hain.</p>",
-          unsafe_allow_html=True,
-      )
-      with st.form("reset_form", clear_on_submit=False):
-        reset_id = st.text_input(
-            "Your Registered Phone Number or Email",
-            placeholder="9876543210 or name@example.com",
-        )
-        new_pass_input = st.text_input(
-            "Set New Password (Min 6 Chars)",
-            type="password",
-            placeholder="••••••••",
-        )
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.form_submit_button("Update Password Now"):
-          target_id = reset_id.strip().lower()
-          existing_check = get_user_full(target_id)
-          if existing_check:
-            if len(new_pass_input) >= 6:
-              if reset_user_password(target_id, new_pass_input):
-                st.success(
-                    "Password successfully updated! Now you can login with your"
-                    " new password."
-                )
-              else:
-                st.error("Error updating password in database.")
-            else:
-              st.warning("New password must be at least 6 characters long.")
-          else:
-            st.error(
-                "This Phone Number or Email is not registered in our database."
-                " Please check your ID."
-            )
+            st.error("❌ Galat OTP! Kripya sahi OTP daalein.")
 
     st.markdown(
         """
             <div style="text-align: center; margin-top: 25px; border-top: 1px solid #2b313a; padding-top: 15px;">
-                <span style="color: #848e9c; font-size: 11px;">🔒 256-Bit SSL Encrypted Broker Protocol • 0% Loss Protection Shield</span>
+                <span style="color: #848e9c; font-size: 11px;">🔒 WhatsApp Style Secure Passwordless Auth • 0% Loss Protection</span>
             </div>
         </div>
         """,
@@ -771,7 +690,7 @@ if (
 
 st.title("⚡ Veer Pro Terminal — World's Best 0% Loss AI Trading Suite")
 
-# --- LIVE MULTI-MARKET TICKER STRIP (REAL-TIME API CONNECTED) ---
+# --- LIVE MULTI-MARKET TICKER STRIP ---
 market_prices = fetch_global_prices()
 tc1, tc2, tc3, tc4, tc5 = st.columns(5)
 
@@ -822,7 +741,7 @@ with tc5:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# --- CLEAN MAIN TABS ---
+# --- MAIN TABS ---
 tab_dash, tab_risk_calc, tab_chart, tab_signals, tab_plans = st.tabs([
     "⚙️ Dashboard",
     "🛡️ Risk & Capital Master",
