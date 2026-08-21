@@ -1,13 +1,13 @@
 # ============================================================
 # VEER PRO TERMINAL
-# Multi-Market AI Trading + Paper Trading Dashboard
-# Secure Persistent Session Version
+# LIVE AI ANALYSIS + DEMO TRADE + REAL MONEY LIVE ARCHITECTURE
 # ============================================================
 
+import os
 import sqlite3
 import hashlib
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pandas as pd
 import requests
@@ -20,7 +20,7 @@ import plotly.graph_objects as go
 # ============================================================
 
 st.set_page_config(
-    page_title="Veer Pro Terminal",
+    page_title="VEER PRO TERMINAL",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -33,126 +33,194 @@ st.set_page_config(
 
 st.markdown(
     """
-    <style>
+<style>
 
-    .stApp {
-        background:
-        radial-gradient(
-            circle at 50% 0%,
-            #171b23 0%,
-            #0b0e11 45%,
-            #07090c 100%
-        );
-    }
+.stApp {
+    background:
+        radial-gradient(circle at 50% 0%, #151a22 0%, #080a0d 48%, #050608 100%);
+    color: #eaecef;
+}
 
-    html, body, [class*="css"] {
-        font-family: Inter, Arial, sans-serif;
-    }
+html, body, [class*="css"] {
+    font-family: Inter, Arial, sans-serif;
+}
 
-    h1,h2,h3,h4,h5,h6 {
-        color:#f5f5f5 !important;
-    }
+h1,h2,h3,h4,h5,h6 {
+    color: #f5f5f5 !important;
+}
 
-    p,label,span {
-        color:#c8ccd3;
-    }
+p, label, span {
+    color: #c8ccd3;
+}
 
-    .main-title {
-        font-size:34px;
-        font-weight:900;
-        color:#fcd535;
-    }
+/* TOP HEADER */
 
-    .subtitle {
-        color:#848e9c;
-        font-size:13px;
-    }
+.veet-title {
+    font-size: 32px;
+    font-weight: 900;
+    color: #fcd535 !important;
+    letter-spacing: -1px;
+}
 
-    .card {
-        background:linear-gradient(145deg,#181c24,#101318);
-        border:1px solid #2b313a;
-        border-radius:14px;
-        padding:18px;
-        margin-bottom:12px;
-    }
+.veet-subtitle {
+    color: #848e9c !important;
+    font-size: 12px;
+}
 
-    .metric-title {
-        color:#848e9c;
-        font-size:12px;
-        text-transform:uppercase;
-    }
+/* CARDS */
 
-    .metric-value {
-        color:#fff;
-        font-size:24px;
-        font-weight:800;
-    }
+.v-card {
+    background: linear-gradient(145deg,#171b22,#0e1116);
+    border: 1px solid #2b313a;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 10px;
+}
 
-    .green {
-        color:#0ecb81 !important;
-        font-weight:800;
-    }
+.v-card:hover {
+    border-color: #444b55;
+}
 
-    .red {
-        color:#f6465d !important;
-        font-weight:800;
-    }
+.metric-label {
+    color: #848e9c !important;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+}
 
-    .yellow {
-        color:#fcd535 !important;
-        font-weight:800;
-    }
+.metric-value {
+    color: #ffffff !important;
+    font-size: 23px;
+    font-weight: 900;
+}
 
-    .signal {
-        border:1px solid #fcd535;
-        background:linear-gradient(145deg,#241e0b,#12100a);
-        border-radius:14px;
-        padding:20px;
-    }
+.green {
+    color: #0ecb81 !important;
+    font-weight: 800;
+}
 
-    .signal-title {
-        color:#fcd535;
-        font-size:22px;
-        font-weight:900;
-    }
+.red {
+    color: #f6465d !important;
+    font-weight: 800;
+}
 
-    .vip {
-        border:1px solid #fcd535;
-        border-radius:10px;
-        padding:12px;
-        text-align:center;
-        background:#211b08;
-        color:#fcd535;
-        font-weight:800;
-    }
+.yellow {
+    color: #fcd535 !important;
+    font-weight: 800;
+}
 
-    .stButton > button {
-        width:100%;
-        min-height:42px;
-        border-radius:8px;
-        font-weight:800;
-        border:1px solid #2b313a;
-        background:linear-gradient(135deg,#fcd535,#f0b90b);
-        color:#0b0e11;
-    }
+/* LIVE */
 
-    .stButton > button:hover {
-        background:#fff;
-        color:#000;
-    }
+.live-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: rgba(14,203,129,.12);
+    border: 1px solid #0ecb81;
+    color: #0ecb81 !important;
+    font-size: 11px;
+    font-weight: 900;
+}
 
-    input, textarea {
-        background-color:#0d1014 !important;
-        color:#fff !important;
-    }
+/* AI */
 
-    [data-testid="stSidebar"] {
-        background:linear-gradient(180deg,#101318,#080a0d);
-        border-right:1px solid #242932;
-    }
+.ai-card {
+    background:
+        linear-gradient(145deg,#211b08,#0e0c07);
+    border: 1px solid #fcd535;
+    border-radius: 14px;
+    padding: 20px;
+    box-shadow: 0 0 25px rgba(252,213,53,.08);
+}
 
-    </style>
-    """,
+.ai-title {
+    color: #fcd535 !important;
+    font-size: 22px;
+    font-weight: 900;
+}
+
+.ai-buy {
+    color: #0ecb81 !important;
+    font-size: 28px;
+    font-weight: 900;
+}
+
+.ai-sell {
+    color: #f6465d !important;
+    font-size: 28px;
+    font-weight: 900;
+}
+
+.ai-hold {
+    color: #fcd535 !important;
+    font-size: 28px;
+    font-weight: 900;
+}
+
+/* SIDEBAR */
+
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg,#101318,#07090c);
+    border-right: 1px solid #252a32;
+}
+
+/* BUTTONS */
+
+.stButton > button {
+    width: 100%;
+    min-height: 42px;
+    border-radius: 8px;
+    border: 1px solid #343a44;
+    font-weight: 800;
+    background: linear-gradient(135deg,#fcd535,#f0b90b);
+    color: #090b0e;
+}
+
+.stButton > button:hover {
+    background: #ffffff !important;
+    color: #000000 !important;
+}
+
+/* INPUT */
+
+input, textarea {
+    background-color: #0b0e11 !important;
+    color: white !important;
+}
+
+[data-baseweb="select"] > div {
+    background-color: #0b0e11 !important;
+    color: white !important;
+}
+
+/* TABS */
+
+.stTabs [data-baseweb="tab"] {
+    font-weight: 700;
+}
+
+/* TABLE */
+
+[data-testid="stDataFrame"] {
+    border: 1px solid #2b313a;
+    border-radius: 10px;
+}
+
+/* LOGIN */
+
+.login-box {
+    max-width: 520px;
+    margin: 60px auto;
+    background: linear-gradient(145deg,#171b22,#0b0e11);
+    border: 1px solid #2b313a;
+    border-top: 3px solid #fcd535;
+    border-radius: 16px;
+    padding: 35px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.7);
+}
+
+</style>
+""",
     unsafe_allow_html=True,
 )
 
@@ -173,8 +241,8 @@ def hash_password(password):
 
     hashed = hashlib.pbkdf2_hmac(
         "sha256",
-        password.encode(),
-        salt.encode(),
+        password.encode("utf-8"),
+        salt.encode("utf-8"),
         120000,
     ).hex()
 
@@ -185,27 +253,21 @@ def verify_password(password, stored):
     if not stored:
         return False
 
-    # Old database compatibility
+    # Legacy plaintext compatibility
     if "$" not in stored:
-        return secrets.compare_digest(
-            password,
-            stored
-        )
+        return secrets.compare_digest(password, stored)
 
     try:
         salt, expected = stored.split("$", 1)
 
         actual = hashlib.pbkdf2_hmac(
             "sha256",
-            password.encode(),
-            salt.encode(),
+            password.encode("utf-8"),
+            salt.encode("utf-8"),
             120000,
         ).hex()
 
-        return secrets.compare_digest(
-            actual,
-            expected
-        )
+        return secrets.compare_digest(actual, expected)
 
     except Exception:
         return False
@@ -215,8 +277,6 @@ def init_db():
 
     conn = db()
     cur = conn.cursor()
-
-    # ---------------- USERS ----------------
 
     cur.execute(
         """
@@ -232,25 +292,31 @@ def init_db():
         """
     )
 
-    # ---------------- SESSIONS ----------------
-
     cur.execute(
         """
-        CREATE TABLE IF NOT EXISTS sessions (
-            token_hash TEXT PRIMARY KEY,
-            email TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            expires_at TEXT NOT NULL,
-            active INTEGER DEFAULT 1
+        CREATE TABLE IF NOT EXISTS demo_accounts (
+            email TEXT PRIMARY KEY,
+            balance REAL DEFAULT 100000,
+            created_at TEXT
         )
         """
     )
 
-    # ---------------- ORDERS ----------------
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS demo_positions (
+            email TEXT,
+            symbol TEXT,
+            quantity REAL,
+            avg_price REAL,
+            PRIMARY KEY(email,symbol)
+        )
+        """
+    )
 
     cur.execute(
         """
-        CREATE TABLE IF NOT EXISTS orders (
+        CREATE TABLE IF NOT EXISTS demo_orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT,
             symbol TEXT,
@@ -265,22 +331,6 @@ def init_db():
         """
     )
 
-    # ---------------- PORTFOLIO ----------------
-
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS portfolio (
-            email TEXT,
-            symbol TEXT,
-            quantity REAL,
-            avg_price REAL,
-            PRIMARY KEY(email,symbol)
-        )
-        """
-    )
-
-    # ---------------- WATCHLIST ----------------
-
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS watchlist (
@@ -291,60 +341,37 @@ def init_db():
         """
     )
 
-    # ---------------- ALERTS ----------------
-
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS alerts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT,
             symbol TEXT,
-            condition TEXT,
             target REAL,
+            direction TEXT,
             active INTEGER DEFAULT 1
         )
         """
     )
-
-    # ---------------- TRANSACTIONS ----------------
-
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT,
-            type TEXT,
-            amount REAL,
-            note TEXT,
-            created_at TEXT
-        )
-        """
-    )
-
-    # ---------------- PROMO ----------------
 
     cur.execute(
         """
         CREATE TABLE IF NOT EXISTS promo_codes (
             code TEXT PRIMARY KEY,
             duration TEXT,
-            max_uses INTEGER DEFAULT 1,
-            used_count INTEGER DEFAULT 0,
-            active INTEGER DEFAULT 1
+            active INTEGER DEFAULT 1,
+            used_by TEXT
         )
         """
     )
 
-    # ---------------- ADMIN ----------------
-
+    # Admin
     cur.execute(
-        "SELECT email,password FROM users WHERE email=?",
-        ("admin@gmail.com",)
+        "SELECT email FROM users WHERE email=?",
+        ("admin@gmail.com",),
     )
 
-    admin = cur.fetchone()
-
-    if not admin:
+    if not cur.fetchone():
 
         cur.execute(
             """
@@ -359,29 +386,11 @@ def init_db():
                 "admin_master",
                 "",
                 "Premium Member (Lifetime)",
-                datetime.now().isoformat(),
-            )
+                datetime.utcnow().isoformat(),
+            ),
         )
 
-    else:
-
-        # Upgrade old plain-text admin password
-        if "$" not in admin[1]:
-
-            cur.execute(
-                """
-                UPDATE users
-                SET password=?
-                WHERE email=?
-                """,
-                (
-                    hash_password(admin[1]),
-                    "admin@gmail.com",
-                )
-            )
-
-    # ---------------- PROMO CODES ----------------
-
+    # Promo codes
     promos = [
         ("VEER3DAYS", "3 Days"),
         ("VEERPREMIUM30", "30 Days"),
@@ -393,7 +402,7 @@ def init_db():
 
         cur.execute(
             "SELECT code FROM promo_codes WHERE code=?",
-            (code,)
+            (code,),
         )
 
         if not cur.fetchone():
@@ -401,16 +410,10 @@ def init_db():
             cur.execute(
                 """
                 INSERT INTO promo_codes
-                (code,duration,max_uses,used_count,active)
-                VALUES(?,?,?,?,?)
+                (code,duration,active)
+                VALUES(?,?,1)
                 """,
-                (
-                    code,
-                    duration,
-                    1,
-                    0,
-                    1,
-                )
+                (code, duration),
             )
 
     conn.commit()
@@ -435,7 +438,7 @@ def get_user(email):
         FROM users
         WHERE email=?
         """,
-        (email.strip().lower(),)
+        (email.strip().lower(),),
     )
 
     row = cur.fetchone()
@@ -445,12 +448,7 @@ def get_user(email):
     return row
 
 
-def register_user(
-    email,
-    password,
-    name,
-    username
-):
+def register_user(email, password, name, username):
 
     try:
 
@@ -464,14 +462,30 @@ def register_user(
             VALUES(?,?,?,?,?,?,?)
             """,
             (
-                email.lower().strip(),
+                email.strip().lower(),
                 hash_password(password),
                 name.strip(),
                 username.strip(),
                 "",
                 "Free User",
-                datetime.now().isoformat(),
-            )
+                datetime.utcnow().isoformat(),
+            ),
+        )
+
+        conn.commit()
+
+        # Create demo account
+        cur.execute(
+            """
+            INSERT OR IGNORE INTO demo_accounts
+            (email,balance,created_at)
+            VALUES(?,?,?)
+            """,
+            (
+                email.strip().lower(),
+                100000.0,
+                datetime.utcnow().isoformat(),
+            ),
         )
 
         conn.commit()
@@ -480,16 +494,32 @@ def register_user(
         return True
 
     except sqlite3.IntegrityError:
-
         return False
 
 
-def update_profile(
-    email,
-    name,
-    username,
-    avatar
-):
+def ensure_demo_account(email):
+
+    conn = db()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        INSERT OR IGNORE INTO demo_accounts
+        (email,balance,created_at)
+        VALUES(?,?,?)
+        """,
+        (
+            email,
+            100000.0,
+            datetime.utcnow().isoformat(),
+        ),
+    )
+
+    conn.commit()
+    conn.close()
+
+
+def update_profile(email, name, username, avatar):
 
     conn = db()
     cur = conn.cursor()
@@ -500,12 +530,7 @@ def update_profile(
         SET name=?,username=?,avatar=?
         WHERE email=?
         """,
-        (
-            name,
-            username,
-            avatar,
-            email,
-        )
+        (name, username, avatar, email),
     )
 
     conn.commit()
@@ -513,214 +538,201 @@ def update_profile(
 
 
 # ============================================================
-# 5. PERSISTENT LOGIN SESSION
+# 5. SESSION
 # ============================================================
 
-def token_hash(token):
+def initialize_session():
 
-    return hashlib.sha256(
-        token.encode()
-    ).hexdigest()
+    defaults = {
+        "authenticated": False,
+        "email": "",
+        "name": "",
+        "username": "",
+        "avatar": "",
+        "tier": "Free User",
+        "market": "Crypto",
+        "symbol": "BTCUSDT",
+        "timeframe": "15m",
+        "trade_mode": "DEMO TRADE",
+    }
+
+    for key, value in defaults.items():
+
+        if key not in st.session_state:
+            st.session_state[key] = value
 
 
-def create_session(email):
+initialize_session()
 
-    # Random secure token
-    raw_token = secrets.token_urlsafe(48)
 
-    hashed = token_hash(raw_token)
+# ============================================================
+# 6. LOGIN SCREEN
+# ============================================================
 
-    created = datetime.utcnow()
+def login_screen():
 
-    expires = created + timedelta(days=30)
-
-    conn = db()
-    cur = conn.cursor()
-
-    cur.execute(
+    st.markdown(
         """
-        INSERT INTO sessions
-        (token_hash,email,created_at,expires_at,active)
-        VALUES(?,?,?,?,1)
+        <div class="login-box">
+
+        <div style="text-align:center">
+
+        <div style="
+            font-size:30px;
+            font-weight:900;
+            color:#fcd535;
+        ">
+        ⚡ VEER PRO
+        </div>
+
+        <div style="
+            color:#848e9c;
+            font-size:12px;
+            margin-bottom:25px;
+        ">
+        LIVE AI TRADING TERMINAL
+        </div>
+
+        </div>
         """,
-        (
-            hashed,
-            email,
-            created.isoformat(),
-            expires.isoformat(),
-        )
+        unsafe_allow_html=True,
     )
 
-    conn.commit()
-    conn.close()
+    tab_login, tab_register = st.tabs(
+        ["🔐 SIGN IN", "📝 CREATE ACCOUNT"]
+    )
 
-    return raw_token
+    with tab_login:
 
+        with st.form("login_form"):
 
-def validate_session(raw_token):
-
-    if not raw_token:
-        return None
-
-    try:
-
-        hashed = token_hash(raw_token)
-
-        conn = db()
-        cur = conn.cursor()
-
-        cur.execute(
-            """
-            SELECT email,expires_at
-            FROM sessions
-            WHERE token_hash=?
-            AND active=1
-            """,
-            (hashed,)
-        )
-
-        row = cur.fetchone()
-
-        if not row:
-
-            conn.close()
-            return None
-
-        email, expires_at = row
-
-        if datetime.utcnow() > datetime.fromisoformat(
-            expires_at
-        ):
-
-            cur.execute(
-                """
-                UPDATE sessions
-                SET active=0
-                WHERE token_hash=?
-                """,
-                (hashed,)
+            email = st.text_input(
+                "Email",
+                placeholder="name@example.com",
             )
 
-            conn.commit()
-            conn.close()
-
-            return None
-
-        conn.close()
-
-        return email
-
-    except Exception:
-
-        return None
-
-
-def destroy_session():
-
-    raw_token = st.query_params.get(
-        "session",
-        ""
-    )
-
-    if raw_token:
-
-        try:
-
-            conn = db()
-            cur = conn.cursor()
-
-            cur.execute(
-                """
-                UPDATE sessions
-                SET active=0
-                WHERE token_hash=?
-                """,
-                (token_hash(raw_token),)
+            password = st.text_input(
+                "Password",
+                type="password",
             )
 
-            conn.commit()
-            conn.close()
+            submit = st.form_submit_button(
+                "ACCESS TERMINAL"
+            )
 
-        except Exception:
-            pass
+            if submit:
 
-    # Remove token from browser URL
-    try:
-        st.query_params.clear()
-    except Exception:
-        pass
+                user = get_user(email)
 
-    for key in [
-        "logged_in",
-        "current_user_email",
-        "current_user_name",
-        "username",
-        "avatar",
-        "user_tier",
-    ]:
+                if user and verify_password(
+                    password,
+                    user[1],
+                ):
 
-        st.session_state.pop(
-            key,
-            None
-        )
+                    st.session_state.authenticated = True
+                    st.session_state.email = user[0]
+                    st.session_state.name = user[2]
+                    st.session_state.username = (
+                        user[3] or "trader"
+                    )
+                    st.session_state.avatar = (
+                        user[4] or ""
+                    )
+                    st.session_state.tier = (
+                        user[5] or "Free User"
+                    )
 
+                    ensure_demo_account(user[0])
 
-def restore_session():
+                    st.rerun()
 
-    # Already logged in in current Streamlit session
-    if st.session_state.get(
-        "logged_in",
-        False
-    ):
-        return True
+                else:
 
-    # Restore from persistent secure random token
-    raw_token = st.query_params.get(
-        "session",
-        ""
+                    st.error(
+                        "Invalid email or password."
+                    )
+
+    with tab_register:
+
+        with st.form("register_form"):
+
+            name = st.text_input("Full Name")
+            username = st.text_input("Username")
+            email = st.text_input("Email")
+            password = st.text_input(
+                "Password",
+                type="password",
+            )
+
+            submit = st.form_submit_button(
+                "CREATE ACCOUNT"
+            )
+
+            if submit:
+
+                if (
+                    len(name.strip()) >= 2
+                    and len(username.strip()) >= 2
+                    and "@" in email
+                    and len(password) >= 6
+                ):
+
+                    ok = register_user(
+                        email,
+                        password,
+                        name,
+                        username,
+                    )
+
+                    if ok:
+
+                        st.session_state.authenticated = True
+                        st.session_state.email = email.lower().strip()
+                        st.session_state.name = name.strip()
+                        st.session_state.username = username.strip()
+                        st.session_state.tier = "Free User"
+
+                        st.success(
+                            "Account created."
+                        )
+
+                        st.rerun()
+
+                    else:
+
+                        st.error(
+                            "Email already registered."
+                        )
+
+                else:
+
+                    st.warning(
+                        "Please enter valid details. Password must be at least 6 characters."
+                    )
+
+    st.markdown(
+        """
+        <div style="
+            text-align:center;
+            color:#5f6670;
+            font-size:10px;
+            margin-top:20px;
+        ">
+        Market data availability depends on connected live providers.
+        </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    if not raw_token:
 
-        return False
-
-    email = validate_session(
-        raw_token
-    )
-
-    if not email:
-
-        try:
-            st.query_params.clear()
-        except Exception:
-            pass
-
-        return False
-
-    user = get_user(email)
-
-    if not user:
-
-        return False
-
-    st.session_state.logged_in = True
-    st.session_state.current_user_email = user[0]
-    st.session_state.current_user_name = user[2]
-    st.session_state.username = (
-        user[3] or "trader"
-    )
-    st.session_state.avatar = (
-        user[4] or ""
-    )
-    st.session_state.user_tier = (
-        user[5] or "Free User"
-    )
-
-    return True
+if not st.session_state.authenticated:
+    login_screen()
+    st.stop()
 
 
 # ============================================================
-# 6. MARKET DATA
+# 7. LIVE MARKET CONFIG
 # ============================================================
 
 CRYPTO_SYMBOLS = [
@@ -737,44 +749,64 @@ CRYPTO_SYMBOLS = [
 ]
 
 
-def fetch_crypto():
+TIMEFRAME_MAP = {
+    "1m": "1m",
+    "5m": "5m",
+    "15m": "15m",
+    "30m": "30m",
+    "1H": "1h",
+    "4H": "4h",
+    "1D": "1d",
+}
+
+
+# ============================================================
+# 8. LIVE CRYPTO MARKET DATA
+# ============================================================
+
+@st.cache_data(ttl=5)
+def fetch_live_crypto():
 
     try:
 
+        url = "https://api.binance.com/api/v3/ticker/24hr"
+
         response = requests.get(
-            "https://api.binance.com/api/v3/ticker/24hr",
-            timeout=5
+            url,
+            timeout=8,
         )
 
-        if response.status_code != 200:
-            return {}
+        response.raise_for_status()
 
         data = response.json()
 
         result = {}
 
-        wanted = set(
-            CRYPTO_SYMBOLS
-        )
+        wanted = set(CRYPTO_SYMBOLS)
 
         for item in data:
 
-            symbol = item["symbol"]
+            symbol = item.get("symbol")
 
-            if symbol not in wanted:
-                continue
+            if symbol in wanted:
 
-            result[symbol] = {
-                "price": float(
-                    item["lastPrice"]
-                ),
-                "change": float(
-                    item["priceChangePercent"]
-                ),
-                "volume": float(
-                    item["quoteVolume"]
-                ),
-            }
+                result[symbol] = {
+                    "price": float(
+                        item["lastPrice"]
+                    ),
+                    "change": float(
+                        item["priceChangePercent"]
+                    ),
+                    "volume": float(
+                        item["quoteVolume"]
+                    ),
+                    "high": float(
+                        item["highPrice"]
+                    ),
+                    "low": float(
+                        item["lowPrice"]
+                    ),
+                }
 
         return result
 
@@ -783,331 +815,159 @@ def fetch_crypto():
         return {}
 
 
-def fallback_markets():
-
-    return {
-
-        "BTCUSDT": {
-            "price": 68417.51,
-            "change": 1.23,
-            "volume": 0
-        },
-
-        "ETHUSDT": {
-            "price": 3540.49,
-            "change": -0.45,
-            "volume": 0
-        },
-
-        "BNBUSDT": {
-            "price": 610.25,
-            "change": 0.72,
-            "volume": 0
-        },
-
-        "SOLUSDT": {
-            "price": 145.06,
-            "change": 2.45,
-            "volume": 0
-        },
-
-        "XRPUSDT": {
-            "price": 0.61,
-            "change": 1.20,
-            "volume": 0
-        },
-
-        "ADAUSDT": {
-            "price": 0.42,
-            "change": 0.75,
-            "volume": 0
-        },
-
-        "DOGEUSDT": {
-            "price": 0.14,
-            "change": 1.10,
-            "volume": 0
-        },
-
-        "RELIANCE": {
-            "price": 2980.50,
-            "change": 0.85,
-            "volume": 0
-        },
-
-        "TATASTEEL": {
-            "price": 158.20,
-            "change": -0.40,
-            "volume": 0
-        },
-
-        "NIFTY": {
-            "price": 24780.00,
-            "change": 0.62,
-            "volume": 0
-        },
-
-        "SENSEX": {
-            "price": 81100.00,
-            "change": 0.41,
-            "volume": 0
-        },
-
-        "AAPL": {
-            "price": 224.50,
-            "change": 1.12,
-            "volume": 0
-        },
-
-        "TSLA": {
-            "price": 245.80,
-            "change": -1.45,
-            "volume": 0
-        },
-
-        "NVDA": {
-            "price": 128.40,
-            "change": 3.25,
-            "volume": 0
-        },
-
-        "EURUSD": {
-            "price": 1.0924,
-            "change": 0.15,
-            "volume": 0
-        },
-
-        "GBPUSD": {
-            "price": 1.3012,
-            "change": -0.22,
-            "volume": 0
-        },
-
-        "USDJPY": {
-            "price": 147.50,
-            "change": 0.45,
-            "volume": 0
-        },
-
-        "GOLD": {
-            "price": 2512.40,
-            "change": 0.50,
-            "volume": 0
-        },
-
-        "SILVER": {
-            "price": 29.30,
-            "change": 0.71,
-            "volume": 0
-        },
-
-        "CRUDEOIL": {
-            "price": 76.20,
-            "change": -1.10,
-            "volume": 0
-        },
-    }
-
-
-@st.cache_data(ttl=15)
-def get_market_data():
-
-    data = fallback_markets()
-
-    live = fetch_crypto()
-
-    if live:
-        data.update(live)
-
-    return data
-
-
-MARKETS = get_market_data()
+MARKETS = fetch_live_crypto()
 
 
 # ============================================================
-# 7. CHART DATA
+# 9. LIVE CHART DATA
 # ============================================================
 
-@st.cache_data(ttl=30)
-def get_chart_data(symbol):
+@st.cache_data(ttl=10)
+def fetch_live_chart(symbol, interval):
 
-    if symbol.endswith("USDT"):
+    try:
 
-        try:
+        response = requests.get(
+            "https://api.binance.com/api/v3/klines",
+            params={
+                "symbol": symbol,
+                "interval": interval,
+                "limit": 300,
+            },
+            timeout=8,
+        )
 
-            response = requests.get(
-                "https://api.binance.com/api/v3/klines",
-                params={
-                    "symbol": symbol,
-                    "interval": "1h",
-                    "limit": 100
-                },
-                timeout=5
+        response.raise_for_status()
+
+        rows = response.json()
+
+        if not rows:
+            return pd.DataFrame()
+
+        df = pd.DataFrame(
+            rows,
+            columns=[
+                "time",
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+                "close_time",
+                "quote_volume",
+                "trades",
+                "buy_base",
+                "buy_quote",
+                "ignore",
+            ],
+        )
+
+        numeric_columns = [
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+        ]
+
+        for col in numeric_columns:
+            df[col] = pd.to_numeric(
+                df[col],
+                errors="coerce",
             )
 
-            if response.status_code == 200:
-
-                rows = response.json()
-
-                df = pd.DataFrame(
-                    rows,
-                    columns=[
-                        "time",
-                        "open",
-                        "high",
-                        "low",
-                        "close",
-                        "volume",
-                        "x1",
-                        "x2",
-                        "x3",
-                        "x4",
-                        "x5",
-                        "x6",
-                    ]
-                )
-
-                for col in [
-                    "open",
-                    "high",
-                    "low",
-                    "close",
-                    "volume"
-                ]:
-
-                    df[col] = df[
-                        col
-                    ].astype(float)
-
-                df["time"] = pd.to_datetime(
-                    df["time"],
-                    unit="ms"
-                )
-
-                return df
-
-        except Exception:
-            pass
-
-    base = MARKETS.get(
-        symbol,
-        {"price": 100}
-    )["price"]
-
-    rows = []
-
-    price = base
-
-    for i in range(100):
-
-        price *= (
-            1 +
-            ((i % 7) - 3) / 1000
+        df["time"] = pd.to_datetime(
+            df["time"],
+            unit="ms",
         )
 
-        rows.append(
-            {
-                "time":
-                    datetime.now()
-                    - timedelta(
-                        hours=100-i
-                    ),
+        return df[
+            [
+                "time",
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+            ]
+        ].dropna()
 
-                "open":
-                    price * .997,
+    except Exception:
 
-                "high":
-                    price * 1.006,
-
-                "low":
-                    price * .994,
-
-                "close":
-                    price,
-
-                "volume":
-                    1000 + i * 10
-            }
-        )
-
-    return pd.DataFrame(rows)
+        return pd.DataFrame()
 
 
 # ============================================================
-# 8. TECHNICAL INDICATORS
+# 10. TECHNICAL INDICATORS
 # ============================================================
 
-def calculate_indicators(df):
+def add_indicators(df):
 
     df = df.copy()
 
     df["EMA20"] = (
         df["close"]
-        .ewm(span=20)
+        .ewm(span=20, adjust=False)
         .mean()
     )
 
     df["EMA50"] = (
         df["close"]
-        .ewm(span=50)
+        .ewm(span=50, adjust=False)
+        .mean()
+    )
+
+    df["EMA200"] = (
+        df["close"]
+        .ewm(span=200, adjust=False)
         .mean()
     )
 
     delta = df["close"].diff()
 
-    gain = delta.clip(
-        lower=0
-    )
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
 
-    loss = -delta.clip(
-        upper=0
-    )
-
-    avg_gain = gain.rolling(
-        14
+    avg_gain = gain.ewm(
+        alpha=1 / 14,
+        adjust=False,
     ).mean()
 
-    avg_loss = loss.rolling(
-        14
+    avg_loss = loss.ewm(
+        alpha=1 / 14,
+        adjust=False,
     ).mean()
 
-    rs = (
-        avg_gain /
-        avg_loss.replace(
-            0,
-            1e-9
-        )
+    rs = avg_gain / avg_loss.replace(
+        0,
+        1e-10,
     )
 
-    df["RSI"] = (
-        100 -
+    df["RSI"] = 100 - (
         100 / (1 + rs)
     )
 
     ema12 = (
         df["close"]
-        .ewm(span=12)
+        .ewm(span=12, adjust=False)
         .mean()
     )
 
     ema26 = (
         df["close"]
-        .ewm(span=26)
+        .ewm(span=26, adjust=False)
         .mean()
     )
 
-    df["MACD"] = (
-        ema12 - ema26
-    )
+    df["MACD"] = ema12 - ema26
 
-    df["Signal"] = (
+    df["MACD_SIGNAL"] = (
         df["MACD"]
-        .ewm(span=9)
+        .ewm(span=9, adjust=False)
         .mean()
     )
 
-    mid = (
+    middle = (
         df["close"]
         .rolling(20)
         .mean()
@@ -1119,124 +979,280 @@ def calculate_indicators(df):
         .std()
     )
 
-    df["BB_UPPER"] = (
-        mid + 2 * std
+    df["BB_MIDDLE"] = middle
+    df["BB_UPPER"] = middle + 2 * std
+    df["BB_LOWER"] = middle - 2 * std
+
+    previous_close = df["close"].shift(1)
+
+    tr1 = df["high"] - df["low"]
+    tr2 = (
+        df["high"] - previous_close
+    ).abs()
+    tr3 = (
+        df["low"] - previous_close
+    ).abs()
+
+    true_range = pd.concat(
+        [tr1, tr2, tr3],
+        axis=1,
+    ).max(axis=1)
+
+    df["ATR"] = (
+        true_range
+        .rolling(14)
+        .mean()
     )
 
-    df["BB_LOWER"] = (
-        mid - 2 * std
+    df["VOL_MA20"] = (
+        df["volume"]
+        .rolling(20)
+        .mean()
     )
 
     return df
 
 
-def ai_analysis(df):
+# ============================================================
+# 11. AI / ALGORITHMIC SIGNAL ENGINE
+# ============================================================
 
-    df = calculate_indicators(df)
+def generate_ai_signal(df):
+
+    if df.empty or len(df) < 60:
+
+        return {
+            "signal": "NO SIGNAL",
+            "score": 0,
+            "entry": None,
+            "stop": None,
+            "tp1": None,
+            "tp2": None,
+            "tp3": None,
+            "rr": None,
+            "reasons": [
+                "Not enough verified live market data."
+            ],
+        }
+
+    df = add_indicators(df)
 
     last = df.iloc[-1]
+
+    price = float(last["close"])
+    atr = float(last["ATR"])
+
+    if pd.isna(atr) or atr <= 0:
+
+        return {
+            "signal": "NO SIGNAL",
+            "score": 0,
+            "entry": price,
+            "stop": None,
+            "tp1": None,
+            "tp2": None,
+            "tp3": None,
+            "rr": None,
+            "reasons": [
+                "Volatility data is not ready."
+            ],
+        }
 
     score = 50
     reasons = []
 
+    # Trend
     if last["EMA20"] > last["EMA50"]:
-
-        score += 15
-
+        score += 10
         reasons.append(
             "EMA20 is above EMA50."
         )
-
     else:
-
-        score -= 15
-
+        score -= 10
         reasons.append(
             "EMA20 is below EMA50."
         )
 
-    if last["RSI"] < 30:
-
+    if last["close"] > last["EMA200"]:
         score += 10
-
         reasons.append(
-            "RSI indicates oversold conditions."
+            "Price is above EMA200."
         )
-
-    elif last["RSI"] > 70:
-
-        score -= 10
-
-        reasons.append(
-            "RSI indicates overbought conditions."
-        )
-
     else:
+        score -= 10
+        reasons.append(
+            "Price is below EMA200."
+        )
+
+    # RSI
+    rsi = float(last["RSI"])
+
+    if 50 <= rsi <= 68:
+
+        score += 8
+        reasons.append(
+            "RSI supports positive momentum."
+        )
+
+    elif 32 <= rsi < 50:
+
+        score -= 5
+        reasons.append(
+            "RSI momentum is weak."
+        )
+
+    elif rsi > 70:
+
+        score -= 8
+        reasons.append(
+            "RSI is overbought."
+        )
+
+    elif rsi < 30:
 
         score += 5
-
         reasons.append(
-            "RSI is in a neutral momentum zone."
+            "RSI is deeply oversold; reversal risk is elevated."
         )
 
-    if last["MACD"] > last["Signal"]:
+    # MACD
+    if last["MACD"] > last["MACD_SIGNAL"]:
 
         score += 10
-
         reasons.append(
-            "MACD momentum is positive."
+            "MACD momentum is bullish."
         )
 
     else:
 
         score -= 10
-
         reasons.append(
-            "MACD momentum is negative."
+            "MACD momentum is bearish."
+        )
+
+    # Volume
+    if (
+        not pd.isna(last["VOL_MA20"])
+        and last["volume"] > last["VOL_MA20"]
+    ):
+
+        score += 7
+        reasons.append(
+            "Current volume is above its 20-period average."
+        )
+
+    # Bollinger
+    if last["close"] > last["BB_MIDDLE"]:
+
+        score += 5
+        reasons.append(
+            "Price is above Bollinger midline."
+        )
+
+    else:
+
+        score -= 5
+        reasons.append(
+            "Price is below Bollinger midline."
         )
 
     score = max(
         0,
         min(
             100,
-            int(score)
-        )
+            int(score),
+        ),
     )
 
-    if score >= 80:
-        signal = "STRONG BUY"
-
-    elif score >= 65:
+    # Signal
+    if score >= 75:
         signal = "BUY"
 
-    elif score >= 55:
-        signal = "HOLD / BULLISH"
+    elif score >= 62:
+        signal = "BUY WATCH"
 
-    elif score >= 45:
-        signal = "HOLD"
-
-    elif score >= 30:
+    elif score <= 25:
         signal = "SELL"
 
+    elif score <= 38:
+        signal = "SELL WATCH"
+
     else:
-        signal = "STRONG SELL"
+        signal = "HOLD"
+
+    # Dynamic risk levels
+    entry = price
+
+    if "BUY" in signal:
+
+        stop = entry - (1.5 * atr)
+
+        risk = entry - stop
+
+        tp1 = entry + risk * 1.5
+        tp2 = entry + risk * 2.0
+        tp3 = entry + risk * 3.0
+
+    elif "SELL" in signal:
+
+        stop = entry + (1.5 * atr)
+
+        risk = stop - entry
+
+        tp1 = entry - risk * 1.5
+        tp2 = entry - risk * 2.0
+        tp3 = entry - risk * 3.0
+
+    else:
+
+        stop = None
+        tp1 = None
+        tp2 = None
+        tp3 = None
 
     return {
-        "score": score,
         "signal": signal,
-        "rsi": float(last["RSI"]),
-        "macd": float(last["MACD"]),
-        "ema20": float(last["EMA20"]),
-        "ema50": float(last["EMA50"]),
+        "score": score,
+        "entry": entry,
+        "stop": stop,
+        "tp1": tp1,
+        "tp2": tp2,
+        "tp3": tp3,
+        "rr": 1.5 if stop else None,
+        "rsi": rsi,
+        "atr": atr,
         "reasons": reasons,
     }
 
 
 # ============================================================
-# 9. PAPER TRADING
+# 12. DEMO ACCOUNT
 # ============================================================
 
-def get_positions(email):
+def get_demo_balance(email):
+
+    ensure_demo_account(email)
+
+    conn = db()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT balance
+        FROM demo_accounts
+        WHERE email=?
+        """,
+        (email,),
+    )
+
+    row = cur.fetchone()
+
+    conn.close()
+
+    return float(row[0]) if row else 0.0
+
+
+def get_demo_positions(email):
 
     conn = db()
     cur = conn.cursor()
@@ -1244,11 +1260,10 @@ def get_positions(email):
     cur.execute(
         """
         SELECT symbol,quantity,avg_price
-        FROM portfolio
-        WHERE email=?
-        AND quantity > 0
+        FROM demo_positions
+        WHERE email=? AND quantity>0
         """,
-        (email,)
+        (email,),
     )
 
     rows = cur.fetchall()
@@ -1258,421 +1273,1209 @@ def get_positions(email):
     return rows
 
 
-def execute_paper_order(
+def execute_demo_trade(
     email,
     symbol,
     side,
     quantity,
-    price
+    price,
 ):
 
-    quantity = float(quantity)
-    price = float(price)
+    try:
 
-    if quantity <= 0:
-        return False, "Quantity must be greater than zero."
+        quantity = float(quantity)
+        price = float(price)
 
-    if price <= 0:
-        return False, "Invalid market price."
+        if quantity <= 0 or price <= 0:
+            return False, "Invalid quantity or price."
 
-    total = quantity * price
+        total = quantity * price
 
-    conn = db()
-    cur = conn.cursor()
-
-    cur.execute(
-        """
-        SELECT quantity,avg_price
-        FROM portfolio
-        WHERE email=? AND symbol=?
-        """,
-        (
-            email,
-            symbol
-        )
-    )
-
-    row = cur.fetchone()
-
-    current_qty = (
-        row[0] if row else 0
-    )
-
-    current_avg = (
-        row[1] if row else 0
-    )
-
-    # ---------------- BUY ----------------
-
-    if side == "BUY":
-
-        new_qty = (
-            current_qty +
-            quantity
-        )
-
-        new_avg = (
-            (
-                current_qty *
-                current_avg
-            ) +
-            (
-                quantity *
-                price
-            )
-        ) / new_qty
+        conn = db()
+        cur = conn.cursor()
 
         cur.execute(
             """
-            INSERT INTO portfolio
-            (email,symbol,quantity,avg_price)
-            VALUES(?,?,?,?)
-            ON CONFLICT(email,symbol)
-            DO UPDATE SET
-            quantity=excluded.quantity,
-            avg_price=excluded.avg_price
+            SELECT balance
+            FROM demo_accounts
+            WHERE email=?
             """,
-            (
-                email,
-                symbol,
-                new_qty,
-                new_avg
-            )
+            (email,),
         )
 
-    # ---------------- SELL ----------------
+        balance_row = cur.fetchone()
 
-    elif side == "SELL":
-
-        if current_qty < quantity:
-
-            conn.close()
-
-            return (
-                False,
-                "Insufficient paper position."
-            )
-
-        new_qty = (
-            current_qty -
-            quantity
+        balance = (
+            float(balance_row[0])
+            if balance_row
+            else 0.0
         )
 
-        if new_qty <= 0:
+        cur.execute(
+            """
+            SELECT quantity,avg_price
+            FROM demo_positions
+            WHERE email=? AND symbol=?
+            """,
+            (email, symbol),
+        )
+
+        position = cur.fetchone()
+
+        current_qty = (
+            float(position[0])
+            if position
+            else 0.0
+        )
+
+        current_avg = (
+            float(position[1])
+            if position
+            else 0.0
+        )
+
+        if side == "BUY":
+
+            if total > balance:
+
+                conn.close()
+
+                return (
+                    False,
+                    "Insufficient demo balance.",
+                )
+
+            new_qty = current_qty + quantity
+
+            if new_qty <= 0:
+                new_avg = 0
+            else:
+                new_avg = (
+                    (
+                        current_qty * current_avg
+                        +
+                        quantity * price
+                    )
+                    / new_qty
+                )
 
             cur.execute(
                 """
-                DELETE FROM portfolio
-                WHERE email=? AND symbol=?
+                INSERT INTO demo_positions
+                (email,symbol,quantity,avg_price)
+                VALUES(?,?,?,?)
+                ON CONFLICT(email,symbol)
+                DO UPDATE SET
+                quantity=excluded.quantity,
+                avg_price=excluded.avg_price
                 """,
                 (
                     email,
-                    symbol
-                )
+                    symbol,
+                    new_qty,
+                    new_avg,
+                ),
             )
+
+            new_balance = balance - total
 
         else:
 
+            if quantity > current_qty:
+
+                conn.close()
+
+                return (
+                    False,
+                    "Not enough demo position to sell.",
+                )
+
+            new_qty = current_qty - quantity
+
             cur.execute(
                 """
-                UPDATE portfolio
+                UPDATE demo_positions
                 SET quantity=?
                 WHERE email=? AND symbol=?
                 """,
                 (
                     new_qty,
                     email,
-                    symbol
-                )
+                    symbol,
+                ),
             )
 
-    else:
+            new_balance = balance + total
 
+        cur.execute(
+            """
+            UPDATE demo_accounts
+            SET balance=?
+            WHERE email=?
+            """,
+            (
+                new_balance,
+                email,
+            ),
+        )
+
+        cur.execute(
+            """
+            INSERT INTO demo_orders
+            (
+                email,
+                symbol,
+                side,
+                order_type,
+                price,
+                quantity,
+                total,
+                status,
+                created_at
+            )
+            VALUES(?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                email,
+                symbol,
+                side,
+                "MARKET",
+                price,
+                quantity,
+                total,
+                "FILLED",
+                datetime.utcnow().isoformat(),
+            ),
+        )
+
+        conn.commit()
         conn.close()
 
-        return False, "Invalid order side."
+        return (
+            True,
+            f"Demo {side} order executed.",
+        )
 
-    # Order history
+    except Exception as e:
+
+        return False, str(e)
+
+
+def get_demo_orders(email):
+
+    conn = db()
+    cur = conn.cursor()
 
     cur.execute(
         """
-        INSERT INTO orders
-        (email,symbol,side,order_type,price,
-        quantity,total,status,created_at)
-        VALUES(?,?,?,?,?,?,?,?,?)
-        """,
-        (
-            email,
+        SELECT
+            id,
             symbol,
             side,
-            "MARKET",
             price,
             quantity,
             total,
-            "FILLED",
-            datetime.now().isoformat()
-        )
+            status,
+            created_at
+        FROM demo_orders
+        WHERE email=?
+        ORDER BY id DESC
+        LIMIT 100
+        """,
+        (email,),
+    )
+
+    rows = cur.fetchall()
+
+    conn.close()
+
+    return rows
+
+
+# ============================================================
+# 13. WATCHLIST
+# ============================================================
+
+def get_watchlist(email):
+
+    conn = db()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT symbol
+        FROM watchlist
+        WHERE email=?
+        """,
+        (email,),
+    )
+
+    rows = [
+        x[0]
+        for x in cur.fetchall()
+    ]
+
+    conn.close()
+
+    return rows
+
+
+def add_watchlist(email, symbol):
+
+    conn = db()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        INSERT OR IGNORE INTO watchlist
+        (email,symbol)
+        VALUES(?,?)
+        """,
+        (email, symbol),
     )
 
     conn.commit()
     conn.close()
 
-    return (
-        True,
-        f"{side} order executed successfully."
+
+def remove_watchlist(email, symbol):
+
+    conn = db()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        DELETE FROM watchlist
+        WHERE email=? AND symbol=?
+        """,
+        (email, symbol),
     )
 
-
-# ============================================================
-# 10. AUTH SCREEN
-# ============================================================
-
-def auth_screen():
-
-    st.markdown(
-        "<br><br>",
-        unsafe_allow_html=True
-    )
-
-    left, center, right = st.columns(
-        [1, 1.5, 1]
-    )
-
-    with center:
-
-        st.markdown(
-            """
-            <div class="card"
-            style="padding:35px;
-            border-top:3px solid #fcd535;">
-
-            <div style="
-            text-align:center;
-            font-size:28px;
-            font-weight:900;
-            color:#fcd535;">
-            ⚡ VEER PRO TERMINAL
-            </div>
-
-            <div style="
-            text-align:center;
-            color:#848e9c;
-            margin-top:5px;">
-            Multi-Market AI Trading Platform
-            </div>
-
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-        login_tab, register_tab = st.tabs(
-            [
-                "🔐 Sign In",
-                "📝 Create Account"
-            ]
-        )
-
-        with login_tab:
-
-            with st.form(
-                "login_form"
-            ):
-
-                email = st.text_input(
-                    "Email"
-                )
-
-                password = st.text_input(
-                    "Password",
-                    type="password"
-                )
-
-                submitted = st.form_submit_button(
-                    "ACCESS TERMINAL"
-                )
-
-                if submitted:
-
-                    user = get_user(
-                        email
-                    )
-
-                    if user and verify_password(
-                        password,
-                        user[1]
-                    ):
-
-                        # Create persistent session
-                        token = create_session(
-                            user[0]
-                        )
-
-                        st.session_state.logged_in = True
-                        st.session_state.current_user_email = user[0]
-                        st.session_state.current_user_name = user[2]
-                        st.session_state.username = (
-                            user[3] or "trader"
-                        )
-                        st.session_state.avatar = (
-                            user[4] or ""
-                        )
-                        st.session_state.user_tier = (
-                            user[5] or "Free User"
-                        )
-
-                        # IMPORTANT:
-                        # Random token, NOT email/password
-                        st.query_params[
-                            "session"
-                        ] = token
-
-                        st.rerun()
-
-                    else:
-
-                        st.error(
-                            "Invalid email or password."
-                        )
-
-        with register_tab:
-
-            with st.form(
-                "register_form"
-            ):
-
-                name = st.text_input(
-                    "Full Name"
-                )
-
-                username = st.text_input(
-                    "Trading Username"
-                )
-
-                email = st.text_input(
-                    "Email"
-                )
-
-                password = st.text_input(
-                    "Password",
-                    type="password"
-                )
-
-                confirm = st.text_input(
-                    "Confirm Password",
-                    type="password"
-                )
-
-                submitted = st.form_submit_button(
-                    "CREATE ACCOUNT"
-                )
-
-                if submitted:
-
-                    if not all([
-                        name.strip(),
-                        username.strip(),
-                        email.strip(),
-                        password
-                    ]):
-
-                        st.warning(
-                            "Please fill all fields."
-                        )
-
-                    elif len(password) < 6:
-
-                        st.warning(
-                            "Password must be at least 6 characters."
-                        )
-
-                    elif password != confirm:
-
-                        st.warning(
-                            "Passwords do not match."
-                        )
-
-                    else:
-
-                        success = register_user(
-                            email,
-                            password,
-                            name,
-                            username
-                        )
-
-                        if success:
-
-                            st.success(
-                                "Account created. Please sign in."
-                            )
-
-                        else:
-
-                            st.error(
-                                "Email is already registered."
-                            )
+    conn.commit()
+    conn.close()
 
 
 # ============================================================
-# 11. RESTORE LOGIN
-# ============================================================
-
-if not restore_session():
-
-    auth_screen()
-
-    st.stop()
-
-
-# ============================================================
-# 12. SIDEBAR
+# 14. SIDEBAR
 # ============================================================
 
 with st.sidebar:
 
-    tier = st.session_state.get(
-        "user_tier",
-        "Free User"
-    )
-
-    is_vip = (
-        "Premium" in tier
-        or "Lifetime" in tier
-    )
-
-    if is_vip:
-
-        st.markdown(
-            """
-            <div class="vip">
-            👑 VIP ELITE MEMBER
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
     st.markdown(
-        "### 👤 Profile"
+        """
+        <div class="veet-title">
+        ⚡ VEER PRO
+        </div>
+
+        <div class="veet-subtitle">
+        LIVE AI TRADING TERMINAL
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    st.write(
-        f"**Name:** "
-        f"{st.session_state.current_user_name}"
-    )
+    st.markdown("---")
+
+    st.markdown("### 👤 ACCOUNT")
 
     st.write(
-        f"**Username:** "
+        f"**{st.session_state.name}**"
+    )
+
+    st.caption(
         f"@{st.session_state.username}"
     )
 
-    st.write(
-        f"**Email:** "
-        f"{st.session_state.current_user_email}"
+    st.caption(
+        st.session_state.tier
     )
 
-    st.write(
-        f"**Tier:** `{tier}`"
+    st.markdown("---")
+
+    st.markdown("### 📊 MARKET")
+
+    available_symbols = sorted(
+        MARKETS.keys()
+    )
+
+    if not available_symbols:
+
+        st.error(
+            "Live market data unavailable."
+        )
+
+        st.stop()
+
+    selected_symbol = st.selectbox(
+        "Symbol",
+        available_symbols,
+        index=(
+            available_symbols.index(
+                st.session_state.symbol
+            )
+            if st.session_state.symbol
+            in available_symbols
+            else 0
+        ),
+    )
+
+    st.session_state.symbol = selected_symbol
+
+    timeframe = st.selectbox(
+        "Timeframe",
+        list(TIMEFRAME_MAP.keys()),
+        index=(
+            list(TIMEFRAME_MAP.keys()).index(
+                st.session_state.timeframe
+            )
+            if st.session_state.timeframe
+            in TIMEFRAME_MAP
+            else 2
+        ),
+    )
+
+    st.session_state.timeframe = timeframe
+
+    st.markdown("---")
+
+    st.markdown("### 🎯 TRADING MODE")
+
+    mode = st.radio(
+        "Execution",
+        [
+            "DEMO TRADE",
+            "REAL MONEY LIVE",
+        ],
+        index=(
+            0
+            if st.session_state.trade_mode
+            == "DEMO TRADE"
+            else 1
+        ),
+    )
+
+    st.session_state.trade_mode = mode
+
+    if mode == "REAL MONEY LIVE":
+
+        st.warning(
+            "Broker connection required. Real orders are disabled until a verified broker API is connected."
+        )
+
+    else:
+
+        st.success(
+            "Demo mode uses live market prices with virtual funds."
+        )
+
+    st.markdown("---")
+
+    st.markdown("### ⭐ WATCHLIST")
+
+    watchlist = get_watchlist(
+        st.session_state.email
+    )
+
+    if watchlist:
+
+        for item in watchlist:
+
+            if item in MARKETS:
+
+                info = MARKETS[item]
+
+                st.write(
+                    f"**{item}**  "
+                    f"${info['price']:,.6f}"
+                )
+
+    else:
+
+        st.caption(
+            "No symbols added yet."
+        )
+
+    st.markdown("---")
+
+    if st.button("🚪 LOG OUT"):
+
+        for key in [
+            "authenticated",
+            "email",
+            "name",
+            "username",
+            "avatar",
+            "tier",
+        ]:
+
+            if key in st.session_state:
+                del st.session_state[key]
+
+        st.rerun()
+
+
+# ============================================================
+# 15. MAIN HEADER
+# ============================================================
+
+info = MARKETS.get(
+    st.session_state.symbol
+)
+
+if not info:
+
+    st.error(
+        "Verified live data unavailable for this symbol."
+    )
+
+    st.stop()
+
+
+current_price = info["price"]
+change = info["change"]
+
+
+st.markdown(
+    f"""
+    <div style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:10px;
+    ">
+
+    <div>
+        <div class="veet-title">
+            {st.session_state.symbol}
+        </div>
+
+        <div class="veet-subtitle">
+            Binance verified live market data
+        </div>
+    </div>
+
+    <div>
+        <span class="live-badge">
+            ● LIVE MARKET
+        </span>
+    </div>
+
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+# ============================================================
+# 16. PRICE HEADER
+# ============================================================
+
+c1, c2, c3, c4 = st.columns(4)
+
+with c1:
+
+    st.markdown(
+        f"""
+        <div class="v-card">
+        <div class="metric-label">Live Price</div>
+        <div class="metric-value">
+        ${current_price:,.8f}
+        </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+with c2:
+
+    css = (
+        "green"
+        if change >= 0
+        else "red"
+    )
+
+    st.markdown(
+        f"""
+        <div class="v-card">
+        <div class="metric-label">24H Change</div>
+        <div class="metric-value {css}">
+        {change:+.2f}%
+        </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+with c3:
+
+    st.markdown(
+        f"""
+        <div class="v-card">
+        <div class="metric-label">24H High</div>
+        <div class="metric-value">
+        ${info['high']:,.8f}
+        </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+with c4:
+
+    st.markdown(
+        f"""
+        <div class="v-card">
+        <div class="metric-label">24H Low</div>
+        <div class="metric-value">
+        ${info['low']:,.8f}
+        </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ============================================================
+# 17. FETCH CHART
+# ============================================================
+
+chart_df = fetch_live_chart(
+    st.session_state.symbol,
+    TIMEFRAME_MAP[
+        st.session_state.timeframe
+    ],
+)
+
+if chart_df.empty:
+
+    st.error(
+        "Live chart data is currently unavailable. No synthetic chart is shown."
+    )
+
+    st.stop()
+
+
+chart_df = add_indicators(
+    chart_df
+)
+
+
+# ============================================================
+# 18. AI SIGNAL
+# ============================================================
+
+signal = generate_ai_signal(
+    chart_df
+)
+
+
+# ============================================================
+# 19. CHART + ORDER PANEL
+# ============================================================
+
+left, right = st.columns(
+    [3.3, 1.2]
+)
+
+
+with left:
+
+    st.markdown(
+        f"""
+        <div class="v-card">
+        <b>{st.session_state.symbol}</b>
+        &nbsp;&nbsp;
+        <span class="yellow">
+        {st.session_state.timeframe}
+        </span>
+        &nbsp;&nbsp;
+        <span class="live-badge">
+        LIVE
+        </span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Candlestick(
+            x=chart_df["time"],
+            open=chart_df["open"],
+            high=chart_df["high"],
+            low=chart_df["low"],
+            close=chart_df["close"],
+            name="Price",
+            increasing_line_color="#0ecb81",
+            decreasing_line_color="#f6465d",
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=chart_df["time"],
+            y=chart_df["EMA20"],
+            name="EMA 20",
+            line=dict(
+                color="#fcd535",
+                width=1,
+            ),
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=chart_df["time"],
+            y=chart_df["EMA50"],
+            name="EMA 50",
+            line=dict(
+                color="#4da3ff",
+                width=1,
+            ),
+        )
+    )
+
+    fig.add_trace(
+        go.Scatter(
+            x=chart_df["time"],
+            y=chart_df["EMA200"],
+            name="EMA 200",
+            line=dict(
+                color="#c77dff",
+                width=1,
+            ),
+        )
+    )
+
+    fig.update_layout(
+        height=600,
+        template="plotly_dark",
+        paper_bgcolor="#080a0d",
+        plot_bgcolor="#080a0d",
+        margin=dict(
+            l=10,
+            r=10,
+            t=10,
+            b=10,
+        ),
+        xaxis=dict(
+            rangeslider=dict(
+                visible=False
+            ),
+            showgrid=True,
+            gridcolor="#1e2329",
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor="#1e2329",
+            side="right",
+        ),
+        legend=dict(
+            orientation="h",
+            y=1.02,
+            x=0,
+        ),
+    )
+
+    st.plotly_chart(
+        fig,
+        use_container_width=True,
+        config={
+            "displaylogo": False,
+            "scrollZoom": True,
+            "responsive": True,
+        },
+    )
+
+
+with right:
+
+    st.markdown(
+        """
+        <div class="ai-card">
+
+        <div class="ai-title">
+        🧠 LIVE AI ANALYSIS
+        </div>
+
+        <div style="
+            color:#848e9c;
+            font-size:11px;
+            margin-top:4px;
+        ">
+        Algorithmic multi-factor market analysis
+        </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    sig = signal["signal"]
+
+    if "BUY" in sig:
+
+        sig_class = "ai-buy"
+
+    elif "SELL" in sig:
+
+        sig_class = "ai-sell"
+
+    else:
+
+        sig_class = "ai-hold"
+
+    st.markdown(
+        f"""
+        <div class="v-card">
+
+        <div class="{sig_class}">
+        {sig}
+        </div>
+
+        <div class="metric-label">
+        AI SCORE
+        </div>
+
+        <div class="metric-value">
+        {signal['score']}%
+        </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if signal["entry"]:
+
+        st.metric(
+            "ENTRY",
+            f"${signal['entry']:,.8f}",
+        )
+
+    if signal["stop"]:
+
+        st.metric(
+            "STOP LOSS",
+            f"${signal['stop']:,.8f}",
+        )
+
+        st.metric(
+            "TARGET 1",
+            f"${signal['tp1']:,.8f}",
+        )
+
+        st.metric(
+            "TARGET 2",
+            f"${signal['tp2']:,.8f}",
+        )
+
+        st.metric(
+            "TARGET 3",
+            f"${signal['tp3']:,.8f}",
+        )
+
+    st.markdown(
+        f"""
+        <div class="v-card">
+
+        <div class="metric-label">
+        RSI
+        </div>
+
+        <div class="metric-value">
+        {signal.get('rsi', 0):.2f}
+        </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if st.button(
+        "⭐ ADD TO WATCHLIST"
+    ):
+
+        add_watchlist(
+            st.session_state.email,
+            st.session_state.symbol,
+        )
+
+        st.success(
+            "Added to watchlist."
+        )
+
+        st.rerun()
+
+
+# ============================================================
+# 20. AI REASONS
+# ============================================================
+
+with st.expander(
+    "🧠 WHY IS THE AI GIVING THIS SIGNAL?"
+):
+
+    for reason in signal["reasons"]:
+
+        st.write(
+            "✓",
+            reason,
+        )
+
+    st.caption(
+        "This is an algorithmic analysis, not a guarantee of future profit."
+    )
+
+
+# ============================================================
+# 21. TRADING PANEL
+# ============================================================
+
+st.markdown("---")
+
+st.markdown(
+    "## ⚡ ORDER PANEL"
+)
+
+trade_col1, trade_col2, trade_col3 = st.columns(
+    [1, 1, 2]
+)
+
+
+with trade_col1:
+
+    st.markdown(
+        f"""
+        <div class="v-card">
+
+        <div class="metric-label">
+        MODE
+        </div>
+
+        <div class="metric-value">
+        {st.session_state.trade_mode}
+        </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+with trade_col2:
+
+    if (
+        st.session_state.trade_mode
+        == "DEMO TRADE"
+    ):
+
+        balance = get_demo_balance(
+            st.session_state.email
+        )
+
+        st.markdown(
+            f"""
+            <div class="v-card">
+
+            <div class="metric-label">
+            DEMO BALANCE
+            </div>
+
+            <div class="metric-value">
+            ${balance:,.2f}
+            </div>
+
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+    else:
+
+        st.markdown(
+            """
+            <div class="v-card">
+
+            <div class="metric-label">
+            REAL MONEY
+            </div>
+
+            <div class="metric-value red">
+            BROKER NOT CONNECTED
+            </div>
+
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+with trade_col3:
+
+    st.markdown(
+        """
+        <div class="v-card">
+
+        <div class="metric-label">
+        EXECUTION STATUS
+        </div>
+
+        <div class="metric-value">
+        LIVE MARKET DATA
+        </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# ============================================================
+# 22. ORDER FORM
+# ============================================================
+
+order_left, order_right = st.columns(
+    [1, 1]
+)
+
+
+with order_left:
+
+    side = st.radio(
+        "Order Side",
+        ["BUY", "SELL"],
+        horizontal=True,
+    )
+
+    quantity = st.number_input(
+        "Quantity",
+        min_value=0.0,
+        value=0.001,
+        step=0.001,
+        format="%.8f",
+    )
+
+    order_price = st.number_input(
+        "Execution Price",
+        min_value=0.0,
+        value=float(current_price),
+        format="%.8f",
+    )
+
+
+with order_right:
+
+    st.markdown(
+        f"""
+        <div class="v-card">
+
+        <div class="metric-label">
+        ESTIMATED ORDER VALUE
+        </div>
+
+        <div class="metric-value">
+        ${quantity * order_price:,.4f}
+        </div>
+
+        <div class="small-muted">
+        Price source: verified live market
+        </div>
+
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if (
+        st.session_state.trade_mode
+        == "DEMO TRADE"
+    ):
+
+        if st.button(
+            f"⚡ EXECUTE DEMO {side}"
+        ):
+
+            ok, message = execute_demo_trade(
+                st.session_state.email,
+                st.session_state.symbol,
+                side,
+                quantity,
+                order_price,
+            )
+
+            if ok:
+                st.success(message)
+            else:
+                st.error(message)
+
+    else:
+
+        st.button(
+            "🔒 REAL MONEY ORDER — BROKER REQUIRED",
+            disabled=True,
+        )
+
+        st.info(
+            "No real order is sent because a verified broker API is not connected."
+        )
+
+
+# ============================================================
+# 23. POSITIONS / ORDERS
+# ============================================================
+
+st.markdown("---")
+
+tab_positions, tab_orders, tab_account = st.tabs(
+    [
+        "📊 POSITIONS",
+        "📋 ORDERS",
+        "👤 ACCOUNT",
+    ]
+)
+
+
+with tab_positions:
+
+    if (
+        st.session_state.trade_mode
+        == "DEMO TRADE"
+    ):
+
+        positions = get_demo_positions(
+            st.session_state.email
+        )
+
+        if positions:
+
+            position_rows = []
+
+            for symbol, qty, avg in positions:
+
+                live = MARKETS.get(symbol)
+
+                if live:
+
+                    price = live["price"]
+
+                    pnl = (
+                        price - avg
+                    ) * qty
+
+                    position_rows.append(
+                        {
+                            "Symbol": symbol,
+                            "Quantity": qty,
+                            "Avg Price": avg,
+                            "Live Price": price,
+                            "P&L": pnl,
+                        }
+                    )
+
+            if position_rows:
+
+                st.dataframe(
+                    pd.DataFrame(
+                        position_rows
+                    ),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+        else:
+
+            st.info(
+                "No demo positions."
+            )
+
+    else:
+
+        st.info(
+            "Real positions will appear here after a verified broker connection is added."
+        )
+
+
+with tab_orders:
+
+    if (
+        st.session_state.trade_mode
+        == "DEMO TRADE"
+    ):
+
+        orders = get_demo_orders(
+            st.session_state.email
+        )
+
+        if orders:
+
+            df_orders = pd.DataFrame(
+                orders,
+                columns=[
+                    "ID",
+                    "Symbol",
+                    "Side",
+                    "Price",
+                    "Quantity",
+                    "Total",
+                    "Status",
+                    "Created",
+                ],
+            )
+
+            st.dataframe(
+                df_orders,
+                use_container_width=True,
+                hide_index=True,
+            )
+
+        else:
+
+            st.info(
+                "No demo orders yet."
+            )
+
+    else:
+
+        st.info(
+            "Real broker orders will appear here after broker integration."
+        )
+
+
+# ============================================================
+# 24. ACCOUNT
+# ============================================================
+
+with tab_account:
+
+    st.markdown(
+        f"""
+        <div class="v-card">
+
+        <h3>Account</h3>
+
+        <b>Name:</b>
+        {st.session_state.name}
+
+        <br>
+
+        <b>Username:</b>
+        @{st.session_state.username}
+
+        <br>
+
+        <b>Email:</b>
+        {st.session_state.email}
+
+        <br>
+
+        <b>Tier:</b>
+        {st.session_state.tier}
+
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
     with st.expander(
@@ -1685,31 +2488,33 @@ with st.sidebar:
 
             new_name = st.text_input(
                 "Name",
-                value=st.session_state.current_user_name
+                value=st.session_state.name,
             )
 
             new_username = st.text_input(
                 "Username",
-                value=st.session_state.username
+                value=st.session_state.username,
             )
 
             new_avatar = st.text_input(
                 "Avatar URL",
-                value=st.session_state.avatar
+                value=st.session_state.avatar,
             )
 
-            if st.form_submit_button(
-                "Update Profile"
-            ):
+            save = st.form_submit_button(
+                "SAVE PROFILE"
+            )
+
+            if save:
 
                 update_profile(
-                    st.session_state.current_user_email,
+                    st.session_state.email,
                     new_name,
                     new_username,
-                    new_avatar
+                    new_avatar,
                 )
 
-                st.session_state.current_user_name = new_name
+                st.session_state.name = new_name
                 st.session_state.username = new_username
                 st.session_state.avatar = new_avatar
 
@@ -1719,894 +2524,26 @@ with st.sidebar:
 
                 st.rerun()
 
-    st.markdown("---")
-
-    # Logout
-    if st.button(
-        "🚪 Logout"
-    ):
-
-        destroy_session()
-
-        st.rerun()
-
-    st.markdown("---")
-
-    # Promo
-
-    st.markdown(
-        "### 👑 Premium"
-    )
-
-    promo = st.text_input(
-        "Promo Code"
-    )
-
-    if st.button(
-        "Redeem Promo"
-    ):
-
-        code = promo.strip().upper()
-
-        conn = db()
-        cur = conn.cursor()
-
-        cur.execute(
-            """
-            SELECT duration,max_uses,
-            used_count,active
-            FROM promo_codes
-            WHERE code=?
-            """,
-            (code,)
-        )
-
-        row = cur.fetchone()
-
-        if not row:
-
-            st.error(
-                "Invalid promo code."
-            )
-
-        elif not row[3]:
-
-            st.error(
-                "Promo code inactive."
-            )
-
-        elif row[2] >= row[1]:
-
-            st.error(
-                "Promo code already used."
-            )
-
-        else:
-
-            duration = row[0]
-
-            new_tier = (
-                f"Premium Member ({duration})"
-            )
-
-            cur.execute(
-                """
-                UPDATE users
-                SET tier=?
-                WHERE email=?
-                """,
-                (
-                    new_tier,
-                    st.session_state.current_user_email
-                )
-            )
-
-            cur.execute(
-                """
-                UPDATE promo_codes
-                SET used_count=used_count+1
-                WHERE code=?
-                """,
-                (code,)
-            )
-
-            conn.commit()
-
-            st.session_state.user_tier = new_tier
-
-            st.success(
-                f"Premium activated: {duration}"
-            )
-
-            st.rerun()
-
-        conn.close()
-
 
 # ============================================================
-# 13. MAIN DASHBOARD
+# 25. MARKET DATA STATUS
 # ============================================================
+
+st.markdown("---")
 
 st.markdown(
-    '<div class="main-title">'
-    '⚡ VEER PRO TERMINAL'
-    '</div>',
-    unsafe_allow_html=True
+    """
+    <div style="
+        text-align:center;
+        color:#606873;
+        font-size:10px;
+        padding:10px;
+    ">
+    ⚡ VEER PRO TERMINAL |
+    LIVE MARKET DATA ONLY |
+    No synthetic prices |
+    No guaranteed-profit claims
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
-
-st.markdown(
-    '<div class="subtitle">'
-    'Multi-Market AI Analytics • Paper Trading • '
-    'Portfolio Intelligence'
-    '</div>',
-    unsafe_allow_html=True
-)
-
-
-# ============================================================
-# 14. TOP MARKET TICKERS
-# ============================================================
-
-top_symbols = [
-    "BTCUSDT",
-    "ETHUSDT",
-    "SOLUSDT",
-    "NIFTY",
-    "GOLD",
-    "AAPL",
-]
-
-
-cols = st.columns(
-    len(top_symbols)
-)
-
-for col, symbol in zip(
-    cols,
-    top_symbols
-):
-
-    data = MARKETS.get(
-        symbol
-    )
-
-    if not data:
-        continue
-
-    change = data["change"]
-
-    with col:
-
-        st.markdown(
-            f"""
-            <div class="card"
-            style="text-align:center">
-
-            <div class="metric-title">
-            {symbol}
-            </div>
-
-            <div class="metric-value">
-            {data['price']:,.4f}
-            </div>
-
-            <div class="
-            {'green' if change >= 0 else 'red'}">
-
-            {change:+.2f}%
-
-            </div>
-
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
-
-# ============================================================
-# 15. NAVIGATION
-# ============================================================
-
-tabs = st.tabs(
-    [
-        "🏠 Dashboard",
-        "📊 Markets",
-        "🤖 AI Signals",
-        "💼 Paper Trading",
-        "📈 Portfolio",
-        "⭐ Watchlist",
-        "🔔 Alerts",
-        "⚙️ Account",
-    ]
-)
-
-
-# ============================================================
-# 16. DASHBOARD
-# ============================================================
-
-with tabs[0]:
-
-    st.subheader(
-        "Market Overview"
-    )
-
-    c1, c2, c3, c4 = st.columns(4)
-
-    with c1:
-        st.metric(
-            "Crypto",
-            len(CRYPTO_SYMBOLS)
-        )
-
-    with c2:
-        st.metric(
-            "Markets",
-            len(MARKETS)
-        )
-
-    with c3:
-        st.metric(
-            "Account",
-            "Premium"
-            if is_vip
-            else "Free"
-        )
-
-    with c4:
-        st.metric(
-            "Mode",
-            "PAPER"
-        )
-
-    st.info(
-        "Paper Trading Mode — no real money is being traded."
-    )
-
-    symbol = st.selectbox(
-        "Select Market",
-        list(MARKETS.keys())
-    )
-
-    df = get_chart_data(
-        symbol
-    )
-
-    fig = go.Figure()
-
-    fig.add_trace(
-        go.Candlestick(
-            x=df["time"],
-            open=df["open"],
-            high=df["high"],
-            low=df["low"],
-            close=df["close"],
-            name=symbol
-        )
-    )
-
-    fig.update_layout(
-        height=500,
-        template="plotly_dark",
-        margin=dict(
-            l=10,
-            r=10,
-            t=30,
-            b=10
-        ),
-        xaxis_rangeslider_visible=False
-    )
-
-    st.plotly_chart(
-        fig,
-        use_container_width=True
-    )
-
-
-# ============================================================
-# 17. MARKETS
-# ============================================================
-
-with tabs[1]:
-
-    st.subheader(
-        "📊 Multi-Market Terminal"
-    )
-
-    rows = []
-
-    for symbol, data in MARKETS.items():
-
-        rows.append(
-            {
-                "Symbol": symbol,
-                "Price": data["price"],
-                "24h Change %": data["change"],
-                "Volume": data["volume"],
-            }
-        )
-
-    market_df = pd.DataFrame(
-        rows
-    )
-
-    st.dataframe(
-        market_df,
-        use_container_width=True,
-        hide_index=True
-    )
-
-
-# ============================================================
-# 18. AI SIGNALS
-# ============================================================
-
-with tabs[2]:
-
-    st.subheader(
-        "🤖 AI Technical Signal Engine"
-    )
-
-    signal_symbol = st.selectbox(
-        "Select Asset",
-        list(MARKETS.keys()),
-        key="signal_symbol"
-    )
-
-    signal_df = get_chart_data(
-        signal_symbol
-    )
-
-    analysis = ai_analysis(
-        signal_df
-    )
-
-    st.markdown(
-        f"""
-        <div class="signal">
-
-        <div class="signal-title">
-        {analysis['signal']}
-        </div>
-
-        <h3>
-        AI Confidence:
-        {analysis['score']}%
-        </h3>
-
-        <p>
-        RSI:
-        {analysis['rsi']:.2f}
-        </p>
-
-        <p>
-        MACD:
-        {analysis['macd']:.6f}
-        </p>
-
-        <p>
-        EMA20:
-        {analysis['ema20']:.4f}
-        </p>
-
-        <p>
-        EMA50:
-        {analysis['ema50']:.4f}
-        </p>
-
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        "### Signal Reasoning"
-    )
-
-    for reason in analysis[
-        "reasons"
-    ]:
-
-        st.write(
-            "• " + reason
-        )
-
-    st.warning(
-        "AI signals are analytical indicators, "
-        "not guaranteed financial advice."
-    )
-
-
-# ============================================================
-# 19. PAPER TRADING
-# ============================================================
-
-with tabs[3]:
-
-    st.subheader(
-        "💼 Paper Trading"
-    )
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-
-        order_symbol = st.selectbox(
-            "Asset",
-            list(MARKETS.keys()),
-            key="order_symbol"
-        )
-
-        order_side = st.selectbox(
-            "Side",
-            ["BUY", "SELL"]
-        )
-
-        quantity = st.number_input(
-            "Quantity",
-            min_value=0.000001,
-            value=1.0,
-            step=1.0
-        )
-
-    with col2:
-
-        current_price = MARKETS[
-            order_symbol
-        ]["price"]
-
-        st.metric(
-            "Current Price",
-            f"{current_price:,.4f}"
-        )
-
-        total = (
-            quantity *
-            current_price
-        )
-
-        st.metric(
-            "Order Value",
-            f"{total:,.2f}"
-        )
-
-        if st.button(
-            "🚀 Execute Paper Order"
-        ):
-
-            success, message = (
-                execute_paper_order(
-                    st.session_state.current_user_email,
-                    order_symbol,
-                    order_side,
-                    quantity,
-                    current_price
-                )
-            )
-
-            if success:
-                st.success(
-                    message
-                )
-            else:
-                st.error(
-                    message
-                )
-
-
-# ============================================================
-# 20. PORTFOLIO
-# ============================================================
-
-with tabs[4]:
-
-    st.subheader(
-        "📈 Paper Portfolio"
-    )
-
-    positions = get_positions(
-        st.session_state.current_user_email
-    )
-
-    if not positions:
-
-        st.info(
-            "Your paper portfolio is empty."
-        )
-
-    else:
-
-        portfolio_rows = []
-
-        total_value = 0
-
-        for symbol, qty, avg in positions:
-
-            price = MARKETS.get(
-                symbol,
-                {"price": avg}
-            )["price"]
-
-            value = (
-                qty *
-                price
-            )
-
-            pnl = (
-                price -
-                avg
-            ) * qty
-
-            total_value += value
-
-            portfolio_rows.append(
-                {
-                    "Symbol": symbol,
-                    "Quantity": qty,
-                    "Avg Price": avg,
-                    "Current Price": price,
-                    "Value": value,
-                    "P&L": pnl,
-                }
-            )
-
-        st.metric(
-            "Portfolio Value",
-            f"{total_value:,.2f}"
-        )
-
-        st.dataframe(
-            pd.DataFrame(
-                portfolio_rows
-            ),
-            use_container_width=True,
-            hide_index=True
-        )
-
-
-# ============================================================
-# 21. WATCHLIST
-# ============================================================
-
-with tabs[5]:
-
-    st.subheader(
-        "⭐ Watchlist"
-    )
-
-    email = (
-        st.session_state.current_user_email
-    )
-
-    conn = db()
-    cur = conn.cursor()
-
-    cur.execute(
-        """
-        SELECT symbol
-        FROM watchlist
-        WHERE email=?
-        """,
-        (email,)
-    )
-
-    watch_rows = cur.fetchall()
-
-    conn.close()
-
-    watch_symbols = [
-        r[0]
-        for r in watch_rows
-    ]
-
-    selected = st.selectbox(
-        "Select Asset",
-        list(MARKETS.keys()),
-        key="watch_select"
-    )
-
-    if st.button(
-        "⭐ Add to Watchlist"
-    ):
-
-        conn = db()
-        cur = conn.cursor()
-
-        cur.execute(
-            """
-            INSERT OR IGNORE INTO watchlist
-            (email,symbol)
-            VALUES(?,?)
-            """,
-            (
-                email,
-                selected
-            )
-        )
-
-        conn.commit()
-        conn.close()
-
-        st.success(
-            "Added to watchlist."
-        )
-
-        st.rerun()
-
-    if watch_symbols:
-
-        for symbol in watch_symbols:
-
-            data = MARKETS.get(
-                symbol
-            )
-
-            if data:
-
-                st.write(
-                    f"**{symbol}** — "
-                    f"{data['price']:,.4f} — "
-                    f"{data['change']:+.2f}%"
-                )
-
-    else:
-
-        st.info(
-            "No assets in watchlist."
-        )
-
-
-# ============================================================
-# 22. ALERTS
-# ============================================================
-
-with tabs[6]:
-
-    st.subheader(
-        "🔔 Price Alerts"
-    )
-
-    email = (
-        st.session_state.current_user_email
-    )
-
-    alert_symbol = st.selectbox(
-        "Asset",
-        list(MARKETS.keys()),
-        key="alert_symbol"
-    )
-
-    condition = st.selectbox(
-        "Condition",
-        [
-            "ABOVE",
-            "BELOW"
-        ]
-    )
-
-    target = st.number_input(
-        "Target Price",
-        min_value=0.000001,
-        value=float(
-            MARKETS[
-                alert_symbol
-            ]["price"]
-        )
-    )
-
-    if st.button(
-        "🔔 Create Alert"
-    ):
-
-        conn = db()
-        cur = conn.cursor()
-
-        cur.execute(
-            """
-            INSERT INTO alerts
-            (email,symbol,condition,target,active)
-            VALUES(?,?,?,?,1)
-            """,
-            (
-                email,
-                alert_symbol,
-                condition,
-                target
-            )
-        )
-
-        conn.commit()
-        conn.close()
-
-        st.success(
-            "Alert created."
-        )
-
-    conn = db()
-    cur = conn.cursor()
-
-    cur.execute(
-        """
-        SELECT symbol,condition,target,active
-        FROM alerts
-        WHERE email=?
-        ORDER BY id DESC
-        """,
-        (email,)
-    )
-
-    alerts = cur.fetchall()
-
-    conn.close()
-
-    if alerts:
-
-        st.dataframe(
-            pd.DataFrame(
-                alerts,
-                columns=[
-                    "Symbol",
-                    "Condition",
-                    "Target",
-                    "Active"
-                ]
-            ),
-            use_container_width=True,
-            hide_index=True
-        )
-
-    else:
-
-        st.info(
-            "No alerts created."
-        )
-
-
-# ============================================================
-# 23. ACCOUNT
-# ============================================================
-
-with tabs[7]:
-
-    st.subheader(
-        "⚙️ Account"
-    )
-
-    st.write(
-        f"**Name:** "
-        f"{st.session_state.current_user_name}"
-    )
-
-    st.write(
-        f"**Username:** "
-        f"@{st.session_state.username}"
-    )
-
-    st.write(
-        f"**Email:** "
-        f"{st.session_state.current_user_email}"
-    )
-
-    st.write(
-        f"**Membership:** "
-        f"{st.session_state.user_tier}"
-    )
-
-    st.info(
-        "Your login session is stored using a "
-        "random session token rather than your email "
-        "or password."
-    )
-
-    st.warning(
-        "This terminal is currently configured for "
-        "paper trading. Real-money broker execution "
-        "should only be added through official broker APIs "
-        "with proper authentication and risk controls."
-    )
-
-
-# ============================================================
-# 24. ADMIN PANEL
-# ============================================================
-
-if (
-    st.session_state.current_user_email
-    == "admin@gmail.com"
-):
-
-    st.sidebar.markdown("---")
-
-    st.sidebar.markdown(
-        "### 🛠️ Admin Panel"
-    )
-
-    with st.sidebar.expander(
-        "👥 Users"
-    ):
-
-        conn = db()
-        cur = conn.cursor()
-
-        cur.execute(
-            """
-            SELECT email,name,username,tier
-            FROM users
-            ORDER BY email
-            """
-        )
-
-        users = cur.fetchall()
-
-        conn.close()
-
-        if users:
-
-            st.dataframe(
-                pd.DataFrame(
-                    users,
-                    columns=[
-                        "Email",
-                        "Name",
-                        "Username",
-                        "Tier"
-                    ]
-                ),
-                use_container_width=True,
-                hide_index=True
-            )
-
-    with st.sidebar.expander(
-        "👑 Grant Premium"
-    ):
-
-        if users:
-
-            emails = [
-                u[0]
-                for u in users
-            ]
-
-            target = st.selectbox(
-                "User",
-                emails,
-                key="admin_user"
-            )
-
-            tier = st.selectbox(
-                "Tier",
-                [
-                    "Free User",
-                    "Premium Member (3 Days)",
-                    "Premium Member (30 Days)",
-                    "Premium Member (1 Year)",
-                    "Premium Member (Lifetime)",
-                ],
-                key="admin_tier"
-            )
-
-            if st.button(
-                "🚀 Grant Access"
-            ):
-
-                conn = db()
-                cur = conn.cursor()
-
-                cur.execute(
-                    """
-                    UPDATE users
-                    SET tier=?
-                    WHERE email=?
-                    """,
-                    (
-                        tier,
-                        target
-                    )
-                )
-
-                conn.commit()
-                conn.close()
-
-                st.success(
-                    "Subscription updated."
-                )
