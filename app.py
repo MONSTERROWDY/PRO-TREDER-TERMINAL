@@ -213,15 +213,28 @@ def init_db():
 
 init_db()
 
-def get_user_full(email):
+# Flexible lookup for both Email and Mobile Number login support
+def get_user_full(login_input):
   try:
     conn = get_db_connection()
     cursor = conn.cursor()
+    clean_input = login_input.strip().lower()
+    
+    # Check by primary email first
     cursor.execute(
-        "SELECT password, name, username, avatar, tier FROM users WHERE email = ?",
-        (email.strip().lower(),),
+        "SELECT password, name, username, avatar, tier, email FROM users WHERE email = ?",
+        (clean_input,),
     )
     res = cursor.fetchone()
+    
+    # If not found by email, check if it matches as username or if stored via mobile identifier
+    if not res:
+      cursor.execute(
+          "SELECT password, name, username, avatar, tier, email FROM users WHERE username = ? OR email LIKE ?",
+          (clean_input, f"%{clean_input}%"),
+      )
+      res = cursor.fetchone()
+      
     conn.close()
     return res
   except Exception:
@@ -288,7 +301,7 @@ if "logged_in" not in st.session_state:
     u_data = get_user_full(saved_email)
     if u_data:
       st.session_state.logged_in = True
-      st.session_state.current_user_email = saved_email
+      st.session_state.current_user_email = u_data[5]
       st.session_state.current_user_name = u_data[1]
       st.session_state.username = u_data[2] if u_data[2] else "trader"
       st.session_state.avatar = (
@@ -322,35 +335,34 @@ def show_auth_screen():
 
     with t1:
       with st.form("login_form", clear_on_submit=False):
-        login_email = st.text_input(
-            "Registered Email", placeholder="name@example.com"
+        login_input_val = st.text_input(
+            "Registered Email or Mobile Number", placeholder="name@example.com or 7479465676"
         )
         login_pass = st.text_input(
             "Account Password", type="password", placeholder="••••••••"
         )
         st.markdown("<br>", unsafe_allow_html=True)
         if st.form_submit_button("Access Terminal"):
-          cleaned_email = login_email.strip().lower()
-          u_data = get_user_full(cleaned_email)
+          u_data = get_user_full(login_input_val)
           if u_data and u_data[0] == login_pass:
             st.session_state.logged_in = True
-            st.session_state.current_user_email = cleaned_email
+            st.session_state.current_user_email = u_data[5]  # Actual DB email identifier
             st.session_state.current_user_name = u_data[1]
             st.session_state.username = u_data[2] if u_data[2] else "trader"
             st.session_state.avatar = (
                 u_data[3] if u_data[3] else "https://i.imgur.com/71916rK.png"
             )
             st.session_state.user_tier = u_data[4] if u_data[4] else "Free User"
-            st.query_params["session_user"] = cleaned_email
+            st.query_params["session_user"] = u_data[5]
             st.rerun()
           else:
-            st.error("Invalid Credentials!")
+            st.error("Invalid Credentials! Please check your mobile number/email and password.")
 
     with t2:
       with st.form("register_form", clear_on_submit=False):
         reg_name = st.text_input("Full Name", placeholder="John Doe")
         reg_uname = st.text_input("Username", placeholder="trader_alpha")
-        reg_email = st.text_input("Email ID", placeholder="john@example.com")
+        reg_email = st.text_input("Email ID / Mobile Number", placeholder="john@example.com or 7479465676")
         reg_pass = st.text_input(
             "Secure Password", type="password", placeholder="••••••••"
         )
@@ -370,7 +382,7 @@ def show_auth_screen():
               st.query_params["session_user"] = cleaned_reg_email
               st.rerun()
             else:
-              st.error("Email ID is already registered!")
+              st.error("Email ID or Mobile is already registered!")
           else:
             st.warning("Please fill all details correctly.")
 
@@ -573,7 +585,6 @@ with tab_chart:
   st.subheader("Live Multi-Asset Price Action & Chart Analysis")
   selected_asset = st.selectbox("Select Trading Asset / Symbol", list(live_prices.keys()), key="chart_asset_sel")
   
-  # Generate dummy candlestick chart for visualization
   df_chart = pd.DataFrame(index=pd.date_range(end=datetime.datetime.now(), periods=100, freq='H'))
   base_p = live_prices[selected_asset]['price']
   df_chart['Close'] = base_p + np.cumsum(np.random.normal(0, base_p * 0.002, 100))
