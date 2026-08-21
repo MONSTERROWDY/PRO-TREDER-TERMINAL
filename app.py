@@ -70,20 +70,6 @@ st.markdown(
         box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 30px rgba(252,213,53,0.07);
         backdrop-filter: blur(10px);
     }
-    .broker-auth-title {
-        font-weight: 900;
-        font-size: 26px;
-        color: #ffffff;
-        letter-spacing: 0.5px;
-        text-align: center;
-        margin-bottom: 5px;
-    }
-    .broker-auth-subtitle {
-        text-align: center;
-        color: #848e9c;
-        font-size: 13px;
-        margin-bottom: 30px;
-    }
 
     /* INPUT FIELDS STYLING */
     .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div {
@@ -392,6 +378,7 @@ def show_auth_screen():
         if st.form_submit_button("Access Terminal"):
           cleaned_email = login_email.strip().lower()
           u_data = get_user_full(cleaned_email)
+          # SECURED FIX: Removed admin credentials from the error message popup
           if u_data and u_data[0] == login_pass:
             st.session_state.logged_in = True
             st.session_state.current_user_email = cleaned_email
@@ -404,10 +391,7 @@ def show_auth_screen():
             st.query_params["session_user"] = cleaned_email
             st.rerun()
           else:
-            st.error(
-                "Invalid Credentials! (Demo Admin: admin@gmail.com /"
-                " password123)"
-            )
+            st.error("Invalid Email or Password! Please try again.")
 
     with t2:
       st.markdown(
