@@ -1,6 +1,3 @@
-Veer Pro Terminal — Complete Streamlit Replacement
-
-# ============================================================
 # VEER PRO TERMINAL
 # Multi-Market AI Trading & Paper Trading Dashboard
 # ============================================================
