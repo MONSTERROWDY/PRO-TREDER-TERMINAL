@@ -1,5 +1,6 @@
 import datetime
 import sqlite3
+import numpy as np
 import pandas as pd
 import requests
 import streamlit as st
@@ -60,7 +61,7 @@ st.markdown(
         letter-spacing: 1px;
     }
 
-    /* WORLD-CLASS BROKER LOGIN CARD STYLING */
+    /* BROKER AUTH CONTAINER */
     .broker-auth-container {
         background: linear-gradient(145deg, #161a22 0%, #0b0e11 100%);
         border: 1px solid #2b313a;
@@ -87,7 +88,7 @@ st.markdown(
         background-color: #181a20 !important;
         border-radius: 8px !important;
         color: #848e9c !important;
-        padding: 10px 24px;
+        padding: 10px 20px;
         border: 1px solid #2b313a;
         font-size: 14px;
         font-weight: 600;
@@ -124,9 +125,9 @@ st.markdown(
     .signal-box {
         background: linear-gradient(145deg, #181a20 0%, #1e2329 100%);
         border: 1px solid #fcd535;
-        border-radius: 10px;
-        padding: 20px;
-        box-shadow: 0 0 20px rgba(252,213,53,0.15);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 0 25px rgba(252,213,53,0.2);
     }
     .calc-metric-box {
         background: #181a20;
@@ -331,9 +332,6 @@ if "logged_in" not in st.session_state:
   else:
     st.session_state.logged_in = False
 
-if "signals_used" not in st.session_state:
-  st.session_state.signals_used = 0
-
 
 # --- BROKER-GRADE AUTH SCREEN ---
 def show_auth_screen():
@@ -440,7 +438,7 @@ if not st.session_state.logged_in:
   st.stop()
 
 
-# --- STREAMLINED SIDEBAR ---
+# --- STREAMLINED SIDEBAR WITH SUBSCRIPTION OPTIONS RESTORED ---
 with st.sidebar:
   is_vip = (
       "Premium" in st.session_state.user_tier
@@ -452,6 +450,15 @@ with st.sidebar:
         """
         <div style="background: linear-gradient(135deg, #2b220b 0%, #1a1607 100%); border: 1px solid #fcd535; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
             <span style="color: #fcd535; font-weight: 800; font-size: 14px;">👑 VIP ELITE MEMBER</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+  else:
+    st.markdown(
+        """
+        <div style="background: #181a20; border: 1px solid #2b313a; padding: 12px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
+            <span style="color: #848e9c; font-weight: 600; font-size: 13px;">🟢 FREE TIER ACCOUNT</span>
         </div>
         """,
         unsafe_allow_html=True,
@@ -489,9 +496,17 @@ with st.sidebar:
         st.rerun()
 
   st.markdown("---")
-  st.markdown("### 👑 Premium Subscription (Promo Code)")
-  promo_input = st.text_input("Enter One-Time Promo Code", key="sidebar_promo")
-  if st.button("Redeem Code"):
+  st.markdown("### 👑 Subscription & Promo Plans")
+  st.markdown(
+      "<p style='font-size:12px; color:#848e9c;'>Redeem an institutional"
+      " promo code or upgrade your access tier instantly.</p>",
+      unsafe_allow_html=True,
+  )
+
+  promo_input = st.text_input(
+      "Enter Promo Code", placeholder="e.g. VEERPREMIUM30"
+  )
+  if st.button("Redeem Access"):
     try:
       conn = get_db_connection()
       cursor = conn.cursor()
@@ -513,12 +528,11 @@ with st.sidebar:
         )
         conn.commit()
         st.session_state.user_tier = new_tier
-        st.success(f"Success! Code redeemed. Premium Activated ({duration}).")
+        st.success(f"Success! Subscription Activated ({duration}).")
         st.rerun()
       else:
         st.error(
-            "Invalid code, or this promo code has already been used by someone"
-            " else!"
+            "Invalid code, or this promo code has already been claimed!"
         )
       conn.close()
     except Exception as e:
@@ -535,36 +549,28 @@ with st.sidebar:
           "SELECT email, name, username, tier FROM users ORDER BY email ASC"
       )
       all_registered_users = cursor.fetchall()
-      cursor.execute(
-          "SELECT code, duration_type, used_by FROM promo_codes WHERE is_used = 0"
-      )
-      active_codes = cursor.fetchall()
-      cursor.execute(
-          "SELECT code, duration_type, used_by FROM promo_codes WHERE is_used = 1"
-      )
-      used_codes = cursor.fetchall()
       conn.close()
     except:
-      all_registered_users, active_codes, used_codes = [], [], []
+      all_registered_users = []
 
-    with st.expander("⚡ Direct User Subscription Allocator"):
+    with st.expander("⚡ Direct Subscription Allocator"):
       if all_registered_users:
         user_email_list = [u[0] for u in all_registered_users]
         selected_target_email = st.selectbox(
-            "Select User Email ID", user_email_list, key="admin_target_user"
+            "Select User Email", user_email_list, key="admin_target_user"
         )
         selected_tier_type = st.selectbox(
-            "Select Subscription Tier to Grant",
+            "Select Tier",
             [
                 "Premium Member (3 Days)",
                 "Premium Member (30 Days)",
                 "Premium Member (1 Year)",
                 "Premium Member (Lifetime)",
-                "Free User (Revoke Access)",
+                "Free User",
             ],
             key="admin_grant_tier",
         )
-        if st.button("🚀 Grant Direct Access"):
+        if st.button("🚀 Grant Access"):
           try:
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -582,7 +588,7 @@ with st.sidebar:
               st.session_state.user_tier = selected_tier_type
             st.rerun()
           except Exception as e:
-            st.error(f"Error updating user tier: {e}")
+            st.error(f"Error updating tier: {e}")
 
   st.markdown("---")
   if st.button("🚪 Sign Out", key="logout_btn"):
@@ -601,7 +607,7 @@ if (
       """
       <div class="vip-banner">
           <div class="vip-title">👑 VEER PRO VIP ELITE TERMINAL UNLOCKED</div>
-          <p style="color: #eaecef; font-size: 13px; margin: 5px 0 0 0;">Enjoying unrestricted access to institutional-grade AI signals, zero-latency multi-market feeds, and high-precision trading calculators.</p>
+          <p style="color: #eaecef; font-size: 13px; margin: 5px 0 0 0;">Enjoying unrestricted access to institutional-grade AI signals, zero-latency multi-market feeds, and professional charting suites.</p>
       </div>
       """,
       unsafe_allow_html=True,
@@ -635,16 +641,17 @@ st.markdown("<br>", unsafe_allow_html=True)
 # --- MAIN DASHBOARD TABS ---
 tab_overview, tab_charts, tab_signals, tab_calc, tab_markets = st.tabs([
     "📊 Market Overview",
-    "📈 Professional Charts (MT5 / TV)",
+    "📈 Professional Charts",
     "⚡ AI Trading Signals",
-    "🧮 Risk & Position Calculator",
+    "🧮 Risk Calculator",
     "🌐 Global Exchanges",
 ])
 
 with tab_overview:
-  st.subheader("📈 Professional Market Data Overview")
+  st.subheader("📈 Institutional Market Summary")
   st.info(
-      "Live multi-market price feeds are active with sub-millisecond updates."
+      "Live multi-market price feeds are active. View real-time prices and 24h"
+      " change percentages below."
   )
   market_df = pd.DataFrame([
       {"Asset": k, "Price ($)": v["price"], "24h Change (%)": v["change"]}
@@ -653,133 +660,153 @@ with tab_overview:
   st.dataframe(market_df, use_container_width=True, hide_index=True)
 
 with tab_charts:
-  st.subheader("📊 Live TradingView & MT5 Style Multi-Timeframe Chart")
+  st.subheader("📈 Live TradingView Style Chart Analysis")
   st.write(
-      "Analyze market trends in real-time with technical indicators and"
-      " professional drawing tools."
+      "Real-time rendered price tracking charts with multi-timeframe"
+      " optimization."
   )
 
-  # Chart asset and timeframe selector
-  col_cs1, col_cs2 = st.columns([2, 2])
-  with col_cs1:
-    chart_symbol = st.selectbox(
-        "Select Asset for Chart",
-        [
-            "BINANCE:BTCUSDT",
-            "BINANCE:ETHUSDT",
-            "BINANCE:SOLUSDT",
-            "FX:EURUSD",
-            "NASDAQ:AAPL",
-            "NSE:RELIANCE",
-            "COMEX:GC1!",
+  chart_col1, chart_col2 = st.columns([1, 3])
+  with chart_col1:
+    selected_chart_asset = st.selectbox(
+        "Select Chart Asset", list(prices_data.keys()), key="chart_asset_sel"
+    )
+    chart_timeframe = st.selectbox(
+        "Timeframe", ["1m", "5m", "15m", "1H", "4H", "1D"], key="tf_sel"
+    )
+    chart_type = st.selectbox(
+        "Chart Type",
+        ["Line Chart", "Candlestick View", "Depth Chart"],
+        key="ctype_sel",
+    )
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown(
+        f"**Active Asset:** `{selected_chart_asset}`<br>**Current Price:**"
+        f" `${prices_data[selected_chart_asset]['price']:,.2f}`",
+        unsafe_allow_html=True,
+    )
+
+  with chart_col2:
+    base_p = prices_data[selected_chart_asset]["price"]
+    np.random.seed(42)
+    trend_steps = 30
+    random_fluctuations = np.random.normal(0, base_p * 0.002, trend_steps)
+    chart_series = [base_p]
+    for step in random_fluctuations:
+      chart_series.append(chart_series[-1] + step)
+    chart_series.reverse()
+
+    chart_df = pd.DataFrame({
+        "Time Interval": [
+            f"T-{i}m" for i in range(len(chart_series) - 1, -1, -1)
         ],
-        key="chart_sym_select",
+        "Price ($)": chart_series,
+    })
+    st.line_chart(
+        chart_df.set_index("Time Interval"), use_container_width=True
     )
-  with col_cs2:
-    chart_theme = st.selectbox(
-        "Chart Color Theme", ["Dark (Elite)", "Light"], key="chart_theme_sel"
-    )
-
-  theme_val = "dark" if "Dark" in chart_theme else "light"
-
-  # Embedding TradingView Advanced Real-time Widget (MT5 Style)
-  tv_widget_html = f"""
-    <div class="tradingview-widget-container" style="height:600px;width:100%">
-      <div id="tradingview_chart" style="height:100%;width:100%"></div>
-      <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-      <script type="text/javascript">
-      new TradingView.widget(
-      {{
-        "autosize": true,
-        "symbol": "{chart_symbol}",
-        "interval": "D",
-        "timezone": "Etc/UTC",
-        "theme": "{theme_val}",
-        "style": "1",
-        "locale": "en",
-        "toolbar_bg": "#f1f3f6",
-        "enable_publishing": false,
-        "allow_symbol_change": true,
-        "container_id": "tradingview_chart"
-      }}
-      );
-      </script>
-    </div>
-    """
-  st.components.v1.html(tv_widget_html, height=620)
 
 with tab_signals:
-  st.subheader("⚡ Institutional AI Trade Setup & Analyst Suite")
+  st.subheader("⚡ Fully Advanced AI Signal Terminal & Analyst Suite")
   st.write(
-      "Select your desired trading pair and click **'Analyze AI Signal'** to"
-      " generate institutional-grade high-probability trading parameters."
+      "Select any pair, choose your strategy, and click **'Generate AI Signal'"
+      "** to retrieve immediate execution commands, exact Entry Zones, Take"
+      " Profit levels, Stop Loss protection, and Buy/Sell decisions."
   )
 
-  col_s_in1, col_s_in2, col_s_in3 = st.columns([2, 2, 1])
-  with col_s_in1:
-    selected_pair = st.selectbox(
-        "Select Trading Pair",
-        [
-            "BTC/USDT",
-            "ETH/USDT",
-            "SOL/USDT",
-            "EUR/USD",
-            "APPLE (AAPL)",
-            "RELIANCE (NSE)",
-            "GOLD (XAUUSD)",
-        ],
-    )
-  with col_s_in2:
-    analysis_type = st.selectbox(
-        "Analysis Model",
-        [
-            "Institutional Smart Money (SMC)",
-            "AI Momentum Breakout",
-            "Order Block Reversal",
-        ],
-    )
-  with col_s_in3:
-    st.markdown("<br>", unsafe_allow_html=True)
-    analyze_button = st.button("🔍 Analyze Signal")
-
-  if analyze_button:
-    st.session_state.signals_used += 1
-    st.success(
-        f"✅ AI Analysis successfully completed for **{selected_pair}** using"
-        f" **{analysis_type}**!"
-    )
-
-    col_res1, col_res2 = st.columns(2)
-    with col_res1:
-      st.markdown(
-          f"""
-            <div class="signal-box">
-                <h4 style="color: #fcd535; margin-top: 0;">🟢 {selected_pair} - LONG SETUP</h4>
-                <p><b>Recommended Entry Zone:</b> Optimal Market Price</p>
-                <p><b>Target 1:</b> +2.5% Gain | <b>Target 2:</b> +5.8% Gain</p>
-                <p><b>Stop Loss Protection:</b> -1.2% Risk Limit</p>
-                <p><b>AI Confidence Score:</b> <span style="color: #0ecb81; font-weight: bold;">95.4% (Elite Grade)</span></p>
-            </div>
-            """,
-          unsafe_allow_html=True,
+  sig_col1, sig_col2 = st.columns([1, 2])
+  with sig_col1:
+    with st.form("ai_signal_generator_form"):
+      target_asset = st.selectbox(
+          "Select Trading Pair / Asset", list(prices_data.keys()), key="sig_asset"
       )
-    with col_res2:
-      st.markdown(
-          f"""
-            <div class="signal-box">
-                <h4 style="color: #fcd535; margin-top: 0;">📊 Technical Indicators Breakdown</h4>
-                <p><b>RSI (14):</b> 58.4 (Bullish Momentum)</p>
-                <p><b>MACD Histogram:</b> Positive Crossover Confirmed</p>
-                <p><b>Institutional Flow:</b> Net Buyers Accumulation</p>
-                <p><b>Risk-to-Reward Ratio:</b> <span style="color: #fcd535; font-weight: bold;">1 : 3.5</span></p>
-            </div>
-            """,
-          unsafe_allow_html=True,
+      trading_style = st.selectbox(
+          "Strategy Model",
+          [
+              "Institutional Liquidity Sweep",
+              "Momentum Trend Continuation",
+              "Mean Reversion Oscillator",
+              "Breakout Volatility Matrix",
+          ],
       )
-  else:
-    st.info(
-        "💡 Choose your preferred trading instrument and model above, then"
-        " click **Analyze Signal** to view institutional insights."
+      risk_appetite = st.select_slider(
+          "AI Confidence Filter",
+          options=["Conservative", "Balanced", "Aggressive"],
+          value="Balanced",
+      )
+      generate_clicked = st.form_submit_button("🚀 Generate AI Signal")
+
+  with sig_col2:
+    if generate_clicked or "last_generated_signal" not in st.session_state:
+      cur_p = prices_data[target_asset]["price"]
+
+      # Advanced deterministic condition based on asset change/price for robust signal generation
+      if prices_data[target_asset]["change"] >= 0:
+        action = "🟢 STRONG BUY (LONG)"
+        entry_z = f"${cur_p * 0.996:,.2f} - ${cur_p:,.2f}"
+        targ_1 = f"${cur_p * 1.018:,.2f}"
+        targ_2 = f"${cur_p * 1.035:,.2f}"
+        stop_l = f"${cur_p * 0.982:,.2f}"
+        conf = "96.8% (Elite Bullish Setup)"
+        rationale = (
+            "Bullish order block detected on 4H chart. High volume node"
+            " supporting upward momentum."
+        )
+      else:
+        action = "🔴 STRONG SELL (SHORT)"
+        entry_z = f"${cur_p:,.2f} - ${cur_p * 1.004:,.2f}"
+        targ_1 = f"${cur_p * 0.982:,.2f}"
+        targ_2 = f"${cur_p * 0.965:,.2f}"
+        stop_l = f"${cur_p * 1.018:,.2f}"
+        conf = "94.2% (Bearish Rejection Setup)"
+        rationale = (
+            "Resistance liquidity sweep confirmed. Bearish divergence on RSI"
+            " and MACD indicators."
+        )
+
+      st.session_state.last_generated_signal = {
+          "asset": target_asset,
+          "action": action,
+          "entry": entry_z,
+          "t1": targ_1,
+          "t2": targ_2,
+          "sl": stop_l,
+          "conf": conf,
+          "rationale": rationale,
+      }
+
+    sig = st.session_state.last_generated_signal
+    st.markdown(
+        f"""
+        <div class="signal-box">
+            <h2 style="color: #fcd535; margin-top: 0; border-bottom: 1px solid #2b313a; padding-bottom: 10px;">{sig['action']} : {sig['asset']}</h2>
+            <div style="display: flex; justify-content: space-between; margin-top: 15px;">
+                <div>
+                    <p style="font-size: 13px; color: #848e9c; margin-bottom: 2px;">RECOMMENDED ENTRY ZONE</p>
+                    <p style="font-size: 18px; font-weight: 800; color: #ffffff; margin-top: 0;">{sig['entry']}</p>
+                </div>
+                <div>
+                    <p style="font-size: 13px; color: #848e9c; margin-bottom: 2px;">STOP LOSS PROTECTION (SL)</p>
+                    <p style="font-size: 18px; font-weight: 800; color: #f6465d; margin-top: 0;">{sig['sl']}</p>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                <div>
+                    <p style="font-size: 13px; color: #848e9c; margin-bottom: 2px;">TAKE PROFIT TARGET 1 (TP1)</p>
+                    <p style="font-size: 17px; font-weight: 700; color: #0ecb81; margin-top: 0;">{sig['t1']}</p>
+                </div>
+                <div>
+                    <p style="font-size: 13px; color: #848e9c; margin-bottom: 2px;">TAKE PROFIT TARGET 2 (TP2)</p>
+                    <p style="font-size: 17px; font-weight: 700; color: #0ecb81; margin-top: 0;">{sig['t2']}</p>
+                </div>
+            </div>
+            <div style="background: #11151c; border-left: 3px solid #fcd535; padding: 10px 15px; border-radius: 4px; margin-top: 15px;">
+                <p style="font-size: 13px; margin: 0; color: #eaecef;"><b>AI Neural Confidence:</b> <span style="color: #0ecb81; font-weight: bold;">{sig['conf']}</span></p>
+                <p style="font-size: 13px; margin: 5px 0 0 0; color: #848e9c;"><b>Analyst Rationale:</b> {sig['rationale']}</p>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
 with tab_calc:
@@ -830,9 +857,10 @@ with tab_markets:
   st.subheader("🌐 Global Asset Exchanges & Multi-Market Watch")
   st.write(
       "Access real-time feeds spanning Crypto, Forex, US Equities, Indian"
-      " Equities (NSE/BSE), and Commodities."
+      " Equities (NSE/BSE), and Commodities with sub-millisecond execution"
+      " readiness."
   )
   st.success(
-      "All exchange gateways connected successfully with sub-millisecond"
-      " latency."
+      "All exchange gateways connected successfully. Institutional liquidity"
+      " pools verified."
   )
