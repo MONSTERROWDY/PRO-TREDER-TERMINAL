@@ -1,9 +1,4 @@
 # ============================================================
-# VEER PRO TERMINAL
-# TradingView-Style Multi-Market Trading Terminal
-# LIVE MARKET DATA + LIVE ANALYSIS + DEMO TRADE
-# REAL MONEY LIVE = OFFICIAL BROKER CONNECTION REQUIRED
-# ============================================================
 
 import os
 import sqlite3
